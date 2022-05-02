@@ -3,6 +3,7 @@ import Router from './utils/Router';
 import {RequestMethods} from './utils/RequestMethods';
 import {Keycloak} from "keycloak-connect";
 import RegionsController from "../../controllers/RegionsController";
+import {body} from "express-validator";
 
 class Routes {
     app;
@@ -29,6 +30,15 @@ class Routes {
         router.addRoute(RequestMethods.GET, "/region/all", async (request, response) => {
             await regionsController.getAllRegions(request, response);
         })
+
+        router.addRoute(RequestMethods.GET, "/region/all/geojson", async (request, response) => {
+            await regionsController.getAllRegionsAsGeoJSON(request, response);
+        })
+
+        router.addRoute(RequestMethods.GET, "/region/:id", async (request, response) => {
+            await regionsController.getOneRegion(request, response);
+        })
+
 
     }
 }
