@@ -1,3 +1,11 @@
+/******************************************************************************
+ * Router.ts                                                                  *
+ *                                                                            *
+ * Copyright (c) 2022 Robin Ferch                                             *
+ * https://robinferch.me                                                      *
+ * This project is released under the MIT license.                            *
+ ******************************************************************************/
+
 import { Request, Response } from 'express';
 import { Executor } from './Executor';
 import { RequestMethods } from './RequestMethods';
@@ -14,7 +22,7 @@ export default class Router {
 
     public addRoute(requestMethod: RequestMethods, endpoint: String,
       executor: Executor, ...middlewares: any) {
-      this.web.getCore().getLogger().debug(`Registering endpoint "api/${this.version}${endpoint}"`);
+      this.web.getCore().getLogger().debug(`Registering endpoint "${requestMethod.toString()} api/${this.version}${endpoint}"`);
       this.web.getApp().all(`/api/${this.version}${endpoint}`, middlewares, (rq: Request, rs: Response, next: any) => {
         if (rq.method === requestMethod.valueOf()) {
           executor(rq, rs);

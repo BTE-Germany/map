@@ -1,0 +1,21 @@
+<component name="CopyrightManager">
+  <settings>
+    <module2copyright>
+      <element module="Backend" copyright="Private MIT" />
+      <element module="Frontend" copyright="Private MIT" />
+    </module2copyright>
+    <LanguageOptions name="JavaScript">
+      <option name="fileTypeOverride" value="3" />
+      <option name="separateBefore" value="true" />
+      <option name="separateAfter" value="true" />
+      <option name="box" value="true" />
+      <option name="filler" value="+" />
+    </LanguageOptions>
+    <LanguageOptions name="TypeScript">
+      <option name="fileTypeOverride" value="3" />
+      <option name="separateBefore" value="true" />
+      <option name="separateAfter" value="true" />
+      <option name="box" value="true" />
+    </LanguageOptions>
+  </settings>
+</component>

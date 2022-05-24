@@ -1,0 +1,3 @@
+<component name="DependencyValidationManager">
+  <scope name="Backend" pattern="file[mapv2]:backend/src//*||file:backend/index.ts||file[mapv2]:backend/prisma//*" />
+</component>

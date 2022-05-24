@@ -1,21 +1,18 @@
 /*+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
- + main.jsx                                                                   +
+ + useQuery.js                                                                +
  +                                                                            +
  + Copyright (c) 2022 Robin Ferch                                             +
  + https://robinferch.me                                                      +
  + This project is released under the MIT license.                            +
  +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++*/
 
-import React from 'react'
-import ReactDOM from 'react-dom/client'
-import App from './App'
-import './index.css'
-import {BrowserRouter} from "react-router-dom";
-import {ReactKeycloakProvider} from '@react-keycloak/web'
+import {useLocation} from "react-router-dom";
+import React from "react";
 
+const useQuery = () => {
+    const {search} = useLocation();
 
-ReactDOM.createRoot(document.getElementById('root')).render(
-    <BrowserRouter>
-        <App/>
-    </BrowserRouter>
-)
+    return React.useMemo(() => new URLSearchParams(search), [search]);
+}
+
+export default useQuery;

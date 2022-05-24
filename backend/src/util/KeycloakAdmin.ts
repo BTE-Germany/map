@@ -1,3 +1,11 @@
+/******************************************************************************
+ * KeycloakAdmin.ts                                                           *
+ *                                                                            *
+ * Copyright (c) 2022 Robin Ferch                                             *
+ * https://robinferch.me                                                      *
+ * This project is released under the MIT license.                            *
+ ******************************************************************************/
+
 import KcAdminClient from "@keycloak/keycloak-admin-client";
 import Core from "../Core";
 
@@ -19,6 +27,12 @@ class KeycloakAdmin {
     }
 
     public async authKcClient() {
+
+        setInterval(() => this.kcAdminClient.auth({
+            grantType: "client_credentials",
+            clientId: process.env.KEYCLOAK_CLIENTID,
+            clientSecret: process.env.KEYCLOAK_CLIENTSECRET,
+        }), 58 * 1000);
         return await this.kcAdminClient.auth({
             grantType: "client_credentials",
             clientId: process.env.KEYCLOAK_CLIENTID,

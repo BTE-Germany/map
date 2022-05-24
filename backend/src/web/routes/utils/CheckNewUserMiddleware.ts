@@ -1,3 +1,11 @@
+/******************************************************************************
+ * CheckNewUserMiddleware.ts                                                  *
+ *                                                                            *
+ * Copyright (c) 2022 Robin Ferch                                             *
+ * https://robinferch.me                                                      *
+ * This project is released under the MIT license.                            *
+ ******************************************************************************/
+
 import {NextFunction, Request, Response} from "express";
 import {PrismaClient} from "@prisma/client";
 import Core from "../../../Core";
@@ -13,7 +21,7 @@ const checkNewUser = (prisma: PrismaClient, core: Core) => {
             const kcuser = await core.getKeycloakAdmin().getKeycloakAdminClient().users.findOne({
                 id: req.kauth.grant.access_token.content.sub
             })
-            if(kcuser.federatedIdentities.length > 0) {
+            if(kcuser.federatedIdentities?.length > 0) {
                 const discordIdentity = kcuser.federatedIdentities.find((fi) => fi.identityProvider === "discord")
                 if(discordIdentity) {
                     if(user.discordId !== discordIdentity.userId) {
@@ -53,7 +61,7 @@ const checkNewUser = (prisma: PrismaClient, core: Core) => {
             const kcuser = await core.getKeycloakAdmin().getKeycloakAdminClient().users.findOne({
                 id: req.kauth.grant.access_token.content.sub
             })
-            const discordIdentity = kcuser.federatedIdentities.find((fi) => fi.identityProvider === "discord")
+            const discordIdentity = kcuser.federatedIdentities?.find((fi) => fi.identityProvider === "discord")
             if (discordIdentity) {
                 await prisma.user.create({
                     data: {

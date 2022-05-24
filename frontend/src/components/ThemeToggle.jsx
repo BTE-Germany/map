@@ -1,3 +1,11 @@
+/*+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+ + ThemeToggle.jsx                                                            +
+ +                                                                            +
+ + Copyright (c) 2022 Robin Ferch                                             +
+ + https://robinferch.me                                                      +
+ + This project is released under the MIT license.                            +
+ +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++*/
+
 import React from 'react';
 import {createStyles, Group, Switch, useMantineColorScheme} from "@mantine/core";
 import {BiSun, BiMoon} from "react-icons/bi";
@@ -29,15 +37,15 @@ const useStyles = createStyles((theme) => ({
 }));
 
 const ThemeToggle = props => {
-    const { colorScheme, toggleColorScheme } = useMantineColorScheme();
-    const { classes, cx } = useStyles();
+    const {colorScheme, toggleColorScheme} = useMantineColorScheme();
+    const {classes, cx} = useStyles();
 
     return (
         <Group position="center" my={30}>
             <div className={classes.root}>
-                <BiSun className={cx(classes.icon, classes.iconLight)} size={18} />
-                <BiMoon className={cx(classes.icon, classes.iconDark)} size={18} />
-                <Switch checked={colorScheme === 'dark'} onChange={() => toggleColorScheme()} size="md" />
+                <BiSun className={cx(classes.icon, classes.iconLight)} size={18}/>
+                <BiMoon className={cx(classes.icon, classes.iconDark)} size={18}/>
+                <Switch checked={colorScheme === 'dark'} onChange={() => toggleColorScheme()} size="md"/>
             </div>
         </Group>
     );

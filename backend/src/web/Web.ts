@@ -1,3 +1,12 @@
+
+/******************************************************************************
+ * Web.ts                                                                     *
+ *                                                                            *
+ * Copyright (c) 2022 Robin Ferch                                             *
+ * https://robinferch.me                                                      *
+ * This project is released under the MIT license.                            *
+ ******************************************************************************/
+
 import * as express from 'express';
 import * as bodyParser from 'body-parser';
 import Core from '../Core';

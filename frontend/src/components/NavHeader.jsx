@@ -1,9 +1,20 @@
+/*+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+ + NavHeader.jsx                                                              +
+ +                                                                            +
+ + Copyright (c) 2022 Robin Ferch                                             +
+ + https://robinferch.me                                                      +
+ + This project is released under the MIT license.                            +
+ +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++*/
+
 import React, {useEffect, useState} from 'react';
 import {ActionIcon, Box, Burger, Container, createStyles, Group, Header, Paper, Transition} from "@mantine/core";
 import {useBooleanToggle} from "@mantine/hooks";
 import {Link, useLocation} from "react-router-dom";
 import ThemeToggle from "./ThemeToggle";
 import AccountButton from "./AccountButton";
+import {useKeycloak} from "@react-keycloak/web";
+import {AiOutlineUser, AiOutlineSearch} from "react-icons/ai";
+import {openSpotlight} from "@mantine/spotlight";
 
 
 const HEADER_HEIGHT = 60;
@@ -99,9 +110,9 @@ const useStyles = createStyles((theme) => ({
 }));
 
 
-const NavHeader = props => {
+const NavHeader = ({mapRef}) => {
 
-
+    const {keycloak} = useKeycloak();
     const links = [
         {
             "link": "/",
@@ -137,7 +148,7 @@ const NavHeader = props => {
 
     return (
         <div>
-            <Header height={HEADER_HEIGHT}  className={classes.root}>
+            <Header height={HEADER_HEIGHT} className={classes.root}>
                 <Container className={classes.header}>
                     <Box className={classes.logo}>
                         <img src="https://bte-germany.de/logo.gif" alt="" width={35}/>
@@ -146,11 +157,29 @@ const NavHeader = props => {
                     <Box className={classes.options}>
                         <Group spacing={5} className={classes.links} mr={"md"}>
                             {items}
+                            {
+                                keycloak?.tokenParsed?.realm_access.roles.includes("mapadmin") && <Link
+                                    to={"/admin"}
+                                    className={cx(classes.link, {[classes.linkActive]: active === "/admin"})}
+                                    onClick={() => {
+                                        setActive("/admin");
+                                        toggleOpened(false);
+                                    }}
+                                >
+                                    Admin
+                                </Link>
+                            }
+
                         </Group>
-                        <ThemeToggle />
-                        <Box ml={"md"}>
-                            <AccountButton />
+                        <ThemeToggle/>
+                        <Box ml={"md"} style={{display: "flex"}}>
+                            <AccountButton/>
+                            {
+                                mapRef && <ActionIcon ml={"sm"} variant="outline"
+                                                      onClick={() => openSpotlight()}><AiOutlineSearch/></ActionIcon>
+                            }
                         </Box>
+
                     </Box>
 
                     <Burger

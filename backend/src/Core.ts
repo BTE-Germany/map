@@ -1,9 +1,19 @@
+
+/******************************************************************************
+ * Core.ts                                                                    *
+ *                                                                            *
+ * Copyright (c) 2022 Robin Ferch                                             *
+ * https://robinferch.me                                                      *
+ * This project is released under the MIT license.                            *
+ ******************************************************************************/
+
 import {configure, getLogger, Logger} from 'log4js';
 import Web from './web/Web';
 import * as Keycloak from "keycloak-connect";
 import * as session from "express-session";
 import KeycloakAdmin from "./util/KeycloakAdmin";
 import {PrismaClient} from "@prisma/client";
+import DiscordIntegration from "./util/DiscordIntegration";
 
 class Core {
     web: Web;
@@ -11,6 +21,7 @@ class Core {
     memoryStore: session.MemoryStore;
     keycloakAdmin: KeycloakAdmin;
     prisma: PrismaClient;
+    discord: DiscordIntegration;
 
 
     constructor() {
@@ -26,6 +37,7 @@ class Core {
             this.web = new Web(this);
             this.web.startWebserver();
         })
+        this.discord = new DiscordIntegration(this);
 
     }
 
@@ -38,6 +50,8 @@ class Core {
     public getKeycloak = (): Keycloak.Keycloak => this.keycloak;
     public getKeycloakAdmin = (): KeycloakAdmin => this.keycloakAdmin;
     public getPrisma = (): PrismaClient => this.prisma;
+    public getDiscord = (): DiscordIntegration => this.discord;
+
 }
 
 export default Core;

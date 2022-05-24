@@ -1,3 +1,11 @@
+/******************************************************************************
+ * index.ts                                                                   *
+ *                                                                            *
+ * Copyright (c) 2022 Robin Ferch                                             *
+ * https://robinferch.me                                                      *
+ * This project is released under the MIT license.                            *
+ ******************************************************************************/
+
 import Core from './src/Core';
 
 require('dotenv').config();
