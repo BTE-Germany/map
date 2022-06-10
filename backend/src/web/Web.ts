@@ -1,4 +1,3 @@
-
 /******************************************************************************
  * Web.ts                                                                     *
  *                                                                            *
@@ -13,17 +12,25 @@ import Core from '../Core';
 import Routes from './routes';
 import * as session from "express-session";
 import * as cors from "cors";
+import * as http from "http";
+import {Express} from "express";
+import SocketIOController from "../util/SocketIOController";
 
 class Web {
-    app;
+    private app: Express;
 
-    core: Core;
+    private core: Core;
 
-    routes: Routes;
+    private routes: Routes;
+
+    private server: http.Server;
+
+    private socketIO: SocketIOController;
 
 
     constructor(core: Core) {
         this.app = express();
+        this.server = http.createServer(this.app);
         this.core = core;
     }
 
@@ -44,11 +51,11 @@ class Web {
         this.core.getLogger().debug("Enabled keycloak-connect adapter")
 
 
-
-        this.app.listen(this.getPort(), () => {
+        this.server.listen(this.getPort(), () => {
             this.core.getLogger().info(`Starting webserver on port ${this.getPort()}`);
             this.routes = new Routes(this);
 
+            this.socketIO = new SocketIOController(this.core);
         });
     }
 
@@ -56,16 +63,24 @@ class Web {
         return process.env.WEBPORT;
     }
 
-    public getApp() {
+    public getApp(): Express {
         return this.app;
     }
 
-    public getCore() {
+    public getCore(): Core {
         return this.core;
     }
 
     public getKeycloak() {
         return this.core.getKeycloak();
+    }
+
+    public getHttpServer(): http.Server {
+        return this.server;
+    }
+
+    public getSocketIO(): SocketIOController {
+        return this.socketIO;
     }
 }
 

@@ -19,8 +19,8 @@ class DiscordIntegration {
     }
 
     setup(): void {
-        const client = new Client({ intents: [Intents.FLAGS.GUILDS] });
-        client.login(process.env.DISCORD_TOKEN).then(r => this.core.getLogger().debug("Logged in to Discord"));
+        const client = new Client({intents: [Intents.FLAGS.GUILDS]});
+        client.login(process.env.DISCORD_TOKEN).then(r => this.core.getLogger().info("Logged in to Discord"));
         this.client = client;
     }
 
@@ -41,7 +41,7 @@ class DiscordIntegration {
         let reportedBy = kcuser.username;
 
         const discordIdentity = kcuser.federatedIdentities?.find((fi) => fi.identityProvider === "discord")
-        if(discordIdentity) {
+        if (discordIdentity) {
             reportedBy = kcuser.username + " (<@" + discordIdentity.userId + ">)";
         }
 
@@ -60,8 +60,8 @@ class DiscordIntegration {
 
         this.client.channels.fetch(process.env.DISCORD_LOG_CHANNEL)
             .then(channel => {
-                if(channel.isText()) {
-                    channel.send({ embeds: [embed] })
+                if (channel.isText()) {
+                    channel.send({embeds: [embed]})
                 }
             })
 

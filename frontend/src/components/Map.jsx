@@ -20,9 +20,11 @@ import useQuery from "../hooks/useQuery";
 import {centerOfMass, polygon} from "@turf/turf";
 import {AiOutlineSearch} from "react-icons/ai";
 import {SpotlightProvider, useSpotlight} from "@mantine/spotlight";
-import search from "../utils/SearchEngine";
 import {BiMapPin} from "react-icons/bi";
 import searchInOSM from "../utils/SearchEngine";
+import socketIOClient from "socket.io-client";
+
+import {TbPlugConnectedX} from "react-icons/tb";
 
 
 const Map = forwardRef(({openDialog, setRegionViewData, updateMap, setUpdateMap}, ref) => {
@@ -36,6 +38,68 @@ const Map = forwardRef(({openDialog, setRegionViewData, updateMap, setUpdateMap}
     const [showLoadingOverlay, setShowLoadingOverlay] = useState(true);
     const clipboard = useClipboard();
     const [actions, setActions] = useState([]);
+    const [players, setPlayers] = useState([]);
+    const [playerMarkers, setPlayerMarkers] = useState([]);
+    const [socketConnected, setSocketConnected] = useState(false);
+
+    let hidePlayers = false;
+
+    useEffect(() => {
+        const socket = socketIOClient("http://localhost:8899");
+
+        socket.on("connect", data => {
+            setSocketConnected(true);
+        });
+
+        socket.on("playerLocations", data => {
+            setPlayers(JSON.parse(data))
+
+
+        });
+
+        socket.on('disconnect', () => {
+            setSocketConnected(false);
+            showNotification({
+                title: 'Whoops',
+                message: 'It looks like we have no connection to the server... Some features might not work.',
+                icon: (<TbPlugConnectedX size={18}/>),
+                color: "red",
+            })
+        })
+
+    }, []);
+
+    useEffect(() => {
+        if (map) {
+            if (playerMarkers.length > 0) {
+                playerMarkers.forEach((m) => {
+                    m.remove();
+                })
+                setPlayerMarkers([])
+            }
+
+
+            for (const feature of players.features) {
+                const el = document.createElement('div');
+                el.className = 'marker';
+                el.id = "marker";
+                el.style.backgroundImage = `url('https://mc-heads.net/avatar/${feature.properties.uuid}')`
+                el.style.width = `32px`;
+                el.style.height = `32px`;
+                el.style.backgroundSize = '100%';
+                el.style.borderRadius = "5px";
+
+                el.setAttribute("data-text", feature.properties.username)
+                let marker = new mapboxgl.Marker(el)
+                    .setLngLat(feature.geometry.coordinates)
+                    .addTo(map);
+                playerMarkers.push(marker);
+                setPlayerMarkers(playerMarkers)
+            }
+
+
+        }
+    }, [players])
 
     useImperativeHandle(ref, () => ({
 
@@ -66,6 +130,39 @@ const Map = forwardRef(({openDialog, setRegionViewData, updateMap, setUpdateMap}
 
     useEffect(() => {
         if (map) return; // initialize map only once
+
+        class HidePlayerControl {
+            onAdd(map) {
+                this.map = map;
+                this.container = document.createElement('div');
+                this.container.classList.add("mapboxgl-ctrl");
+                this.container.classList.add("mapboxgl-ctrl-group");
+                this.playerButton = document.createElement("button");
+                this.playerButton.type = "button";
+                this.playerButton.classList.add("mapboxgl-ctrl-player-icon");
+                this.playerButton.style.backgroundImage = 'url("background-image: url("data:image/svg+xml,%3Csvg xmlns=\'http://www.w3.org/2000/svg\' width=\'24\' height=\'24\' viewBox=\'0 0 24 24\' fill=\'none\' stroke=\'currentColor\' stroke-width=\'2\' stroke-linecap=\'round\' stroke-linejoin=\'round\' class=\'feather feather-users\'%3E%3Cpath d=\'M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2\'/%3E%3Ccircle cx=\'9\' cy=\'7\' r=\'4\'/%3E%3Cpath d=\'M23 21v-2a4 4 0 0 0-3-3.87\'/%3E%3Cpath d=\'M16 3.13a4 4 0 0 1 0 7.75\'/%3E%3C/svg%3E");")'
+                this.container.appendChild(this.playerButton)
+                this.playerButton.addEventListener('click', () => {
+                    if (hidePlayers) {
+                        console.log(hidePlayers)
+                        document.documentElement.style.setProperty('--marker-display', 1)
+                        hidePlayers = false;
+                    } else {
+                        document.documentElement.style.setProperty('--marker-display', 0)
+                        hidePlayers = true;
+                    }
+
+
+                })
+                return this.container;
+            }
+
+            onRemove() {
+                this.container.parentNode.removeChild(this.container);
+                this.map = undefined;
+            }
+        }
+
         const mapInstance = new mapboxgl.Map({
             container: mapContainer.current,
             style: 'mapbox://styles/nachwahl/cl2nl1qes00bn14ksw5y85arm',
@@ -74,7 +171,14 @@ const Map = forwardRef(({openDialog, setRegionViewData, updateMap, setUpdateMap}
         });
         mapInstance.addControl(new mapboxgl.NavigationControl());
         mapInstance.addControl(new MapboxStyleSwitcherControl(styles, {defaultStyle: "Dark"}));
+        mapInstance.addControl(new HidePlayerControl());
         setMap(mapInstance)
+
+        const popup = new mapboxgl.Popup({
+            closeButton: false,
+            closeOnClick: false
+        });
+
 
     });
 
@@ -224,6 +328,24 @@ const Map = forwardRef(({openDialog, setRegionViewData, updateMap, setUpdateMap}
                            searchIcon={showSearchLoading ? <Loader size={"xs"}/> : <AiOutlineSearch/>}
                            filter={(query, actions) => actions}>
             <div style={{width: "100%", position: 'relative', flex: 1}}>
+                {
+                    !socketConnected &&
+                    <Box sx={(theme) => ({
+                        backgroundColor: theme.colors.red[8],
+                        position: "fixed",
+                        right: 5,
+                        top: 5,
+                        zIndex: 9999,
+                        height: 25,
+                        width: 25,
+                        display: "flex",
+                        justifyContent: "center",
+                        alignItems: "center",
+                        borderRadius: "99px"
+                    })}>
+                        <TbPlugConnectedX size={15}/>
+                    </Box>
+                }
                 <LoadingOverlay visible={showLoadingOverlay}/>
                 <div ref={mapContainer} style={{width: "100%", height: "100%"}}/>
             </div>

@@ -1,17 +1,16 @@
 /*+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
- + Link.jsx                                                                   +
- +                                                                            +
- + Copyright (c) 2022 Robin Ferch                                             +
+ + Copyright (c) Robin Ferch 2022                                             +
  + https://robinferch.me                                                      +
- + This project is released under the MIT license.                            +
  +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++*/
 
 import React, {useState} from 'react';
 import {Box, Button, Code, Container, Group, Kbd, Stepper, TextInput, Title} from "@mantine/core";
 import {useForm} from "@mantine/form";
 import {useKeycloak} from "@react-keycloak/web";
-import {Navigate} from "react-router-dom";
+import {Navigate, useNavigate} from "react-router-dom";
 import NavHeader from "../components/NavHeader";
+import {showNotification} from "@mantine/notifications";
+import axios from "axios";
 
 const Link = props => {
     const {keycloak} = useKeycloak()
@@ -24,8 +23,46 @@ const Link = props => {
     const nextStep = () => setActive((current) => (current < 3 ? current + 1 : current));
     const prevStep = () => setActive((current) => (current > 0 ? current - 1 : current));
 
-    const linkAccount = ({code}) => {
+    const navigate = useNavigate();
+
+    const linkAccount = async ({code}) => {
+        console.log(code)
         setLoading(true);
+        try {
+            const {
+                data,
+                status
+            } = await axios.post(`/api/v1/user/link`, {code}, {
+                headers: {
+                    authorization: "Bearer " + keycloak.token
+                }
+            });
+
+            showNotification({
+                title: 'Link successfully',
+                message: 'This account was successfully linked to ' + data.username,
+                color: "green"
+            })
+            navigate("/");
+
+            setLoading(false);
+        } catch (e) {
+            setLoading(false);
+            if (e.response.status === 404) {
+                showNotification({
+                    title: 'Invalid code',
+                    message: 'The code you have entered could not be found',
+                    color: "red"
+                })
+            } else {
+                showNotification({
+                    title: 'Error',
+                    message: 'An unknown error occurred, please report this to our support.',
+                    color: "red"
+                })
+            }
+        }
+
     }
 
     const codeForm = useForm({

@@ -30,6 +30,7 @@ model User {
   discordId          String?
   regions            Region[]
   blockedFromReports Boolean  @default(false)
+  minecraftUUID     String? @default("")
 }
 
 model LinkCodes {

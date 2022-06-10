@@ -1,4 +1,3 @@
-
 /******************************************************************************
  * Core.ts                                                                    *
  *                                                                            *
@@ -51,6 +50,7 @@ class Core {
     public getKeycloakAdmin = (): KeycloakAdmin => this.keycloakAdmin;
     public getPrisma = (): PrismaClient => this.prisma;
     public getDiscord = (): DiscordIntegration => this.discord;
+    public getWeb = (): Web => this.web;
 
 }
 

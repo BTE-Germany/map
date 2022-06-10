@@ -15,6 +15,7 @@ import AccountButton from "./AccountButton";
 import {useKeycloak} from "@react-keycloak/web";
 import {AiOutlineUser, AiOutlineSearch} from "react-icons/ai";
 import {openSpotlight} from "@mantine/spotlight";
+import {useUser} from "../hooks/useUser";
 
 
 const HEADER_HEIGHT = 60;

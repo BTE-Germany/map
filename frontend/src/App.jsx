@@ -28,9 +28,12 @@ function App() {
         "realm": "btegermany",
         "clientId": "mapfrontend"
     });
-    const [colorScheme, setColorScheme] = useState('dark');
-    const toggleColorScheme = (value) =>
-        setColorScheme(value || (colorScheme === 'dark' ? 'light' : 'dark'));
+    const [colorScheme, setColorScheme] = useState(window.localStorage.getItem("color-scheme") || "dark");
+    const toggleColorScheme = (value) => {
+
+        window.localStorage.setItem("color-scheme", value || (colorScheme === 'dark' ? 'light' : 'dark'));
+        return setColorScheme(value || (colorScheme === 'dark' ? 'light' : 'dark'));
+    }
 
     return (
         <div>

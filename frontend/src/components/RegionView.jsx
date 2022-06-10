@@ -37,6 +37,7 @@ import {FiLock} from "react-icons/fi";
 import {useUser} from "../hooks/useUser";
 import {IoMdFlag} from "react-icons/io";
 import ReportDialog from "./ReportDialog";
+import {Link} from "react-router-dom";
 
 const RegionView = ({data, open, setOpen, setUpdateMap}) => {
 
@@ -119,7 +120,8 @@ const RegionView = ({data, open, setOpen, setUpdateMap}) => {
         });
     }
 
-    const teleportToRegion = () => {
+    const teleportToRegion = async () => {
+        await axios.post(`/api/v1/user/teleport`, {coords: center}, {headers: {authorization: "Bearer " + keycloak.token}})
         showNotification({
             title: 'Teleport to region',
             message: 'You will be teleported shortly.',
@@ -178,8 +180,18 @@ const RegionView = ({data, open, setOpen, setUpdateMap}) => {
                                 <Button color={"red"} leftIcon={<AiFillDelete/>} onClick={showDeleteConfirmation}>Delete
                                     Region</Button>
                             }
-                            <Button color={"blue"} leftIcon={<MdOutlineShareLocation/>} onClick={teleportToRegion}>Teleport
-                                here</Button>
+                            {
+                                user?.data?.minecraftUUID &&
+                                <Button color={"blue"} leftIcon={<MdOutlineShareLocation/>} onClick={teleportToRegion}>Teleport
+                                    here</Button>
+                            }
+
+                            {
+                                !user?.data?.minecraftUUID &&
+                                <Button color={"blue"} leftIcon={<MdOutlineShareLocation/>} component={Link}
+                                        to={"/link"}>Teleport
+                                    here</Button>
+                            }
                         </Group> : <Button leftIcon={<FiLock size={14}/>} fullWidth mt={"md"}
                                            onClick={() => keycloak.login({redirectUri: window.location.origin + "?region=" + region.id + "&details=true"})}>Login
                             to get more features</Button>
@@ -225,18 +237,21 @@ const RegionView = ({data, open, setOpen, setUpdateMap}) => {
                         </Accordion.Item>
                     </Accordion>
 
+                    {
+                        !user?.data?.blockedFromReports &&
+                        <Box style={{position: "absolute", bottom: 15, right: 15}}>
+                            <Tooltip
+                                label="Report this region"
+                                position="right"
+                            >
 
-                    <Box style={{position: "absolute", bottom: 15, right: 15}}>
-                        <Tooltip
-                            label="Report this region"
-                            position="right"
-                        >
+                                <ActionIcon size="md" variant="light" onClick={openReportModal}>
+                                    <IoMdFlag/>
+                                </ActionIcon>
+                            </Tooltip>
+                        </Box>
+                    }
 
-                            <ActionIcon size="md" variant="light" onClick={openReportModal}>
-                                <IoMdFlag/>
-                            </ActionIcon>
-                        </Tooltip>
-                    </Box>
 
                 </Box>
             }

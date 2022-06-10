@@ -9,6 +9,7 @@
 import React, {useState, useEffect, useContext, createContext} from "react";
 import {useKeycloak} from "@react-keycloak/web";
 import axios from "axios";
+import {useLocation} from 'react-router-dom';
 
 const authContext = createContext();
 
@@ -25,6 +26,16 @@ export const useUser = () => {
 function useProvideAuth() {
     const [data, setData] = useState(null);
     const {keycloak} = useKeycloak();
+    const location = useLocation();
+
+    const updateData = async () => {
+        if (keycloak && keycloak.authenticated) {
+            axios.get("/api/v1/user/@me", {headers: {authorization: "Bearer " + keycloak.token}})
+                .then(({data: user}) => {
+                    setData(user);
+                })
+        }
+    }
 
     useEffect(() => {
         if (keycloak && keycloak.authenticated) {
@@ -33,8 +44,9 @@ function useProvideAuth() {
                     setData(user);
                 })
         }
-    }, [keycloak]);
+    }, [keycloak, location]);
     return {
-        data
+        data,
+        updateData
     };
 }

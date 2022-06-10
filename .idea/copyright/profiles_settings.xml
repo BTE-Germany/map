@@ -1,5 +1,5 @@
 <component name="CopyrightManager">
-  <settings>
+  <settings default="Private MIT">
     <module2copyright>
       <element module="Backend" copyright="Private MIT" />
       <element module="Frontend" copyright="Private MIT" />

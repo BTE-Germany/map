@@ -40,6 +40,12 @@ class Routes {
         const adminController: AdminController = new AdminController(this.web.getCore());
 
 
+        // TODO: Add to controllers for body checks
+        //  const errors = validationResult(req);
+        //    if (!errors.isEmpty()) {
+        //       return res.status(400).json({errors: errors.array()});
+        //    }
+
         router.addRoute(RequestMethods.GET, "/region/all", async (request, response) => {
             await regionsController.getAllRegions(request, response);
         })
@@ -57,8 +63,8 @@ class Routes {
         }, this.keycloak.protect())
 
         router.addRoute(RequestMethods.POST, "/region/:id/report", async (request, response) => {
-            await regionsController.reportRegion(request, response);
-        },
+                await regionsController.reportRegion(request, response);
+            },
             this.keycloak.protect(),
             checkNewUser(this.web.getCore().getPrisma(), this.web.getCore()),
             body('reason').isString(),
@@ -72,6 +78,17 @@ class Routes {
         router.addRoute(RequestMethods.POST, "/user/link", async (request, response) => {
             await userController.linkUser(request, response);
         }, this.keycloak.protect(), checkNewUser(this.web.getCore().getPrisma(), this.web.getCore()), body('code').isString())
+
+        router.addRoute(RequestMethods.POST, "/user/unlink", async (request, response) => {
+            await userController.unlinkUser(request, response);
+        }, this.keycloak.protect(), checkNewUser(this.web.getCore().getPrisma(), this.web.getCore()))
+
+        router.addRoute(RequestMethods.POST, "/user/teleport", async (request, response) => {
+            await userController.teleportTo(request, response);
+        }, this.keycloak.protect(), checkNewUser(this.web.getCore().getPrisma(), this.web.getCore()), body('coords').isArray({
+            max: 2,
+            min: 2
+        }))
 
         router.addRoute(RequestMethods.GET, "/admin/user/@list", async (request, response) => {
             await adminController.getAllUsers(request, response);
