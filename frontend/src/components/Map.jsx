@@ -45,7 +45,7 @@ const Map = forwardRef(({openDialog, setRegionViewData, updateMap, setUpdateMap}
     let hidePlayers = false;
 
     useEffect(() => {
-        const socket = socketIOClient("http://localhost:8899");
+        const socket = socketIOClient(window.location.hostname);
 
         socket.on("connect", data => {
             setSocketConnected(true);
