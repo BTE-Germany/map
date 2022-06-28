@@ -15,6 +15,7 @@ import * as cors from "cors";
 import * as http from "http";
 import {Express} from "express";
 import SocketIOController from "../util/SocketIOController";
+import * as path from "path";
 
 class Web {
     private app: Express;
@@ -44,6 +45,10 @@ class Web {
         }));
         this.app.use(cors())
 
+        this.app.use(
+            express.static(path.join(__dirname, "../../../frontend/dist"))
+        );
+
         this.app.use(this.core.getKeycloak().middleware({
             logout: '/logout',
             admin: '/'
@@ -54,6 +59,12 @@ class Web {
         this.server.listen(this.getPort(), () => {
             this.core.getLogger().info(`Starting webserver on port ${this.getPort()}`);
             this.routes = new Routes(this);
+
+            this.app.get("*", (req, res) => {
+                res.sendFile(
+                    path.join(__dirname, "../../../frontend/dist/index.html")
+                );
+            });
 
             this.socketIO = new SocketIOController(this.core);
         });
