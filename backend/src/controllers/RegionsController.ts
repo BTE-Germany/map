@@ -9,6 +9,8 @@
 import {Request, Response} from "express";
 import Core from "../Core";
 import * as turf from "@turf/turf";
+import axios from "axios";
+import {validationResult} from "express-validator";
 
 class RegionsController {
 
@@ -27,6 +29,9 @@ class RegionsController {
         const regions = await this.core.getPrisma().region.findUnique({
             where: {
                 id: request.params.id
+            },
+            include: {
+                additionalBuilder: true
             }
         });
         response.send(regions);
@@ -74,8 +79,8 @@ class RegionsController {
                 owner: true
             }
         });
-        if(region) {
-            if(region.owner.ssoId === request.kauth.grant.access_token.content.sub) {
+        if (region) {
+            if (region.owner.ssoId === request.kauth.grant.access_token.content.sub) {
                 await this.core.getPrisma().region.delete({
                     where: {
                         id: region.id
@@ -96,7 +101,7 @@ class RegionsController {
                 id: request.params.id
             }
         });
-        if(region) {
+        if (region) {
             await this.core.getDiscord().sendReportMessage(region.id, request.kauth.grant.access_token.content.sub, request.body.comment, request.body.reason);
             response.send({"success": true});
         } else {
@@ -104,6 +109,101 @@ class RegionsController {
         }
     }
 
+    public async addAdditionalBuilder(request: Request, response: Response) {
+        const errors = validationResult(request);
+        if (!errors.isEmpty()) {
+            return response.status(400).json({errors: errors.array()});
+        }
+
+
+        let region = await this.core.getPrisma().region.findUnique({
+            where: {
+                id: request.params.id
+            },
+            include: {
+                owner: true
+            }
+        });
+        if (region) {
+
+            if (region.owner.ssoId !== request.kauth.grant.access_token.content.sub) {
+                response.status(403).send("You are not the owner of this region");
+                return;
+            }
+
+            const {data: mcApiData} = await axios.get(`https://playerdb.co/api/player/minecraft/${request.body.username}`)
+            if (mcApiData.code === "player.found") {
+                let additionalBuilder = await this.core.getPrisma().additionalBuilder.findFirst({
+                    where: {
+                        minecraftUUID: mcApiData.data.player.id
+                    }
+                })
+
+                if (additionalBuilder) {
+                    response.status(400).send("Builder already exists");
+                    return;
+                }
+
+                let b = await this.core.getPrisma().additionalBuilder.create({
+                    data: {
+                        minecraftUUID: mcApiData.data.player.id,
+                        username: mcApiData.data.player.username,
+                        region: {
+                            connect: {
+                                id: region.id
+                            }
+                        }
+                    }
+                })
+                this.core.getLogger().debug(b);
+                response.send({"success": true});
+            } else {
+                response.status(400).send("Minecraft user doesn't exist");
+            }
+
+        } else {
+            response.status(404).send("Region not found");
+        }
+    }
+
+    async removeAdditionalBuilder(request: Request, response: Response) {
+
+        let region = await this.core.getPrisma().region.findUnique({
+            where: {
+                id: request.params.id
+            },
+            include: {
+                owner: true
+            }
+        });
+        if (region) {
+
+            if (region.owner.ssoId !== request.kauth.grant.access_token.content.sub) {
+                response.status(403).send("You are not the owner of this region");
+                return;
+            }
+
+            let additionalBuilder = await this.core.getPrisma().additionalBuilder.findUnique({
+                where: {
+                    id: request.params.builderId
+                }
+            })
+
+            if (additionalBuilder) {
+                await this.core.getPrisma().additionalBuilder.delete({
+                    where: {
+                        id: additionalBuilder.id
+                    }
+                });
+                response.send({"success": true});
+            } else {
+                response.status(404).send("Additional builder not found");
+            }
+
+        } else {
+            response.status(404).send("Region not found");
+        }
+    }
 }
 
 export default RegionsController

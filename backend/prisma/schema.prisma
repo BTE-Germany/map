@@ -1,7 +1,6 @@
 // This is your Prisma schema file,
 // learn more about it in the docs: https://pris.ly/d/prisma-schema
 
-
 generator client {
   provider = "prisma-client-js"
 }
@@ -12,16 +11,18 @@ datasource db {
 }
 
 model Region {
-  id          String   @id @default(uuid())
-  username    String
-  description String
-  userUUID    String
-  ownerID     String
-  owner       User     @relation(fields: [ownerID], references: [id])
-  data        String   @db.Text
-  city        String
-  area        Int
-  createdAt   DateTime @default(now())
+  id                String              @id @default(uuid())
+  username          String
+  description       String
+  userUUID          String
+  ownerID           String
+  owner             User                @relation(fields: [ownerID], references: [id])
+  data              String              @db.Text
+  city              String
+  area              Int
+  createdAt         DateTime            @default(now())
+  images            Image[]
+  additionalBuilder AdditionalBuilder[]
 }
 
 model User {
@@ -30,12 +31,27 @@ model User {
   discordId          String?
   regions            Region[]
   blockedFromReports Boolean  @default(false)
-  minecraftUUID     String? @default("")
+  minecraftUUID      String?  @default("")
 }
 
 model LinkCodes {
-  id                String   @id @default(uuid())
-  code              String @unique
-  playerUUID        String
-  createdAt   DateTime @default(now())
+  id         String   @id @default(uuid())
+  code       String   @unique
+  playerUUID String
+  createdAt  DateTime @default(now())
+}
+
+model Image {
+  id        String @id @default(uuid())
+  region    Region @relation(fields: [regionId], references: [id])
+  regionId  String
+  imageData String
+}
+
+model AdditionalBuilder {
+  id            String @id @default(uuid())
+  minecraftUUID String
+  username      String
+  region        Region @relation(fields: [regionId], references: [id])
+  regionId      String
 }

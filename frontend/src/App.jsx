@@ -11,7 +11,7 @@ import Home from "./pages/Home";
 import {useState} from "react";
 import {ColorSchemeProvider, Loader, LoadingOverlay, MantineProvider} from "@mantine/core";
 import Keycloak from "keycloak-js";
-import {ReactKeycloakProvider} from '@react-keycloak/web'
+import {ReactKeycloakProvider} from '@react-keycloak-fork/web'
 import LinkPage from "./pages/Link";
 import {NotificationsProvider} from "@mantine/notifications";
 import {ModalsProvider} from "@mantine/modals";

@@ -32,7 +32,7 @@ const useStyles = createStyles((theme) => ({
     },
 }));
 
-const StatCard = ({title, Icon, value, subtitle}) => {
+const StatCard = ({title, Icon, value, subtitle, noBigValue}) => {
     const {classes} = useStyles();
     return (
         <Paper withBorder p="md" radius="md" shadow="md" sx={{width: "100%"}}>
@@ -44,7 +44,9 @@ const StatCard = ({title, Icon, value, subtitle}) => {
             </Group>
 
             <Group align="flex-end" spacing="xs" mt={15}>
-                <Text className={classes.value}>{value}</Text>
+                {
+                    !noBigValue ? <Text className={classes.value}>{value}</Text> : <>{value}</>
+                }
             </Group>
 
             <Text size="xs" color="dimmed" mt={7}>

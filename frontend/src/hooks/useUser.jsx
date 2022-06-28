@@ -7,7 +7,7 @@
  +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++*/
 
 import React, {useState, useEffect, useContext, createContext} from "react";
-import {useKeycloak} from "@react-keycloak/web";
+import {useKeycloak} from "@react-keycloak-fork/web";
 import axios from "axios";
 import {useLocation} from 'react-router-dom';
 

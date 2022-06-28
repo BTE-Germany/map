@@ -12,7 +12,7 @@ import {useBooleanToggle} from "@mantine/hooks";
 import {Link, useLocation} from "react-router-dom";
 import ThemeToggle from "./ThemeToggle";
 import AccountButton from "./AccountButton";
-import {useKeycloak} from "@react-keycloak/web";
+import {useKeycloak} from "@react-keycloak-fork/web";
 import {AiOutlineUser, AiOutlineSearch} from "react-icons/ai";
 import {openSpotlight} from "@mantine/spotlight";
 import {useUser} from "../hooks/useUser";

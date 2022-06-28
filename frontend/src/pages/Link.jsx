@@ -1,12 +1,15 @@
 /*+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
- + Copyright (c) Robin Ferch 2022                                             +
+ + Link.jsx                                                                   +
+ +                                                                            +
+ + Copyright (c) 2022 Robin Ferch                                             +
  + https://robinferch.me                                                      +
+ + This project is released under the MIT license.                            +
  +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++*/
 
 import React, {useState} from 'react';
 import {Box, Button, Code, Container, Group, Kbd, Stepper, TextInput, Title} from "@mantine/core";
 import {useForm} from "@mantine/form";
-import {useKeycloak} from "@react-keycloak/web";
+import {useKeycloak} from "@react-keycloak-fork/web";
 import {Navigate, useNavigate} from "react-router-dom";
 import NavHeader from "../components/NavHeader";
 import {showNotification} from "@mantine/notifications";

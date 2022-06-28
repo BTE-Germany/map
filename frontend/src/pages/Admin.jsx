@@ -23,7 +23,7 @@ const Admin = props => {
                     <Tabs.Tab label="Benutzer" icon={<FiUsers size={14}/>}>
                         <AdminUsers/>
                     </Tabs.Tab>
-                    <Tabs.Tab label="Regionen" icon={<HiOutlineMap size={14}/>}>Gallery tab content</Tabs.Tab>
+                    <Tabs.Tab label="Regionen" icon={<HiOutlineMap size={14}/>}>lander stinkt (mischa auch)</Tabs.Tab>
 
                 </Tabs>
             </Container>

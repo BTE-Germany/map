@@ -16,7 +16,7 @@ import {
     Group,
     Image,
     Loader,
-    Paper,
+    Paper, ScrollArea,
     Table,
     Text,
     Title,
@@ -28,16 +28,20 @@ import {centerOfMass, polygon} from "@turf/turf";
 import StatCard from "./StatCard";
 import {FaCity} from "react-icons/fa";
 import {BiArea} from "react-icons/bi";
-import {AiFillDelete} from "react-icons/ai";
-import {MdOutlineShareLocation} from "react-icons/md";
+import {AiFillDelete, AiOutlineDelete, AiOutlineLink} from "react-icons/ai";
+import {MdAdd, MdOutlineShareLocation} from "react-icons/md";
 import {useModals} from "@mantine/modals";
 import {showNotification} from "@mantine/notifications";
-import {useKeycloak} from "@react-keycloak/web";
+import {useKeycloak} from "@react-keycloak-fork/web";
 import {FiLock} from "react-icons/fi";
 import {useUser} from "../hooks/useUser";
 import {IoMdFlag} from "react-icons/io";
 import ReportDialog from "./ReportDialog";
 import {Link} from "react-router-dom";
+import RegionImageView from "./RegionImageView";
+import {BsFillPersonFill} from "react-icons/bs";
+import {HiUserGroup} from "react-icons/hi";
+import AdditionalBuildersDialog from "./AdditionalBuildersDialog";
 
 const RegionView = ({data, open, setOpen, setUpdateMap}) => {
 
@@ -82,6 +86,10 @@ const RegionView = ({data, open, setOpen, setUpdateMap}) => {
         clipboard.copy(coords[0] + "," + coords[1]);
     }
 
+    const copyLink = (id) => {
+        clipboard.copy(window.location.origin + "?region=" + id + "&details=true")
+    }
+
     const showDeleteConfirmation = () => {
         setOpen(false)
         modals.openConfirmModal({
@@ -106,6 +114,14 @@ const RegionView = ({data, open, setOpen, setUpdateMap}) => {
             showNotification({
                 title: 'You need to be logged in!',
                 message: 'You need to be logged in to report a region.',
+                color: "red"
+            })
+            return;
+        }
+        if (region.ownerID === user?.data?.id) {
+            showNotification({
+                title: 'Ehhhhh...',
+                message: 'You are not able to report your own region, you dummie.',
                 color: "red"
             })
             return;
@@ -139,6 +155,37 @@ const RegionView = ({data, open, setOpen, setUpdateMap}) => {
         setUpdateMap(true);
     }
 
+    const openAdditionalBuilderModal = () => {
+        if (!keycloak.authenticated) {
+            showNotification({
+                title: 'You need to be logged in!',
+                message: 'You need to be logged in to report a region.',
+                color: "red"
+            })
+            return;
+        }
+        if (region.ownerID !== user?.data?.id) {
+            showNotification({
+                title: 'Ehhhhh...',
+                message: 'You are not the owner of this region.',
+                color: "red"
+            })
+            return;
+        }
+        setOpen(false);
+        modals.openModal({
+            title: 'Add Additional Builder',
+            centered: true,
+            onClose: () => {
+                setOpen(true);
+                getData();
+            },
+            children: (
+                <AdditionalBuildersDialog regionId={region.id} keycloak={keycloak}/>
+            ),
+        });
+    }
+
 
     return (
         <Drawer
@@ -159,14 +206,37 @@ const RegionView = ({data, open, setOpen, setUpdateMap}) => {
                 }}>
                     <Loader mt={"xl"}/>
                 </Box> : <Box>
-                    <Paper shadow="md" p="md" withBorder sx={{display: "flex", alignItems: "center"}} mt={"xl"}
-                           radius={"md"} mb={"md"}>
-                        <Image src={`https://crafatar.com/avatars/${data.userUuid}?size=64`} alt="" radius={"md"}
-                               style={{width: 64}}/>
-                        <Title ml={"md"} order={3}>{data.username}</Title>
-                    </Paper>
+                    {/* TODO: Wait for Mantine 4.3 to release, where Dropboxes are fixed */}
+                    {/*<RegionImageView/>*/}
+
 
                     <Group spacing={"md"} cols={1}>
+                        <StatCard title={"Owner"} value={<Box sx={{display: "flex", alignItems: "center"}}
+                        >
+                            <Image src={`https://crafatar.com/avatars/${data.userUuid}?size=64`} alt="" radius={"md"}
+                                   style={{width: 64}}/>
+                            <Title ml={"md"} order={3}>{data.username}</Title>
+                        </Box>} Icon={BsFillPersonFill} subtitle={""}/>
+                        {
+                            (region?.additionalBuilder?.length > 0 && !(region.ownerID === user?.data?.id)) &&
+                            <StatCard title={"Additional Builders"} noBigValue={true}
+                                      value={<AdditionalBuilders showEditButtons={false}
+                                                                 openAdditionalBuilderModal={openAdditionalBuilderModal}
+                                                                 region={region} update={getData}/>}
+                                      Icon={HiUserGroup}
+                                      subtitle={""}/>
+                        }
+
+                        {
+                            ((region.ownerID === user?.data?.id)) &&
+                            <StatCard title={"Additional Builders"} noBigValue={true}
+                                      value={<AdditionalBuilders showEditButtons={true}
+                                                                 openAdditionalBuilderModal={openAdditionalBuilderModal}
+                                                                 region={region} update={getData}
+                                      />}
+                                      Icon={HiUserGroup}
+                                      subtitle={""}/>
+                        }
                         <StatCard title={"City"} value={region?.city} Icon={FaCity} subtitle={""}/>
                         <StatCard title={"Area"} value={numberWithCommas(region?.area) + " m²"} Icon={BiArea}
                                   subtitle={""}/>
@@ -237,9 +307,10 @@ const RegionView = ({data, open, setOpen, setUpdateMap}) => {
                         </Accordion.Item>
                     </Accordion>
 
-                    {
-                        !user?.data?.blockedFromReports &&
-                        <Box style={{position: "absolute", bottom: 15, right: 15}}>
+
+                    <Box style={{position: "absolute", bottom: 15, right: 15}}>
+                        {
+                            !user?.data?.blockedFromReports &&
                             <Tooltip
                                 label="Report this region"
                                 position="right"
@@ -249,8 +320,20 @@ const RegionView = ({data, open, setOpen, setUpdateMap}) => {
                                     <IoMdFlag/>
                                 </ActionIcon>
                             </Tooltip>
-                        </Box>
-                    }
+                        }
+
+                        <Tooltip
+                            label={clipboard.copied ? "Copied" : "Copy a link to this region"}
+                            position="right"
+                            color={clipboard.copied ? "green" : "gray"}
+                            ml={"sm"}
+                        >
+
+                            <ActionIcon size="md" variant="light" onClick={() => copyLink(region.id)}>
+                                <AiOutlineLink/>
+                            </ActionIcon>
+                        </Tooltip>
+                    </Box>
 
 
                 </Box>
@@ -260,5 +343,70 @@ const RegionView = ({data, open, setOpen, setUpdateMap}) => {
         </Drawer>
     );
 }
+
+const AdditionalBuilders = ({region, showEditButtons, openAdditionalBuilderModal, update}) => {
+    const {keycloak} = useKeycloak();
+    const [load, setLoad] = useState(false);
+    const removeBuilder = (builder) => {
+        setLoad(true);
+        axios.delete(`/api/v1/region/${region.id}/additionalBuilder/${builder}`, {headers: {authorization: "Bearer " + keycloak.token}})
+            .then(() => {
+                showNotification({
+                    title: 'Success',
+                    message: 'Builder added',
+                    color: "green"
+                })
+                update();
+                setLoad(false);
+            })
+            .catch((e) => {
+                showNotification({
+                    title: 'Failed',
+                    message: 'An unexpected error occurred.',
+                    color: "red"
+                })
+                setLoad(false);
+            })
+    }
+
+    return (
+        <div style={{width: "100%"}}>
+            {
+                region.additionalBuilder &&
+                <Box sx={{width: "100%"}}>
+                    {
+                        region.additionalBuilder.map((builder, idx) => {
+                            return (
+                                <Box sx={{display: "flex", justifyContent: "space-between", width: "100%"}}>
+                                    <Box id={idx} sx={{display: "flex", gap: "10px", alignItems: "center"}}>
+                                        <img src={`https://crafatar.com/avatars/${builder.minecraftUUID}?size=20`}
+                                             alt=""
+                                             width={20} height={20}/>
+                                        <Text sx={{fontWeight: "bold"}}>{builder.username}</Text>
+                                    </Box>
+                                    {
+                                        showEditButtons &&
+                                        <ActionIcon onClick={() => removeBuilder(builder.id)} loading={load}>
+                                            <AiOutlineDelete/>
+                                        </ActionIcon>
+                                    }
+
+                                </Box>
+                            )
+                        })
+                    }
+                </Box>
+            }
+
+            {
+                showEditButtons &&
+                <Button color={"blue"} mt={"md"} leftIcon={<MdAdd/>} onClick={openAdditionalBuilderModal}>
+                    Add Additional Builder
+                </Button>
+            }
+        </div>
+    )
+
+};
 
 export default RegionView

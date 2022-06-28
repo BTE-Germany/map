@@ -8,7 +8,7 @@
 
 import React, {useEffect} from 'react';
 import axios from "axios";
-import {useKeycloak} from "@react-keycloak/web";
+import {useKeycloak} from "@react-keycloak-fork/web";
 import {ActionIcon, Badge, Box, Loader, Table, Tooltip} from "@mantine/core";
 import {BsFileEarmarkLock2} from "react-icons/bs";
 import {BiLockOpen} from "react-icons/bi";

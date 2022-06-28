@@ -11,10 +11,11 @@ import Router from './utils/Router';
 import {RequestMethods} from './utils/RequestMethods';
 import {Keycloak} from "keycloak-connect";
 import RegionsController from "../../controllers/RegionsController";
-import {body} from "express-validator";
+import {body, query} from "express-validator";
 import checkNewUser from "./utils/CheckNewUserMiddleware";
 import UserController from "../../controllers/UserController";
 import AdminController from "../../controllers/AdminController";
+import StatsController from "../../controllers/StatsController";
 
 class Routes {
     app;
@@ -38,6 +39,7 @@ class Routes {
         const regionsController: RegionsController = new RegionsController(this.web.getCore());
         const userController: UserController = new UserController(this.web.getCore());
         const adminController: AdminController = new AdminController(this.web.getCore());
+        const statsController: StatsController = new StatsController(this.web.getCore());
 
 
         // TODO: Add to controllers for body checks
@@ -71,6 +73,20 @@ class Routes {
             body('comment').isString(),
             body('comment').isLength({min: 50}))
 
+        router.addRoute(RequestMethods.POST, "/region/:id/additionalBuilder", async (request, response) => {
+                await regionsController.addAdditionalBuilder(request, response);
+            },
+            this.keycloak.protect(),
+            checkNewUser(this.web.getCore().getPrisma(), this.web.getCore()),
+            body('username').isString())
+
+
+        router.addRoute(RequestMethods.DELETE, "/region/:id/additionalBuilder/:builderId", async (request, response) => {
+                await regionsController.removeAdditionalBuilder(request, response);
+            },
+            this.keycloak.protect(),
+            checkNewUser(this.web.getCore().getPrisma(), this.web.getCore()))
+
         router.addRoute(RequestMethods.GET, "/user/@me", async (request, response) => {
             await userController.getCurrentUser(request, response);
         }, this.keycloak.protect(), checkNewUser(this.web.getCore().getPrisma(), this.web.getCore()))
@@ -101,6 +117,15 @@ class Routes {
         router.addRoute(RequestMethods.POST, "/admin/user/@unlock", async (request, response) => {
             await adminController.unlockUser(request, response);
         }, this.keycloak.protect("realm:mapadmin"), checkNewUser(this.web.getCore().getPrisma(), this.web.getCore()), body('userId').isString())
+
+
+        router.addRoute(RequestMethods.GET, "/stats/general", async (request, response) => {
+            await statsController.getGeneralStats(request, response);
+        })
+
+        router.addRoute(RequestMethods.GET, "/stats/leaderboard", async (request, response) => {
+            await statsController.getLeaderboard(request, response);
+        }, query('page').isInt({min: 0}))
 
     }
 }

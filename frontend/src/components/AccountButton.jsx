@@ -11,13 +11,14 @@ import {ActionIcon, Divider, Menu, Tooltip} from "@mantine/core";
 import {AiOutlineUser} from "react-icons/ai";
 import {FiLock, FiGlobe, FiLink2} from "react-icons/fi";
 import {FaDiscord} from "react-icons/fa";
-import {useKeycloak} from "@react-keycloak/web";
+import {useKeycloak} from "@react-keycloak-fork/web";
 import {Link} from "react-router-dom";
 import {IoMdPaper} from "react-icons/io";
 import {MdOutlinePrivacyTip} from "react-icons/md";
 import {useUser} from "../hooks/useUser";
 import {showNotification} from "@mantine/notifications";
 import axios from "axios";
+import {BiDotsVerticalRounded} from "react-icons/all";
 
 const AccountButton = props => {
 
@@ -47,7 +48,8 @@ const AccountButton = props => {
         <div>
 
 
-            <Menu trigger="hover" delay={500} control={<ActionIcon variant="outline"><AiOutlineUser/></ActionIcon>}>
+            <Menu trigger="hover" delay={500}
+                  control={<ActionIcon variant="outline"><BiDotsVerticalRounded/></ActionIcon>}>
                 <Menu.Label>Account</Menu.Label>
                 {
                     keycloak?.authenticated && <Menu.Item icon={<AiOutlineUser size={14}/>}

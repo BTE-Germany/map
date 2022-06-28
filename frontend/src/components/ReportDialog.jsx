@@ -12,7 +12,7 @@ import {Button, Checkbox, Group, NativeSelect, Select, Textarea, TextInput} from
 import {useForm} from "@mantine/form";
 import axios from "axios";
 import {showNotification} from "@mantine/notifications";
-import {useKeycloak} from "@react-keycloak/web";
+import {useKeycloak} from "@react-keycloak-fork/web";
 
 const ReportDialog = ({regionId, keycloak}) => {
 
