@@ -47,7 +47,8 @@ class SocketIOController {
         this.io = new Server(this.httpServer, {
             cors: {
                 origin: "*"
-            }
+            },
+            transports: ['websocket', 'polling']
         });
 
         this.io.use(authMiddleware);
