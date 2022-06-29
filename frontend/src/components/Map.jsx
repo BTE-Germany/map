@@ -45,7 +45,7 @@ const Map = forwardRef(({openDialog, setRegionViewData, updateMap, setUpdateMap}
     let hidePlayers = false;
 
     useEffect(() => {
-        const socket = socketIOClient(window.location.hostname);
+        const socket = socketIOClient(import.meta.env.VITE_WS_HOST);
 
         socket.on("connect", data => {
             setSocketConnected(true);
