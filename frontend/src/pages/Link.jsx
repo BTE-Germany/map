@@ -92,7 +92,8 @@ const Link = props => {
                             on "Direct connect" and enter <Code>bte-germany.de</Code> in the IP field.
                         </Stepper.Step>
                         <Stepper.Step label="Second step" description="Get your link code" py={"md"}>
-                            Now press <Kbd>T</Kbd> to open your chat. Here, enter <Code>/link</Code> and press enter.
+                            Now press <Kbd>T</Kbd> to open your chat. Here, enter <Code>/map link</Code> and press
+                            enter.
                             You
                             should now see a 6-digit code.
                         </Stepper.Step>

@@ -42,12 +42,6 @@ class Routes {
         const statsController: StatsController = new StatsController(this.web.getCore());
 
 
-        // TODO: Add to controllers for body checks
-        //  const errors = validationResult(req);
-        //    if (!errors.isEmpty()) {
-        //       return res.status(400).json({errors: errors.array()});
-        //    }
-
         router.addRoute(RequestMethods.GET, "/region/all", async (request, response) => {
             await regionsController.getAllRegions(request, response);
         })
@@ -70,8 +64,7 @@ class Routes {
             this.keycloak.protect(),
             checkNewUser(this.web.getCore().getPrisma(), this.web.getCore()),
             body('reason').isString(),
-            body('comment').isString(),
-            body('comment').isLength({min: 50}))
+            body('comment').isString().isLength({min: 50}))
 
         router.addRoute(RequestMethods.POST, "/region/:id/additionalBuilder", async (request, response) => {
                 await regionsController.addAdditionalBuilder(request, response);

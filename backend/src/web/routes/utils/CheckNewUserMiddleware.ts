@@ -17,14 +17,14 @@ const checkNewUser = (prisma: PrismaClient, core: Core) => {
                 ssoId: req.kauth.grant.access_token.content.sub
             }
         })
-        if(user) {
+        if (user) {
             const kcuser = await core.getKeycloakAdmin().getKeycloakAdminClient().users.findOne({
                 id: req.kauth.grant.access_token.content.sub
             })
-            if(kcuser.federatedIdentities?.length > 0) {
+            if (kcuser.federatedIdentities?.length > 0) {
                 const discordIdentity = kcuser.federatedIdentities.find((fi) => fi.identityProvider === "discord")
-                if(discordIdentity) {
-                    if(user.discordId !== discordIdentity.userId) {
+                if (discordIdentity) {
+                    if (user.discordId !== discordIdentity.userId) {
                         const user = await prisma.user.update({
                             where: {
                                 ssoId: req.kauth.grant.access_token.content.sub
@@ -78,6 +78,7 @@ const checkNewUser = (prisma: PrismaClient, core: Core) => {
             }
 
         }
+
         next()
     }
 

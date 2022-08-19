@@ -15,8 +15,8 @@ model Region {
   username          String
   description       String
   userUUID          String
-  ownerID           String
-  owner             User                @relation(fields: [ownerID], references: [id])
+  ownerID           String?
+  owner             User?                @relation(fields: [ownerID], references: [id])
   data              String              @db.Text
   city              String
   area              Int

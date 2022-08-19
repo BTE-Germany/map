@@ -59,6 +59,32 @@ class UserController {
                     id: code.id
                 }
             })
+
+            let regions = await this.core.getPrisma().region.findMany({
+                where: {
+                    userUUID: code.playerUUID
+                }
+            })
+            this.core.getLogger().debug(regions)
+
+            if (regions.length > 0) {
+                regions.forEach((region) => {
+                    this.core.getPrisma().region.update({
+                        where: {
+                            id: region.id
+                        },
+                        data: {
+                            owner: {
+                                connect: {
+                                    ssoId: req.kauth.grant.access_token.content.sub
+                                }
+                            }
+                        }
+                    }).then((x) => this.core.getLogger().debug(x))
+                })
+            }
+
+
             res.send({success: true, username});
         } else {
             res.status(404).send("code not found");

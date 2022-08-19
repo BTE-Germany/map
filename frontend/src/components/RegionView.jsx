@@ -353,7 +353,7 @@ const AdditionalBuilders = ({region, showEditButtons, openAdditionalBuilderModal
             .then(() => {
                 showNotification({
                     title: 'Success',
-                    message: 'Builder added',
+                    message: 'Builder removed',
                     color: "green"
                 })
                 update();
