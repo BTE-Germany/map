@@ -44,17 +44,18 @@ export default class StatsController {
         let count = groupUsers.length;
 
         const groupUsersPage = await this.core.getPrisma().region.groupBy({
-            by: ['username'],
+            by: ['userUUID', 'username'],
             _sum: {
                 area: true,
             },
-            skip: parseInt(<string>request.query.page) * 10,
-            take: 10,
             orderBy: {
-                _count: {
-                    area: 'asc',
+                _sum: {
+                    area: 'desc',
                 },
             },
+            skip: parseInt(<string>request.query.page) * 10,
+            take: 10,
+
         })
 
 

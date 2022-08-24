@@ -103,9 +103,17 @@ const Stats = props => {
                                     leaderboard.map((player, idx) => {
                                         return (
                                             <tr key={idx}>
-                                                <td style={{display: "flex", alignItems: "center", gap: "5px"}}><img
-                                                    src={`https://minotar.net/avatar/${player.username}/20`}
-                                                    alt=""/> {player.username}</td>
+                                                {
+                                                    player.username === "BTE Germany Event" ?
+                                                        <td style={{display: "flex", alignItems: "center", gap: "5px"}}>
+                                                            <img
+                                                                src={`https://bte-germany.de/logo.gif`}
+                                                                alt="" width={20}/> {player.username}</td> :
+                                                        <td style={{display: "flex", alignItems: "center", gap: "5px"}}>
+                                                            <img
+                                                                src={`https://minotar.net/avatar/${player.username}/20`}
+                                                                alt=""/> {player.username}</td>
+                                                }
                                                 <td>{player.area} m²</td>
                                             </tr>
                                         )
