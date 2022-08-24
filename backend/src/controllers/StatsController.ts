@@ -52,7 +52,7 @@ export default class StatsController {
             take: 10,
             orderBy: {
                 _count: {
-                    area: 'desc',
+                    area: 'asc',
                 },
             },
         })

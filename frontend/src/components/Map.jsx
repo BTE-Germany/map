@@ -244,8 +244,17 @@ const Map = forwardRef(({openDialog, setRegionViewData, updateMap, setUpdateMap}
             'type': 'fill',
             'source': 'regions',
             'paint': {
-                'fill-color': 'rgba(3,80,203,0.37)',
-                'fill-outline-color': 'rgba(1,50,127,0.92)'
+                'fill-color': [
+                    'match',
+                    ['get', 'regionType'],
+                    'normal',
+                    'rgba(3,80,203,0.37)',
+                    'event',
+                    'rgba(225,4,4,0.37)',
+                    'plot',
+                    'rgba(30,203,3,0.37)',
+                    /* other */ 'rgba(3,80,203,0.37)'
+                ],
             }
         });
 
@@ -255,9 +264,21 @@ const Map = forwardRef(({openDialog, setRegionViewData, updateMap, setUpdateMap}
             'source': "regions",
             'layout': {},
             'paint': {
-                'line-color': 'rgb(0,90,229)',
+                'line-color': [
+                    'match',
+                    ['get', 'regionType'],
+                    'normal',
+                    'rgb(0,90,229)',
+                    'event',
+                    'rgb(149,5,5)',
+                    'plot',
+                    'rgb(25,118,2)',
+                    /* other */ 'rgb(0,90,229)'
+                ],
                 'line-width': 3
             }
+
+
         });
 
         map.on('click', 'regions-layer', (e) => {

@@ -8,7 +8,7 @@
 
 import React, {useEffect, useState} from 'react';
 import {
-    Accordion, ActionIcon,
+    Accordion, ActionIcon, Alert,
     Box,
     Button,
     Code,
@@ -42,6 +42,7 @@ import RegionImageView from "./RegionImageView";
 import {BsFillPersonFill} from "react-icons/bs";
 import {HiUserGroup} from "react-icons/hi";
 import AdditionalBuildersDialog from "./AdditionalBuildersDialog";
+import {GiPartyPopper, TbFence} from "react-icons/all";
 
 const RegionView = ({data, open, setOpen, setUpdateMap}) => {
 
@@ -211,12 +212,34 @@ const RegionView = ({data, open, setOpen, setUpdateMap}) => {
 
 
                     <Group spacing={"md"} cols={1}>
-                        <StatCard title={"Owner"} value={<Box sx={{display: "flex", alignItems: "center"}}
-                        >
-                            <Image src={`https://crafatar.com/avatars/${data.userUuid}?size=64`} alt="" radius={"md"}
-                                   style={{width: 64}}/>
-                            <Title ml={"md"} order={3}>{data.username}</Title>
-                        </Box>} Icon={BsFillPersonFill} subtitle={""}/>
+                        {
+                            (!region.isEventRegion && !region.isPlotRegion) &&
+                            <StatCard title={"Owner"} value={<Box sx={{display: "flex", alignItems: "center"}}
+                            >
+                                <Image src={`https://crafatar.com/avatars/${data.userUuid}?size=64`} alt=""
+                                       radius={"md"}
+                                       style={{width: 64}}/>
+                                <Title ml={"md"} order={3}>{data.username}</Title>
+                            </Box>} Icon={BsFillPersonFill} subtitle={""}/>
+                        }
+
+                        {
+                            region.isEventRegion &&
+                            <Alert icon={<GiPartyPopper size={16}/>} sx={{width: "100%"}} title="Event Region"
+                                   color="green">
+                                This is an Event Region, which was built as part of a BTE Germany Event. Therefore, it
+                                has no owner.
+                            </Alert>
+                        }
+
+                        {
+                            region.isPlotRegion &&
+                            <Alert icon={<TbFence size={16}/>} sx={{width: "100%"}} title="Plot Region"
+                                   color="blue">
+                                This is an plot region. Therefore, it has no owner.
+                            </Alert>
+                        }
+
                         {
                             (region?.additionalBuilder?.length > 0 && !(region.ownerID === user?.data?.id)) &&
                             <StatCard title={"Additional Builders"} noBigValue={true}
@@ -310,7 +333,7 @@ const RegionView = ({data, open, setOpen, setUpdateMap}) => {
 
                     <Box style={{position: "absolute", bottom: 15, right: 15}}>
                         {
-                            !user?.data?.blockedFromReports &&
+                            (!user?.data?.blockedFromReports && !region.isPlotRegion && !region.isEventRegion) &&
                             <Tooltip
                                 label="Report this region"
                                 position="right"

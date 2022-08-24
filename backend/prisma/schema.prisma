@@ -23,6 +23,8 @@ model Region {
   createdAt         DateTime            @default(now())
   images            Image[]
   additionalBuilder AdditionalBuilder[]
+  isEventRegion     Boolean             @default(false)
+  isPlotRegion      Boolean             @default(false)
 }
 
 model User {

@@ -46,12 +46,20 @@ class RegionsController {
                 coords.push([d[1], d[0]]);
             });
             coords.push([JSON.parse(r.data)[0][1], JSON.parse(r.data)[0][0]]);
+            let regionType = "normal";
+            if (r.isEventRegion) {
+                regionType = "event";
+            }
+            if (r.isPlotRegion) {
+                regionType = "plot";
+            }
             geoJsonFeatures.push({
                 "type": "Feature",
                 "properties": {
                     id: r.id,
                     username: r.username,
-                    userUuid: r.userUUID
+                    userUuid: r.userUUID,
+                    regionType: regionType
                 },
                 "geometry": {
                     "type": "Polygon",
