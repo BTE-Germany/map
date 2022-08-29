@@ -57,3 +57,12 @@ model AdditionalBuilder {
   region        Region @relation(fields: [regionId], references: [id])
   regionId      String
 }
+
+model InteractiveBuilding {
+    id            String @id @default(uuid())
+    name            String
+    fileURL     String
+    origin      String
+    altitude    Int
+    rotate      String
+}

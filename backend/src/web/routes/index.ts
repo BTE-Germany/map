@@ -16,6 +16,7 @@ import checkNewUser from "./utils/CheckNewUserMiddleware";
 import UserController from "../../controllers/UserController";
 import AdminController from "../../controllers/AdminController";
 import StatsController from "../../controllers/StatsController";
+import InteractiveBuildingsController from "../../controllers/InteractiveBuildingsController";
 
 class Routes {
     app;
@@ -40,6 +41,7 @@ class Routes {
         const userController: UserController = new UserController(this.web.getCore());
         const adminController: AdminController = new AdminController(this.web.getCore());
         const statsController: StatsController = new StatsController(this.web.getCore());
+        const interactiveBuildingsController: InteractiveBuildingsController = new InteractiveBuildingsController(this.web.getCore());
 
 
         router.addRoute(RequestMethods.GET, "/region/all", async (request, response) => {
@@ -119,6 +121,12 @@ class Routes {
         router.addRoute(RequestMethods.GET, "/stats/leaderboard", async (request, response) => {
             await statsController.getLeaderboard(request, response);
         }, query('page').isInt({min: 0}))
+
+
+        router.addRoute(RequestMethods.GET, "/interactiveBuildings/all", async (request, response) => {
+            await interactiveBuildingsController.getAllBuildings(request, response);
+        })
+
 
     }
 }

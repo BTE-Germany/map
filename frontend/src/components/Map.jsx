@@ -26,6 +26,10 @@ import socketIOClient from "socket.io-client";
 
 import {TbPlugConnectedX} from "react-icons/tb";
 
+import * as THREE from 'three';
+import {GLTFLoader} from "three/examples/jsm/loaders/GLTFLoader";
+import generate3DLayer from "../utils/generate3DLayer";
+
 
 const Map = forwardRef(({openDialog, setRegionViewData, updateMap, setUpdateMap}, ref) => {
     mapboxgl.accessToken = 'pk.eyJ1IjoibmFjaHdhaGwiLCJhIjoiY2tta3ZkdXJ2MDAwbzJ1cXN3ejM5N3NkcyJ9.t2yFHFQzb2PAHvPHF16sFw';
@@ -174,6 +178,19 @@ const Map = forwardRef(({openDialog, setRegionViewData, updateMap, setUpdateMap}
         mapInstance.addControl(new HidePlayerControl());
         setMap(mapInstance)
 
+        let buildings = [];
+
+        axios.get("/api/v1/interactiveBuildings/all").then(({data}) => {
+
+            data.forEach((building) => {
+                let b = generate3DLayer(building.id, JSON.parse(building.origin), building.altitude, JSON.parse(building.rotate), building.fileURL, mapInstance)
+                mapInstance.addLayer(b, 'waterway-label');
+            })
+            
+
+        })
+
+
         const popup = new mapboxgl.Popup({
             closeButton: false,
             closeOnClick: false
@@ -198,7 +215,6 @@ const Map = forwardRef(({openDialog, setRegionViewData, updateMap, setUpdateMap}
         if (map) {
             map.on('load', () => {
                 addLayer().then(() => testQuery());
-
             })
         }
     }, [map])
