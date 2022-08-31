@@ -178,17 +178,20 @@ const Map = forwardRef(({openDialog, setRegionViewData, updateMap, setUpdateMap}
         mapInstance.addControl(new HidePlayerControl());
         setMap(mapInstance)
 
-        let buildings = [];
 
-        axios.get("/api/v1/interactiveBuildings/all").then(({data}) => {
+        mapInstance.on('style.load', () => {
+            let buildings = [];
 
-            data.forEach((building) => {
-                let b = generate3DLayer(building.id, JSON.parse(building.origin), building.altitude, JSON.parse(building.rotate), building.fileURL, mapInstance)
-                mapInstance.addLayer(b, 'waterway-label');
+            axios.get("/api/v1/interactiveBuildings/all").then(({data}) => {
+
+                data.forEach((building) => {
+                    let b = generate3DLayer(building.id, JSON.parse(building.origin), building.altitude, JSON.parse(building.rotate), building.fileURL, mapInstance)
+                    mapInstance.addLayer(b, 'waterway-label');
+                })
+
+
             })
-            
-
-        })
+        });
 
 
         const popup = new mapboxgl.Popup({

@@ -11,6 +11,11 @@ import * as THREE from "three";
 import {GLTFLoader} from "three/examples/jsm/loaders/GLTFLoader";
 import {DRACOLoader} from "three/examples/jsm/loaders/DRACOLoader";
 
+const loader = new GLTFLoader();
+
+const dracoLoader = new DRACOLoader();
+dracoLoader.setDecoderPath('https://www.gstatic.com/draco/versioned/decoders/1.5.3/');
+
 const generate3DLayer = (id, origin, altitude, rotate, modelURL, mapInstance) => {
     const modelOrigin = origin;
     const modelAltitude = altitude;
@@ -40,6 +45,7 @@ const generate3DLayer = (id, origin, altitude, rotate, modelURL, mapInstance) =>
         id: id,
         type: 'custom',
         renderingMode: '3d',
+        maxZoom: 13,
         onAdd: function (map, gl) {
             this.camera = new THREE.Camera();
             this.scene = new THREE.Scene();
@@ -48,10 +54,6 @@ const generate3DLayer = (id, origin, altitude, rotate, modelURL, mapInstance) =>
             this.scene.add(light);
 
 
-            const loader = new GLTFLoader();
-
-            const dracoLoader = new DRACOLoader();
-            dracoLoader.setDecoderPath('https://www.gstatic.com/draco/versioned/decoders/1.5.3/');
             loader.setDRACOLoader(dracoLoader);
             loader.load(
                 modelURL,
@@ -79,6 +81,7 @@ const generate3DLayer = (id, origin, altitude, rotate, modelURL, mapInstance) =>
             this.renderer.autoClear = false;
         },
         render: function (gl, matrix) {
+            if (mapInstance.getZoom() < 15) return;
             const rotationX = new THREE.Matrix4().makeRotationAxis(
                 new THREE.Vector3(1, 0, 0),
                 modelTransform.rotateX
