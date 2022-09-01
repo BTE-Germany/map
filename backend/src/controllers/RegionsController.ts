@@ -143,7 +143,8 @@ class RegionsController {
             if (mcApiData.code === "player.found") {
                 let additionalBuilder = await this.core.getPrisma().additionalBuilder.findFirst({
                     where: {
-                        minecraftUUID: mcApiData.data.player.id
+                        minecraftUUID: mcApiData.data.player.id,
+                        regionId: region.id
                     }
                 })
 
