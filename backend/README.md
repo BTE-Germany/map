@@ -5,7 +5,7 @@
 # Start Developing
 #### If you are using JetBrains WebStorm, look below under `Start Developing in WebStorm`
 
-1. Clone this Repository (`git clone https://github.com/BuildTheEarth/website-node-backend.git`)
+1. Clone this Repository (`git clone https://github.com/BTE-Germany/map.git`)
 2. Compile the TS files to JS (`tsc` if not installed, run `npm install -g typescript`)
 3. Start the server with `npm start`
 4. 🎉 Start Coding
@@ -14,7 +14,7 @@
 
 
 # Start Developing in WebStorm
-1. Clone this Repository (`git clone https://github.com/BuildTheEarth/website-node-backend.git`)
+1. Clone this Repository (`git clone https://github.com/BTE-Germany/map.git`)
 2. Open your WebStorm settings (CTRL+ALT+S)
 3. Enable the following checkbox ![](https://i.arvserver.xyz/webstorm64_S0SyJU6BhQ.png)
 4. Start the server with `npm start`
