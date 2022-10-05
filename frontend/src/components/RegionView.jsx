@@ -6,7 +6,7 @@
  + This project is released under the MIT license.                            +
  +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++*/
 
-import React, {useEffect, useState} from 'react';
+import React, { useEffect, useState } from 'react';
 import {
     Accordion, ActionIcon, Alert,
     Box,
@@ -23,38 +23,41 @@ import {
     Tooltip
 } from "@mantine/core";
 import axios from "axios";
-import {useClipboard} from "@mantine/hooks";
-import {centerOfMass, polygon} from "@turf/turf";
+import { useClipboard } from "@mantine/hooks";
+import { centerOfMass, polygon } from "@turf/turf";
 import StatCard from "./StatCard";
-import {FaCity} from "react-icons/fa";
-import {BiArea} from "react-icons/bi";
-import {AiFillDelete, AiOutlineDelete, AiOutlineLink} from "react-icons/ai";
-import {MdAdd, MdOutlineShareLocation} from "react-icons/md";
-import {useModals} from "@mantine/modals";
-import {showNotification} from "@mantine/notifications";
-import {useKeycloak} from "@react-keycloak-fork/web";
-import {FiLock} from "react-icons/fi";
-import {useUser} from "../hooks/useUser";
-import {IoMdFlag} from "react-icons/io";
+import NewStatCard from "./StatCard";
+import { FaCity } from "react-icons/fa";
+import { BiArea } from "react-icons/bi";
+import { AiFillDelete, AiOutlineDelete, AiOutlineLink } from "react-icons/ai";
+import { MdAdd, MdOutlineShareLocation } from "react-icons/md";
+import { useModals } from "@mantine/modals";
+import { showNotification } from "@mantine/notifications";
+import { useKeycloak } from "@react-keycloak-fork/web";
+import { FiLock } from "react-icons/fi";
+import { useUser } from "../hooks/useUser";
+import { IoMdFlag } from "react-icons/io";
 import ReportDialog from "./ReportDialog";
-import {Link} from "react-router-dom";
+import { Link } from "react-router-dom";
 import RegionImageView from "./RegionImageView";
-import {BsFillPersonFill} from "react-icons/bs";
-import {HiUserGroup} from "react-icons/hi";
+import { BsFillPersonFill } from "react-icons/bs";
+import { HiUserGroup } from "react-icons/hi";
 import AdditionalBuildersDialog from "./AdditionalBuildersDialog";
-import {GiPartyPopper, TbFence} from "react-icons/all";
+import { GiPartyPopper, TbFence } from "react-icons/all";
 
-const RegionView = ({data, open, setOpen, setUpdateMap}) => {
+const RegionView = ({ data, open, setOpen, setUpdateMap }) => {
 
     if (!data) return null;
 
     const modals = useModals();
     const [loading, setLoading] = useState(true);
-    const clipboard = useClipboard({timeout: 800});
+    const clipboard = useClipboard({ timeout: 800 });
     const [center, setCenter] = useState([0, 0]);
     const [region, setRegion] = useState(null);
+    const [editing, setEditing] = useState(false);
 
-    const {keycloak} = useKeycloak()
+    const { keycloak } = useKeycloak()
+    const isAdmin = keycloak?.tokenParsed?.realm_access.roles.includes("mapadmin");
 
     const user = useUser();
 
@@ -101,8 +104,8 @@ const RegionView = ({data, open, setOpen, setUpdateMap}) => {
                     Are you sure you want to delete this region? <b>This process is irreversible.</b>
                 </Text>
             ),
-            labels: {confirm: 'Delete region', cancel: "No don't delete it"},
-            confirmProps: {color: 'red'},
+            labels: { confirm: 'Delete region', cancel: "No don't delete it" },
+            confirmProps: { color: 'red' },
             onCancel: () => setOpen(true),
             onConfirm: () => {
                 deleteRegion(region.id);
@@ -132,13 +135,13 @@ const RegionView = ({data, open, setOpen, setUpdateMap}) => {
             title: 'Report this region',
             centered: true,
             children: (
-                <ReportDialog regionId={region.id} keycloak={keycloak}/>
+                <ReportDialog regionId={region.id} keycloak={keycloak} />
             ),
         });
     }
 
     const teleportToRegion = async () => {
-        await axios.post(`/api/v1/user/teleport`, {coords: center}, {headers: {authorization: "Bearer " + keycloak.token}})
+        await axios.post(`/api/v1/user/teleport`, { coords: center }, { headers: { authorization: "Bearer " + keycloak.token } })
         showNotification({
             title: 'Teleport to region',
             message: 'You will be teleported shortly.',
@@ -147,7 +150,7 @@ const RegionView = ({data, open, setOpen, setUpdateMap}) => {
     }
 
     const deleteRegion = async (id) => {
-        await axios.delete(`/api/v1/region/${id}`, {headers: {authorization: "Bearer " + keycloak.token}});
+        await axios.delete(`/api/v1/region/${id}`, { headers: { authorization: "Bearer " + keycloak.token } });
         showNotification({
             title: 'Region deleted!',
             message: 'This region has been deleted.',
@@ -182,7 +185,7 @@ const RegionView = ({data, open, setOpen, setUpdateMap}) => {
                 getData();
             },
             children: (
-                <AdditionalBuildersDialog regionId={region.id} keycloak={keycloak}/>
+                <AdditionalBuildersDialog regionId={region.id} keycloak={keycloak} />
             ),
         });
     }
@@ -205,7 +208,7 @@ const RegionView = ({data, open, setOpen, setUpdateMap}) => {
                     justifyContent: "center",
                     alignItems: "center"
                 }}>
-                    <Loader mt={"xl"}/>
+                    <Loader mt={"xl"} />
                 </Box> : <Box>
                     {/* TODO: Wait for Mantine 4.3 to release, where Dropboxes are fixed */}
                     {/*<RegionImageView/>*/}
@@ -214,19 +217,19 @@ const RegionView = ({data, open, setOpen, setUpdateMap}) => {
                     <Group spacing={"md"} cols={1}>
                         {
                             (!region.isEventRegion && !region.isPlotRegion) &&
-                            <StatCard title={"Owner"} value={<Box sx={{display: "flex", alignItems: "center"}}
+                            <StatCard title={"Owner"} value={<Box sx={{ display: "flex", alignItems: "center" }}
                             >
-                                <Image src={`https://crafatar.com/avatars/${data.userUuid}?size=64`} alt=""
-                                       radius={"md"}
-                                       style={{width: 64}}/>
+                                <Image src={`https://crafatar.com/avatars/${data.userUUID}?size=64`} alt=""
+                                    radius={"md"}
+                                    style={{ width: 64 }} />
                                 <Title ml={"md"} order={3}>{data.username}</Title>
-                            </Box>} Icon={BsFillPersonFill} subtitle={""}/>
+                            </Box>} Icon={BsFillPersonFill} subtitle={""} />
                         }
 
                         {
                             region.isEventRegion &&
-                            <Alert icon={<GiPartyPopper size={16}/>} sx={{width: "100%"}} title="Event Region"
-                                   color="green">
+                            <Alert icon={<GiPartyPopper size={16} />} sx={{ width: "100%" }} title="Event Region"
+                                color="green">
                                 This is an Event Region, which was built as part of a BTE Germany Event. Therefore, it
                                 has no owner.
                             </Alert>
@@ -234,8 +237,8 @@ const RegionView = ({data, open, setOpen, setUpdateMap}) => {
 
                         {
                             region.isPlotRegion &&
-                            <Alert icon={<TbFence size={16}/>} sx={{width: "100%"}} title="Plot Region"
-                                   color="blue">
+                            <Alert icon={<TbFence size={16} />} sx={{ width: "100%" }} title="Plot Region"
+                                color="blue">
                                 This is an plot region. Therefore, it has no owner.
                             </Alert>
                         }
@@ -243,26 +246,26 @@ const RegionView = ({data, open, setOpen, setUpdateMap}) => {
                         {
                             (region?.additionalBuilder?.length > 0 && !(region.ownerID === user?.data?.id)) &&
                             <StatCard title={"Additional Builders"} noBigValue={true}
-                                      value={<AdditionalBuilders showEditButtons={false}
-                                                                 openAdditionalBuilderModal={openAdditionalBuilderModal}
-                                                                 region={region} update={getData}/>}
-                                      Icon={HiUserGroup}
-                                      subtitle={""}/>
+                                value={<AdditionalBuilders showEditButtons={false}
+                                    openAdditionalBuilderModal={openAdditionalBuilderModal}
+                                    region={region} update={getData} />}
+                                Icon={HiUserGroup}
+                                subtitle={""} />
                         }
 
                         {
                             ((region.ownerID === user?.data?.id)) &&
                             <StatCard title={"Additional Builders"} noBigValue={true}
-                                      value={<AdditionalBuilders showEditButtons={true}
-                                                                 openAdditionalBuilderModal={openAdditionalBuilderModal}
-                                                                 region={region} update={getData}
-                                      />}
-                                      Icon={HiUserGroup}
-                                      subtitle={""}/>
+                                value={<AdditionalBuilders showEditButtons={true}
+                                    openAdditionalBuilderModal={openAdditionalBuilderModal}
+                                    region={region} update={getData}
+                                />}
+                                Icon={HiUserGroup}
+                                subtitle={""} />
                         }
                         <StatCard title={"City"} value={region?.city} Icon={FaCity} subtitle={""}/>
                         <StatCard title={"Area"} value={numberWithCommas(region?.area) + " m²"} Icon={BiArea}
-                                  subtitle={""}/>
+                            subtitle={""} />
                     </Group>
 
 
@@ -275,18 +278,18 @@ const RegionView = ({data, open, setOpen, setUpdateMap}) => {
                             }
                             {
                                 user?.data?.minecraftUUID &&
-                                <Button color={"blue"} leftIcon={<MdOutlineShareLocation/>} onClick={teleportToRegion}>Teleport
+                                <Button color={"blue"} leftIcon={<MdOutlineShareLocation />} onClick={teleportToRegion}>Teleport
                                     here</Button>
                             }
 
                             {
                                 !user?.data?.minecraftUUID &&
-                                <Button color={"blue"} leftIcon={<MdOutlineShareLocation/>} component={Link}
-                                        to={"/link"}>Teleport
+                                <Button color={"blue"} leftIcon={<MdOutlineShareLocation />} component={Link}
+                                    to={"/link"}>Teleport
                                     here</Button>
                             }
-                        </Group> : <Button leftIcon={<FiLock size={14}/>} fullWidth mt={"md"}
-                                           onClick={() => keycloak.login({redirectUri: window.location.origin + "?region=" + region.id + "&details=true"})}>Login
+                        </Group> : <Button leftIcon={<FiLock size={14} />} fullWidth mt={"md"}
+                            onClick={() => keycloak.login({ redirectUri: window.location.origin + "?region=" + region.id + "&details=true" })}>Login
                             to get more features</Button>
                     }
 
@@ -295,43 +298,44 @@ const RegionView = ({data, open, setOpen, setUpdateMap}) => {
                         <Accordion.Item label="More information">
                             <Table>
                                 <tbody>
-                                <tr>
-                                    <td>ID</td>
-                                    <td>
-                                        <Tooltip
-                                            label={clipboard.copied ? "Copied" : "Click to copy"}
-                                            position="right"
-                                            color={clipboard.copied ? "green" : "gray"}
-                                            transition="scale"
-                                        >
-                                            <Code onClick={() => copyId(data.id)} sx={{
-                                                cursor: "pointer"
-                                            }}>{data.id}</Code>
-                                        </Tooltip>
-                                    </td>
-                                </tr>
-                                <tr>
-                                    <td>Center coordinates</td>
-                                    <td>
-                                        <Tooltip
-                                            label={clipboard.copied ? "Copied" : "Click to copy"}
-                                            position="right"
-                                            color={clipboard.copied ? "green" : "gray"}
-                                            transition="scale"
-                                        >
-                                            <Code onClick={() => copyCoords(center)} sx={{
-                                                cursor: "pointer"
-                                            }}>{center[0]}, {center[1]}</Code>
-                                        </Tooltip>
-                                    </td>
-                                </tr>
+                                    <tr>
+                                        <td>ID</td>
+                                        <td>
+                                            <Tooltip
+                                                label={clipboard.copied ? "Copied" : "Click to copy"}
+                                                position="right"
+                                                color={clipboard.copied ? "green" : "gray"}
+                                                transition="scale"
+                                            >
+                                                <Code onClick={() => copyId(data.id)} sx={{
+                                                    cursor: "pointer"
+                                                }}>{data.id}</Code>
+                                            </Tooltip>
+                                        </td>
+                                    </tr>
+                                    <tr>
+                                        <td>Center coordinates</td>
+                                        <td>
+                                            <Tooltip
+                                                label={clipboard.copied ? "Copied" : "Click to copy"}
+                                                position="right"
+                                                color={clipboard.copied ? "green" : "gray"}
+                                                transition="scale"
+                                            >
+                                                <Code onClick={() => copyCoords(center)} sx={{
+                                                    cursor: "pointer"
+                                                }}>{center[0]}, {center[1]}</Code>
+                                            </Tooltip>
+                                        </td>
+                                    </tr>
                                 </tbody>
                             </Table>
                         </Accordion.Item>
                     </Accordion>
 
 
-                    <Box style={{position: "absolute", bottom: 15, right: 15}}>
+
+                    <Box style={{ position: "absolute", bottom: 15, right: 15 }}>
                         {
                             (!user?.data?.blockedFromReports && !region.isPlotRegion && !region.isEventRegion) &&
                             <Tooltip
@@ -340,7 +344,7 @@ const RegionView = ({data, open, setOpen, setUpdateMap}) => {
                             >
 
                                 <ActionIcon size="md" variant="light" onClick={openReportModal}>
-                                    <IoMdFlag/>
+                                    <IoMdFlag />
                                 </ActionIcon>
                             </Tooltip>
                         }
@@ -353,7 +357,7 @@ const RegionView = ({data, open, setOpen, setUpdateMap}) => {
                         >
 
                             <ActionIcon size="md" variant="light" onClick={() => copyLink(region.id)}>
-                                <AiOutlineLink/>
+                                <AiOutlineLink />
                             </ActionIcon>
                         </Tooltip>
                     </Box>
@@ -367,12 +371,12 @@ const RegionView = ({data, open, setOpen, setUpdateMap}) => {
     );
 }
 
-const AdditionalBuilders = ({region, showEditButtons, openAdditionalBuilderModal, update}) => {
-    const {keycloak} = useKeycloak();
+const AdditionalBuilders = ({ region, showEditButtons, openAdditionalBuilderModal, update }) => {
+    const { keycloak } = useKeycloak();
     const [load, setLoad] = useState(false);
     const removeBuilder = (builder) => {
         setLoad(true);
-        axios.delete(`/api/v1/region/${region.id}/additionalBuilder/${builder}`, {headers: {authorization: "Bearer " + keycloak.token}})
+        axios.delete(`/api/v1/region/${region.id}/additionalBuilder/${builder}`, { headers: { authorization: "Bearer " + keycloak.token } })
             .then(() => {
                 showNotification({
                     title: 'Success',
@@ -393,24 +397,24 @@ const AdditionalBuilders = ({region, showEditButtons, openAdditionalBuilderModal
     }
 
     return (
-        <div style={{width: "100%"}}>
+        <div style={{ width: "100%" }}>
             {
                 region.additionalBuilder &&
-                <Box sx={{width: "100%"}}>
+                <Box sx={{ width: "100%" }}>
                     {
                         region.additionalBuilder.map((builder, idx) => {
                             return (
-                                <Box sx={{display: "flex", justifyContent: "space-between", width: "100%"}}>
-                                    <Box id={idx} sx={{display: "flex", gap: "10px", alignItems: "center"}}>
+                                <Box sx={{ display: "flex", justifyContent: "space-between", width: "100%" }}>
+                                    <Box id={idx} sx={{ display: "flex", gap: "10px", alignItems: "center" }}>
                                         <img src={`https://crafatar.com/avatars/${builder.minecraftUUID}?size=20`}
-                                             alt=""
-                                             width={20} height={20}/>
-                                        <Text sx={{fontWeight: "bold"}}>{builder.username}</Text>
+                                            alt=""
+                                            width={20} height={20} />
+                                        <Text sx={{ fontWeight: "bold" }}>{builder.username}</Text>
                                     </Box>
                                     {
                                         showEditButtons &&
                                         <ActionIcon onClick={() => removeBuilder(builder.id)} loading={load}>
-                                            <AiOutlineDelete/>
+                                            <AiOutlineDelete />
                                         </ActionIcon>
                                     }
 
@@ -423,7 +427,7 @@ const AdditionalBuilders = ({region, showEditButtons, openAdditionalBuilderModal
 
             {
                 showEditButtons &&
-                <Button color={"blue"} mt={"md"} leftIcon={<MdAdd/>} onClick={openAdditionalBuilderModal}>
+                <Button color={"blue"} mt={"md"} leftIcon={<MdAdd />} onClick={openAdditionalBuilderModal}>
                     Add Additional Builder
                 </Button>
             }

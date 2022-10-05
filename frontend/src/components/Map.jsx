@@ -6,32 +6,32 @@
  + This project is released under the MIT license.                            +
  +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++*/
 
-import React, {forwardRef, useEffect, useImperativeHandle, useRef, useState} from 'react';
+import React, { forwardRef, useEffect, useImperativeHandle, useRef, useState } from 'react';
 import axios from "axios";
 import mapboxgl from "mapbox-gl";
 import "mapbox-gl/dist/mapbox-gl.css";
-import {Box, Button, Loader, LoadingOverlay} from "@mantine/core";
-import {useClipboard} from "@mantine/hooks";
-import {showNotification} from "@mantine/notifications";
-import {BsCheck2} from "react-icons/bs";
+import { Box, Button, Loader, LoadingOverlay } from "@mantine/core";
+import { useClipboard } from "@mantine/hooks";
+import { showNotification } from "@mantine/notifications";
+import { BsCheck2 } from "react-icons/bs";
 import "mapbox-gl-style-switcher/styles.css";
-import {MapboxStyleSwitcherControl} from "mapbox-gl-style-switcher";
+import { MapboxStyleSwitcherControl } from "mapbox-gl-style-switcher";
 import useQuery from "../hooks/useQuery";
-import {centerOfMass, polygon} from "@turf/turf";
-import {AiOutlineSearch} from "react-icons/ai";
-import {SpotlightProvider, useSpotlight} from "@mantine/spotlight";
-import {BiMapPin} from "react-icons/bi";
+import { centerOfMass, polygon } from "@turf/turf";
+import { AiOutlineSearch } from "react-icons/ai";
+import { SpotlightProvider, useSpotlight } from "@mantine/spotlight";
+import { BiMapPin } from "react-icons/bi";
 import searchInOSM from "../utils/SearchEngine";
 import socketIOClient from "socket.io-client";
 
-import {TbPlugConnectedX} from "react-icons/tb";
+import { TbPlugConnectedX } from "react-icons/tb";
 
 import * as THREE from 'three';
-import {GLTFLoader} from "three/examples/jsm/loaders/GLTFLoader";
+import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader";
 import generate3DLayer from "../utils/generate3DLayer";
 
 
-const Map = forwardRef(({openDialog, setRegionViewData, updateMap, setUpdateMap}, ref) => {
+const Map = forwardRef(({ openDialog, setRegionViewData, updateMap, setUpdateMap }, ref) => {
     mapboxgl.accessToken = 'pk.eyJ1IjoibmFjaHdhaGwiLCJhIjoiY2tta3ZkdXJ2MDAwbzJ1cXN3ejM5N3NkcyJ9.t2yFHFQzb2PAHvPHF16sFw';
 
     const mapContainer = useRef(null);
@@ -66,7 +66,7 @@ const Map = forwardRef(({openDialog, setRegionViewData, updateMap, setUpdateMap}
             showNotification({
                 title: 'Whoops',
                 message: 'It looks like we have no connection to the server... Some features might not work.',
-                icon: (<TbPlugConnectedX size={18}/>),
+                icon: (<TbPlugConnectedX size={18} />),
                 color: "red",
             })
         })
@@ -126,9 +126,9 @@ const Map = forwardRef(({openDialog, setRegionViewData, updateMap, setUpdateMap}
             title: "Light",
             uri: "mapbox://styles/mapbox/light-v9"
         },
-        {title: "Outdoors", uri: "mapbox://styles/mapbox/outdoors-v11"},
-        {title: "Satellite", uri: "mapbox://styles/mapbox/satellite-streets-v11"},
-        {title: "Streets", uri: "mapbox://styles/mapbox/streets-v11"}
+        { title: "Outdoors", uri: "mapbox://styles/mapbox/outdoors-v11" },
+        { title: "Satellite", uri: "mapbox://styles/mapbox/satellite-streets-v11" },
+        { title: "Streets", uri: "mapbox://styles/mapbox/streets-v11" }
     ];
 
 
@@ -174,7 +174,7 @@ const Map = forwardRef(({openDialog, setRegionViewData, updateMap, setUpdateMap}
             zoom: zoom
         });
         mapInstance.addControl(new mapboxgl.NavigationControl());
-        mapInstance.addControl(new MapboxStyleSwitcherControl(styles, {defaultStyle: "Dark"}));
+        mapInstance.addControl(new MapboxStyleSwitcherControl(styles, { defaultStyle: "Dark" }));
         mapInstance.addControl(new HidePlayerControl());
         setMap(mapInstance)
 
@@ -182,7 +182,7 @@ const Map = forwardRef(({openDialog, setRegionViewData, updateMap, setUpdateMap}
         mapInstance.on('style.load', () => {
             let buildings = [];
 
-            axios.get("/api/v1/interactiveBuildings/all").then(({data}) => {
+            axios.get("/api/v1/interactiveBuildings/all").then(({ data }) => {
 
                 data.forEach((building) => {
                     let b = generate3DLayer(building.id, JSON.parse(building.origin), building.altitude, JSON.parse(building.rotate), building.fileURL, mapInstance)
@@ -239,7 +239,7 @@ const Map = forwardRef(({openDialog, setRegionViewData, updateMap, setUpdateMap}
                         let centerMass = centerOfMass(poly);
                         changeLatLon(centerMass.geometry.coordinates[0], centerMass.geometry.coordinates[1])
                         if (query.get("details") === "true") {
-                            openDialog({id: regionId, userUuid: region.data.userUUID, username: region.data.username});
+                            openDialog({ id: regionId, userUUID: region.data.userUUID, username: region.data.username });
                         }
                     })
 
@@ -317,7 +317,7 @@ const Map = forwardRef(({openDialog, setRegionViewData, updateMap, setUpdateMap}
             showNotification({
                 title: 'Copied successfully',
                 message: 'The coordinates have been copied to your clipboard!',
-                icon: <BsCheck2 size={18}/>,
+                icon: <BsCheck2 size={18} />,
                 color: "teal"
             })
         })
@@ -348,7 +348,7 @@ const Map = forwardRef(({openDialog, setRegionViewData, updateMap, setUpdateMap}
                     title: 'Go to coordinates',
                     description: query,
                     onTrigger: () => changeLatLon(coords[0], coords[1]),
-                    icon: <BiMapPin size={18}/>,
+                    icon: <BiMapPin size={18} />,
                 },
             ])
             return;
@@ -365,9 +365,9 @@ const Map = forwardRef(({openDialog, setRegionViewData, updateMap, setUpdateMap}
 
     return (
         <SpotlightProvider shortcut={['mod + S']} actions={actions} onQueryChange={handleQueryChange}
-                           searchIcon={showSearchLoading ? <Loader size={"xs"}/> : <AiOutlineSearch/>}
-                           filter={(query, actions) => actions}>
-            <div style={{width: "100%", position: 'relative', flex: 1}}>
+            searchIcon={showSearchLoading ? <Loader size={"xs"} /> : <AiOutlineSearch />}
+            filter={(query, actions) => actions}>
+            <div style={{ width: "100%", position: 'relative', flex: 1 }}>
                 {
                     !socketConnected &&
                     <Box sx={(theme) => ({
@@ -383,11 +383,11 @@ const Map = forwardRef(({openDialog, setRegionViewData, updateMap, setUpdateMap}
                         alignItems: "center",
                         borderRadius: "99px"
                     })}>
-                        <TbPlugConnectedX size={15}/>
+                        <TbPlugConnectedX size={15} />
                     </Box>
                 }
-                <LoadingOverlay visible={showLoadingOverlay}/>
-                <div ref={mapContainer} style={{width: "100%", height: "100%"}}/>
+                <LoadingOverlay visible={showLoadingOverlay} />
+                <div ref={mapContainer} style={{ width: "100%", height: "100%" }} />
             </div>
         </SpotlightProvider>
 

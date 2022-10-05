@@ -6,35 +6,35 @@
  + This project is released under the MIT license.                            +
  +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++*/
 
-import React, {useEffect} from 'react';
+import React, { useEffect } from 'react';
 import axios from "axios";
-import {useKeycloak} from "@react-keycloak-fork/web";
-import {ActionIcon, Badge, Box, Loader, Table, Tooltip} from "@mantine/core";
-import {BsFileEarmarkLock2} from "react-icons/bs";
-import {BiLockOpen} from "react-icons/bi";
+import { useKeycloak } from "@react-keycloak-fork/web";
+import { ActionIcon, Badge, Box, Loader, Table, Tooltip } from "@mantine/core";
+import { BsFileEarmarkLock2 } from "react-icons/bs";
+import { BiLockOpen } from "react-icons/bi";
 
 
 const AdminUsers = props => {
     const [users, setUsers] = React.useState([]);
     const [isLoading, setIsLoading] = React.useState(true);
-    const {keycloak} = useKeycloak();
+    const { keycloak } = useKeycloak();
 
     useEffect(() => {
         getUsers();
     }, []);
 
     const getUsers = async () => {
-        const {data} = await axios.get(`api/v1/admin/user/@list`, {headers: {authorization: "Bearer " + keycloak.token}});
+        const { data } = await axios.get(`api/v1/admin/user/@list`, { headers: { authorization: "Bearer " + keycloak.token } });
         setUsers(data);
         setIsLoading(false);
     }
     const lockUser = async (user) => {
-        await axios.post(`api/v1/admin/user/@lock`, {userId: user}, {headers: {authorization: "Bearer " + keycloak.token}});
+        await axios.post(`api/v1/admin/user/@lock`, { userId: user }, { headers: { authorization: "Bearer " + keycloak.token } });
         getUsers();
     }
 
     const unlockUser = async (user) => {
-        await axios.post(`api/v1/admin/user/@unlock`, {userId: user}, {headers: {authorization: "Bearer " + keycloak.token}});
+        await axios.post(`api/v1/admin/user/@unlock`, { userId: user }, { headers: { authorization: "Bearer " + keycloak.token } });
         getUsers();
     }
 
@@ -54,11 +54,11 @@ const AdminUsers = props => {
                     {
                         element.enabled ? <Tooltip label="Sperren">
                             <ActionIcon color="red" variant="light" onClick={() => lockUser(element.id)}>
-                                <BsFileEarmarkLock2/>
+                                <BsFileEarmarkLock2 />
                             </ActionIcon>
                         </Tooltip> : <Tooltip label="Entsperren">
                             <ActionIcon color="green" variant="light" onClick={() => unlockUser(element.id)}>
-                                <BiLockOpen/>
+                                <BiLockOpen />
                             </ActionIcon>
                         </Tooltip>
                     }
@@ -72,15 +72,15 @@ const AdminUsers = props => {
     return (
         <div>
             {
-                isLoading ? <Loader/> :
+                isLoading ? <Loader /> :
                     <Table>
                         <thead>
-                        <tr>
-                            <th>Benutzername</th>
-                            <th>E-Mail Adresse</th>
-                            <th>Tags</th>
-                            <th>Aktionen</th>
-                        </tr>
+                            <tr>
+                                <th>Benutzername</th>
+                                <th>E-Mail Adresse</th>
+                                <th>Tags</th>
+                                <th>Aktionen</th>
+                            </tr>
                         </thead>
                         <tbody>{rows}</tbody>
                     </Table>

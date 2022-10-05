@@ -6,27 +6,27 @@
  + This project is released under the MIT license.                            +
  +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++*/
 
-import {Route, Routes} from "react-router-dom";
+import { Route, Routes } from "react-router-dom";
 import Home from "./pages/Home";
-import {useState} from "react";
-import {ColorSchemeProvider, Loader, LoadingOverlay, MantineProvider} from "@mantine/core";
+import { useState } from "react";
+import { ColorSchemeProvider, Loader, LoadingOverlay, MantineProvider } from "@mantine/core";
 import Keycloak from "keycloak-js";
-import {ReactKeycloakProvider} from '@react-keycloak-fork/web'
+import { ReactKeycloakProvider } from '@react-keycloak-fork/web'
 import LinkPage from "./pages/Link";
-import {NotificationsProvider} from "@mantine/notifications";
-import {ModalsProvider} from "@mantine/modals";
-import {ProvideAuth} from "./hooks/useUser";
-import {SpotlightProvider} from "@mantine/spotlight";
-import {AiFillHome} from 'react-icons/ai';
-import {AiOutlineSearch} from 'react-icons/ai';
+import { NotificationsProvider } from "@mantine/notifications";
+import { ModalsProvider } from "@mantine/modals";
+import { ProvideAuth } from "./hooks/useUser";
+import { SpotlightProvider } from "@mantine/spotlight";
+import { AiFillHome } from 'react-icons/ai';
+import { AiOutlineSearch } from 'react-icons/ai';
 import Stats from "./pages/Stats";
 import Admin from "./pages/Admin";
 
 function App() {
     const keycloak = new Keycloak({
         "url": "https://auth.bte-germany.de",
-        "realm": "btegermany",
-        "clientId": "mapfrontend"
+        "realm": "btetest",
+        "clientId": "maptestfrontend"
     });
     const [colorScheme, setColorScheme] = useState(window.localStorage.getItem("color-scheme") || "dark");
     const toggleColorScheme = (value) => {
@@ -39,7 +39,7 @@ function App() {
         <div>
 
             <ColorSchemeProvider colorScheme={colorScheme} toggleColorScheme={toggleColorScheme}>
-                <MantineProvider theme={{colorScheme}} withGlobalStyles withNormalizeCSS>
+                <MantineProvider theme={{ colorScheme }} withGlobalStyles withNormalizeCSS>
                     <NotificationsProvider>
                         <ModalsProvider>
 
@@ -53,15 +53,15 @@ function App() {
                                     maxHeight: "100vh",
                                     maxWidth: "100vw"
                                 }}>
-                                    <LoadingOverlay visible={true}/>
+                                    <LoadingOverlay visible={true} />
                                 </div>}
                             >
                                 <ProvideAuth>
                                     <Routes>
-                                        <Route path="/" element={<Home/>} exact/>
-                                        <Route path="/link" element={<LinkPage/>} exact/>
-                                        <Route path="/stats" element={<Stats/>} exact/>
-                                        <Route path="/admin" element={<Admin/>} exact/>
+                                        <Route path="/" element={<Home />} exact />
+                                        <Route path="/link" element={<LinkPage />} exact />
+                                        <Route path="/stats" element={<Stats />} exact />
+                                        <Route path="/admin" element={<Admin />} exact />
                                     </Routes>
                                 </ProvideAuth>
                             </ReactKeycloakProvider>
