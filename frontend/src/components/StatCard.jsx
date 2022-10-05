@@ -7,7 +7,7 @@
  +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++*/
 
 import React from 'react';
-import {createStyles, Group, Paper, Text} from "@mantine/core";
+import { createStyles, Group, Input, Paper, Text, TextInput, Button, ActionIcon } from "@mantine/core";
 
 
 const useStyles = createStyles((theme) => ({
@@ -32,28 +32,53 @@ const useStyles = createStyles((theme) => ({
     },
 }));
 
-const StatCard = ({title, Icon, value, subtitle, noBigValue}) => {
-    const {classes} = useStyles();
-    return (
+const StatCard = ({ title, Icon, value, subtitle, noBigValue, editable, id }) => {
+    const { classes } = useStyles();
+    const internValue = value;
+    if (editable) {
+        return (
             <Paper withBorder p="md" radius="md" shadow="md" sx={{ width: "100%" }}>
-            <Group position="apart">
-                <Text size="xs" color="dimmed" className={classes.title}>
-                    {title}
-                </Text>
+                <Group position="apart">
+                    <Text size="xs" color="dimmed" className={classes.title}>
+                        Edit: {title}
+                    </Text>
                     <Icon className={classes.icon} size={22} />
-            </Group>
+                </Group>
 
-            <Group align="flex-end" spacing="xs" mt={15}>
-                {
-                    !noBigValue ? <Text className={classes.value}>{value}</Text> : <>{value}</>
-                }
-            </Group>
+                <Group align="flex-end" spacing="xs" mt={15}>
+                    {
+                        <TextInput id={id} defaultValue={value} />
+                    }
+                </Group>
 
-            <Text size="xs" color="dimmed" mt={7}>
-                {subtitle}
-            </Text>
-        </Paper>
-    );
+                <Text size="xs" color="dimmed" mt={7}>
+                    {subtitle}
+                </Text>
+            </Paper>
+        )
+    }
+    else {
+        return (
+            <Paper withBorder p="md" radius="md" shadow="md" sx={{ width: "100%" }}>
+                <Group position="apart">
+                    <Text size="xs" color="dimmed" className={classes.title}>
+                        {title}
+                    </Text>
+                    <Icon className={classes.icon} size={22} />
+                </Group>
+
+                <Group align="flex-end" spacing="xs" mt={15}>
+                    {
+                        !noBigValue ? <Text className={classes.value}>{value}</Text> : <>{value}</>
+                    }
+                </Group>
+
+                <Text size="xs" color="dimmed" mt={7}>
+                    {subtitle}
+                </Text>
+            </Paper>
+        );
+    }
 }
 
 export default StatCard

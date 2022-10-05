@@ -190,6 +190,13 @@ const RegionView = ({ data, open, setOpen, setUpdateMap }) => {
         });
     }
 
+    const onSave = async () => {
+        setEditing(false);
+        const city = document.getElementById('city').value;
+        await axios.post(`api/v1/region/${data.id}/edit`, { city: city }, { headers: { authorization: "Bearer " + keycloak.token } })
+        setLoading(true);
+        getData();
+    }
 
     return (
         <Drawer
@@ -263,7 +270,8 @@ const RegionView = ({ data, open, setOpen, setUpdateMap }) => {
                                 Icon={HiUserGroup}
                                 subtitle={""} />
                         }
-                        <StatCard title={"City"} value={region?.city} Icon={FaCity} subtitle={""}/>
+
+                        <StatCard title={"City"} value={region?.city} Icon={FaCity} subtitle={""} editable={editing} id={"city"} />
                         <StatCard title={"Area"} value={numberWithCommas(region?.area) + " m²"} Icon={BiArea}
                             subtitle={""} />
                     </Group>
@@ -272,9 +280,9 @@ const RegionView = ({ data, open, setOpen, setUpdateMap }) => {
                     {
                         keycloak?.authenticated ? <Group spacing={"md"} cols={2} grow mt={"md"}>
                             {
-                                (region.ownerID === user?.data?.id) &&
-                                <Button color={"red"} leftIcon={<AiFillDelete/>} onClick={showDeleteConfirmation}>Delete
-                                    Region</Button>
+                                (region.ownerID === user?.data?.id) || isAdmin ?
+                                    <Button color={"red"} leftIcon={<AiFillDelete />} onClick={showDeleteConfirmation}>Delete
+                                        Region</Button> : null
                             }
                             {
                                 user?.data?.minecraftUUID &&
@@ -291,6 +299,16 @@ const RegionView = ({ data, open, setOpen, setUpdateMap }) => {
                         </Group> : <Button leftIcon={<FiLock size={14} />} fullWidth mt={"md"}
                             onClick={() => keycloak.login({ redirectUri: window.location.origin + "?region=" + region.id + "&details=true" })}>Login
                             to get more features</Button>
+                    }
+
+                    {
+                        isAdmin && !editing ? <Button fullWidth mt={"md"} onClick={() => setEditing(true)} >Edit the values</Button> : null
+                    }
+                    {
+                        isAdmin && editing ? <Button fullWidth mt={"md"} onClick={() => onSave()} >Save</Button> : null
+                    }
+                    {
+                        isAdmin && editing ? <Button fullWidth mt={"md"} onClick={() => setEditing(false)} >Cancel</Button> : null
                     }
 
 

@@ -12,6 +12,7 @@ import NavHeader from "../components/NavHeader";
 import { HiOutlineMap } from "react-icons/hi";
 import { FiUsers } from "react-icons/fi";
 import AdminUsers from "../components/AdminUsers";
+import AdminRegions from '../components/AdminRegions';
 
 const Admin = props => {
     return (
@@ -23,7 +24,9 @@ const Admin = props => {
                     <Tabs.Tab label="Benutzer" icon={<FiUsers size={14} />}>
                         <AdminUsers />
                     </Tabs.Tab>
-                    <Tabs.Tab label="Regionen" icon={<HiOutlineMap size={14}/>}>lander stinkt (mischa auch)</Tabs.Tab>
+                    <Tabs.Tab label="Regionen" icon={<HiOutlineMap size={14} />}>
+                        <AdminRegions />
+                    </Tabs.Tab>
 
                 </Tabs>
             </Container>
