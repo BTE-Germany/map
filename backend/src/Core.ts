@@ -13,6 +13,7 @@ import * as session from "express-session";
 import KeycloakAdmin from "./util/KeycloakAdmin";
 import {PrismaClient} from "@prisma/client";
 import DiscordIntegration from "./util/DiscordIntegration";
+import S3Controller from "./util/S3Controller";
 
 class Core {
     web: Web;
@@ -21,6 +22,7 @@ class Core {
     keycloakAdmin: KeycloakAdmin;
     prisma: PrismaClient;
     discord: DiscordIntegration;
+    s3: S3Controller;
 
 
     constructor() {
@@ -51,6 +53,7 @@ class Core {
     public getPrisma = (): PrismaClient => this.prisma;
     public getDiscord = (): DiscordIntegration => this.discord;
     public getWeb = (): Web => this.web;
+    public getS3 = (): S3Controller => this.s3;
 
 }
 
