@@ -6,15 +6,30 @@
  + This project is released under the MIT license.                            +
  +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++*/
 
-import React from 'react';
+import React, { useCallback } from 'react';
 import { Container, Tabs, Title } from "@mantine/core";
 import NavHeader from "../components/NavHeader";
 import { HiOutlineMap } from "react-icons/hi";
 import { FiUsers } from "react-icons/fi";
 import AdminUsers from "../components/AdminUsers";
 import AdminRegions from '../components/AdminRegions';
+import { useKeycloak } from "@react-keycloak-fork/web";
 
-const Admin = props => {
+const Admin = () => {
+    //simple admin check
+    const { keycloak } = useKeycloak()
+    const login = useCallback(() => {
+        keycloak?.login()
+    }, [keycloak])
+
+    const isAdmin = keycloak?.tokenParsed?.realm_access.roles.includes("mapadmin");
+    if (!keycloak?.authenticated) {
+        return <h1>Not logged in! <u onClick={() => login()}>Click here to login</u></h1>
+    }
+    if (!isAdmin) {
+        return <h1>Not authorized - go back</h1>
+    }
+
     return (
         <div>
             <NavHeader />
