@@ -110,6 +110,8 @@ class RegionsController {
                 id: request.params.id
             },
             data: {
+                username: request.body.username,
+                userUUID: request.body.player_id,
                 city: request.body.city,
             }
         });

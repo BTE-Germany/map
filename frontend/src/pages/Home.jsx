@@ -10,7 +10,7 @@ import React, { useRef, useState } from 'react';
 import Map from "../components/Map";
 import NavHeader from "../components/NavHeader";
 import { Box, LoadingOverlay } from "@mantine/core";
-import RegionView from "../components/RegionView";
+import { RegionView } from "../components/RegionView";
 
 const Home = props => {
 

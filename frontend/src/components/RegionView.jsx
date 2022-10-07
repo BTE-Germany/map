@@ -7,21 +7,7 @@
  +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++*/
 
 import React, { useEffect, useState } from 'react';
-import {
-    Accordion, ActionIcon, Alert,
-    Box,
-    Button,
-    Code,
-    Drawer,
-    Group,
-    Image,
-    Loader,
-    Paper, ScrollArea,
-    Table,
-    Text,
-    Title,
-    Tooltip
-} from "@mantine/core";
+import { Accordion, ActionIcon, Alert, Box, Button, Code, Drawer, Group, Loader, Radio, ScrollArea, Table, Text, Tooltip } from "@mantine/core";
 import axios from "axios";
 import { useClipboard } from "@mantine/hooks";
 import { centerOfMass, polygon } from "@turf/turf";
@@ -191,9 +177,23 @@ const RegionView = ({ data, open, setOpen, setUpdateMap }) => {
     }
 
     const onSave = async () => {
-        setEditing(false);
         const city = document.getElementById('city').value;
-        await axios.post(`api/v1/region/${data.id}/edit`, { city: city }, { headers: { authorization: "Bearer " + keycloak.token } })
+        const owner = document.getElementById('owner').value;
+        try {
+            const { data: mcApiData } = await axios.get(`https://playerdb.co/api/player/minecraft/${owner}`);
+            console.log(mcApiData);
+            const params = {
+                city: city,
+                player_id: mcApiData.data.player.id,
+                username: mcApiData.data.player.username
+            }
+            await axios.post(`api/v1/region/${data.id}/edit`, params, { headers: { authorization: "Bearer " + keycloak.token } })
+        }
+        catch (error) {
+            alert("User does not exist! Error: " + error);
+            return
+        }
+        setEditing(false);
         setLoading(true);
         getData();
     }
@@ -205,10 +205,9 @@ const RegionView = ({ data, open, setOpen, setUpdateMap }) => {
             title={`Region Info`}
             padding="xl"
             size="xl"
-            overlayBlur={3}
-        >
-            {
-                loading ? <Box sx={{
+            overlayBlur={3} >
+            {loading ?
+                <Box sx={{
                     height: "90%",
                     width: "100%",
                     display: "flex",
@@ -216,52 +215,47 @@ const RegionView = ({ data, open, setOpen, setUpdateMap }) => {
                     alignItems: "center"
                 }}>
                     <Loader mt={"xl"} />
-                </Box> : <Box>
+                </Box>
+                :
+                <Box>
                     {/* TODO: Wait for Mantine 4.3 to release, where Dropboxes are fixed */}
                     {/*<RegionImageView/>*/}
 
-
                     <Group spacing={"md"} cols={1}>
-                        {
-                            (!region.isEventRegion && !region.isPlotRegion) &&
-                            <StatCard title={"Owner"} value={<Box sx={{ display: "flex", alignItems: "center" }}
-                            >
-                                <Image src={`https://crafatar.com/avatars/${data.userUUID}?size=64`} alt=""
-                                    radius={"md"}
-                                    style={{ width: 64 }} />
-                                <Title ml={"md"} order={3}>{data.username}</Title>
-                            </Box>} Icon={BsFillPersonFill} subtitle={""} />
+                        {!region.isEventRegion && !region.isPlotRegion ?
+                            <StatCard title={"Owner"} innerImage={`https://crafatar.com/avatars/${data.userUUID}?size=64`}
+                                value={data.username} Icon={BsFillPersonFill} subtitle={""} editable={editing} id={"owner"} />
+                            : null
                         }
 
-                        {
-                            region.isEventRegion &&
+                        {region.isEventRegion ?
                             <Alert icon={<GiPartyPopper size={16} />} sx={{ width: "100%" }} title="Event Region"
                                 color="green">
                                 This is an Event Region, which was built as part of a BTE Germany Event. Therefore, it
                                 has no owner.
                             </Alert>
+                            : null
                         }
 
-                        {
-                            region.isPlotRegion &&
+                        {region.isPlotRegion ?
                             <Alert icon={<TbFence size={16} />} sx={{ width: "100%" }} title="Plot Region"
                                 color="blue">
-                                This is an plot region. Therefore, it has no owner.
+                                This is a plot region. Therefore, it has no owner.
                             </Alert>
+                            : null
                         }
 
-                        {
-                            (region?.additionalBuilder?.length > 0 && !(region.ownerID === user?.data?.id)) &&
+                        {region?.additionalBuilder?.length > 0 && !(region.ownerID === user?.data?.id) ?
                             <StatCard title={"Additional Builders"} noBigValue={true}
                                 value={<AdditionalBuilders showEditButtons={false}
                                     openAdditionalBuilderModal={openAdditionalBuilderModal}
                                     region={region} update={getData} />}
                                 Icon={HiUserGroup}
                                 subtitle={""} />
+                            : null
                         }
 
-                        {
-                            ((region.ownerID === user?.data?.id)) &&
+                        {(region.ownerID === user?.data?.id) ?
                             <StatCard title={"Additional Builders"} noBigValue={true}
                                 value={<AdditionalBuilders showEditButtons={true}
                                     openAdditionalBuilderModal={openAdditionalBuilderModal}
@@ -269,6 +263,19 @@ const RegionView = ({ data, open, setOpen, setUpdateMap }) => {
                                 />}
                                 Icon={HiUserGroup}
                                 subtitle={""} />
+                            : null
+                        }
+
+                        {/*editing ?
+                            <Radio.Group name="type" label="Regions Typ"
+                                description="This is anonymous"
+                                value="normal"
+                            >
+                                <Radio value="normal" label="Normal" />
+                                <Radio value="event" label="Event" />
+                                <Radio value="plot" label="Plot" />
+                            </Radio.Group>
+                            : null*/
                         }
 
                         <StatCard title={"City"} value={region?.city} Icon={FaCity} subtitle={""} editable={editing} id={"city"} />
@@ -277,40 +284,35 @@ const RegionView = ({ data, open, setOpen, setUpdateMap }) => {
                     </Group>
 
 
-                    {
-                        keycloak?.authenticated ? <Group spacing={"md"} cols={2} grow mt={"md"}>
-                            {
-                                (region.ownerID === user?.data?.id) || isAdmin ?
-                                    <Button color={"red"} leftIcon={<AiFillDelete />} onClick={showDeleteConfirmation}>Delete
-                                        Region</Button> : null
+                    {keycloak?.authenticated ?
+                        <Group spacing={"md"} cols={2} grow mt={"md"}>
+                            {(region.ownerID === user?.data?.id) || isAdmin ?
+                                <Button color={"red"} leftIcon={<AiFillDelete />} onClick={showDeleteConfirmation}>Delete
+                                    Region</Button>
+                                : null
                             }
-                            {
-                                user?.data?.minecraftUUID &&
+                            {user?.data?.minecraftUUID ?
                                 <Button color={"blue"} leftIcon={<MdOutlineShareLocation />} onClick={teleportToRegion}>Teleport
                                     here</Button>
+                                : null
                             }
 
-                            {
-                                !user?.data?.minecraftUUID &&
+                            {!user?.data?.minecraftUUID ?
                                 <Button color={"blue"} leftIcon={<MdOutlineShareLocation />} component={Link}
                                     to={"/link"}>Teleport
                                     here</Button>
+                                : null
                             }
-                        </Group> : <Button leftIcon={<FiLock size={14} />} fullWidth mt={"md"}
+                        </Group>
+                        :
+                        <Button leftIcon={<FiLock size={14} />} fullWidth mt={"md"}
                             onClick={() => keycloak.login({ redirectUri: window.location.origin + "?region=" + region.id + "&details=true" })}>Login
                             to get more features</Button>
                     }
 
-                    {
-                        isAdmin && !editing ? <Button fullWidth mt={"md"} onClick={() => setEditing(true)} >Edit the values</Button> : null
-                    }
-                    {
-                        isAdmin && editing ? <Button fullWidth mt={"md"} onClick={() => onSave()} >Save</Button> : null
-                    }
-                    {
-                        isAdmin && editing ? <Button fullWidth mt={"md"} onClick={() => setEditing(false)} >Cancel</Button> : null
-                    }
-
+                    {isAdmin && !editing ? <Button fullWidth mt={"md"} onClick={() => setEditing(true)} >Edit the values</Button> : null}
+                    {isAdmin && editing ? <Button fullWidth mt={"md"} onClick={() => onSave()} >Save</Button> : null}
+                    {isAdmin && editing ? <Button fullWidth mt={"md"} onClick={() => setEditing(false)} >Cancel</Button> : null}
 
                     <Accordion iconPosition="right" offsetIcon={false} my={"md"}>
                         <Accordion.Item label="More information">
@@ -351,40 +353,32 @@ const RegionView = ({ data, open, setOpen, setUpdateMap }) => {
                         </Accordion.Item>
                     </Accordion>
 
-
-
                     <Box style={{ position: "absolute", bottom: 15, right: 15 }}>
-                        {
-                            (!user?.data?.blockedFromReports && !region.isPlotRegion && !region.isEventRegion) &&
+                        {(!user?.data?.blockedFromReports && !region.isPlotRegion && !region.isEventRegion) ?
                             <Tooltip
                                 label="Report this region"
-                                position="right"
-                            >
+                                position="right">
 
                                 <ActionIcon size="md" variant="light" onClick={openReportModal}>
                                     <IoMdFlag />
                                 </ActionIcon>
                             </Tooltip>
+                            : null
                         }
 
                         <Tooltip
                             label={clipboard.copied ? "Copied" : "Copy a link to this region"}
                             position="right"
                             color={clipboard.copied ? "green" : "gray"}
-                            ml={"sm"}
-                        >
+                            ml={"sm"} >
 
                             <ActionIcon size="md" variant="light" onClick={() => copyLink(region.id)}>
                                 <AiOutlineLink />
                             </ActionIcon>
                         </Tooltip>
                     </Box>
-
-
                 </Box>
             }
-
-
         </Drawer>
     );
 }
@@ -454,4 +448,4 @@ const AdditionalBuilders = ({ region, showEditButtons, openAdditionalBuilderModa
 
 };
 
-export default RegionView
+export { RegionView }
