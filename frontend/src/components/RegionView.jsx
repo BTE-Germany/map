@@ -56,15 +56,16 @@ const RegionView = ({data, open, setOpen, setUpdateMap}) => {
     const [center, setCenter] = useState([0, 0]);
     const [region, setRegion] = useState(null);
     const [editing, setEditing] = useState(false);
+    const [plotType, setPlotType] = useState("normal");
 
-    const {keycloak} = useKeycloak()
+    const {keycloak} = useKeycloak();
     const isAdmin = keycloak?.tokenParsed?.realm_access.roles.includes("mapadmin");
 
     const user = useUser();
 
     const numberWithCommas = (x) => {
         return x.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ".");
-    }
+    };
 
     useEffect(() => {
         setLoading(true);
@@ -73,30 +74,40 @@ const RegionView = ({data, open, setOpen, setUpdateMap}) => {
 
     const getData = async () => {
         if (!data?.id) return;
-        const region = await axios.get(`/api/v1/region/${data.id}`)
+        const region = await axios.get(`/api/v1/region/${data.id}`);
+        if (region.data.isEventRegion) {
+            setPlotType('event');
+        }
+        else if (region.data.isPlotRegion) {
+            setPlotType('plot');
+        }
+        else if (!region.data.isPlotRegion && !region.data.isEventRegion) {
+            setPlotType('normal');
+        }
+
         setRegion(region.data);
         let coords = JSON.parse(region.data.data);
         coords.push(coords[0]);
-        let poly = polygon([coords])
-        let centerMass = centerOfMass(poly)
-        setCenter(centerMass.geometry.coordinates)
+        let poly = polygon([coords]);
+        let centerMass = centerOfMass(poly);
+        setCenter(centerMass.geometry.coordinates);
         setLoading(false);
     };
 
     const copyId = (id) => {
         clipboard.copy(id);
-    }
+    };
 
     const copyCoords = (coords) => {
         clipboard.copy(coords[0] + "," + coords[1]);
-    }
+    };
 
     const copyLink = (id) => {
-        clipboard.copy(window.location.origin + "?region=" + id + "&details=true")
-    }
+        clipboard.copy(window.location.origin + "?region=" + id + "&details=true");
+    };
 
     const showDeleteConfirmation = () => {
-        setOpen(false)
+        setOpen(false);
         modals.openConfirmModal({
             title: 'Delete this region?',
             centered: true,
@@ -112,7 +123,7 @@ const RegionView = ({data, open, setOpen, setUpdateMap}) => {
                 deleteRegion(region.id);
             },
         });
-    }
+    };
 
     const openReportModal = () => {
         if (!keycloak.authenticated) {
@@ -120,7 +131,7 @@ const RegionView = ({data, open, setOpen, setUpdateMap}) => {
                 title: 'You need to be logged in!',
                 message: 'You need to be logged in to report a region.',
                 color: "red"
-            })
+            });
             return;
         }
         if (region.ownerID === user?.data?.id) {
@@ -128,7 +139,7 @@ const RegionView = ({data, open, setOpen, setUpdateMap}) => {
                 title: 'Ehhhhh...',
                 message: 'You are not able to report your own region, you dummie.',
                 color: "red"
-            })
+            });
             return;
         }
         setOpen(false);
@@ -136,19 +147,19 @@ const RegionView = ({data, open, setOpen, setUpdateMap}) => {
             title: 'Report this region',
             centered: true,
             children: (
-                <ReportDialog regionId={region.id} keycloak={keycloak}/>
+                <ReportDialog regionId={region.id} keycloak={keycloak} />
             ),
         });
-    }
+    };
 
     const teleportToRegion = async () => {
-        await axios.post(`/api/v1/user/teleport`, {coords: center}, {headers: {authorization: "Bearer " + keycloak.token}})
+        await axios.post(`/api/v1/user/teleport`, {coords: center}, {headers: {authorization: "Bearer " + keycloak.token}});
         showNotification({
             title: 'Teleport to region',
             message: 'You will be teleported shortly.',
             color: "green"
-        })
-    }
+        });
+    };
 
     const deleteRegion = async (id) => {
         await axios.delete(`/api/v1/region/${id}`, {headers: {authorization: "Bearer " + keycloak.token}});
@@ -156,9 +167,9 @@ const RegionView = ({data, open, setOpen, setUpdateMap}) => {
             title: 'Region deleted!',
             message: 'This region has been deleted.',
             color: "red"
-        })
+        });
         setUpdateMap(true);
-    }
+    };
 
     const openAdditionalBuilderModal = () => {
         if (!keycloak.authenticated) {
@@ -166,7 +177,7 @@ const RegionView = ({data, open, setOpen, setUpdateMap}) => {
                 title: 'You need to be logged in!',
                 message: 'You need to be logged in to report a region.',
                 color: "red"
-            })
+            });
             return;
         }
         if (region.ownerID !== user?.data?.id) {
@@ -174,7 +185,7 @@ const RegionView = ({data, open, setOpen, setUpdateMap}) => {
                 title: 'Ehhhhh...',
                 message: 'You are not the owner of this region.',
                 color: "red"
-            })
+            });
             return;
         }
         setOpen(false);
@@ -186,31 +197,34 @@ const RegionView = ({data, open, setOpen, setUpdateMap}) => {
                 getData();
             },
             children: (
-                <AdditionalBuildersDialog regionId={region.id} keycloak={keycloak}/>
+                <AdditionalBuildersDialog regionId={region.id} keycloak={keycloak} />
             ),
         });
-    }
+    };
 
     const onSave = async () => {
         const city = document.getElementById('city').value;
-        const owner = document.getElementById('owner').value;
+        const owner = document.getElementById('owner')?.value;
         try {
             const {data: mcApiData} = await axios.get(`https://playerdb.co/api/player/minecraft/${owner}`);
             console.log(mcApiData);
             const params = {
                 city: city,
                 player_id: mcApiData.data.player.id,
-                username: mcApiData.data.player.username
-            }
-            await axios.post(`api/v1/region/${data.id}/edit`, params, {headers: {authorization: "Bearer " + keycloak.token}})
+                username: mcApiData.data.player.username,
+                isEventRegion: plotType === 'event',
+                isPlotRegion: plotType === 'plot',
+            };
+            await axios.post(`api/v1/region/${data.id}/edit`, params, {headers: {authorization: "Bearer " + keycloak.token}});
         } catch (error) {
             alert("User does not exist! Error: " + error);
-            return
+            return;
         }
         setEditing(false);
         setLoading(true);
+        setUpdateMap(true);
         getData();
-    }
+    };
 
     return (
         <Drawer
@@ -228,24 +242,24 @@ const RegionView = ({data, open, setOpen, setUpdateMap}) => {
                     justifyContent: "center",
                     alignItems: "center"
                 }}>
-                    <Loader mt={"xl"}/>
+                    <Loader mt={"xl"} />
                 </Box>
                 :
                 <Box>
-                    <RegionImageView/>
+                    <RegionImageView />
 
                     <Group spacing={"md"} cols={1}>
                         {!region.isEventRegion && !region.isPlotRegion ?
                             <StatCard title={"Owner"}
-                                      innerImage={`https://crafatar.com/avatars/${data.userUUID}?size=64`}
-                                      value={data.username} Icon={BsFillPersonFill} subtitle={""} editable={editing}
-                                      id={"owner"}/>
+                                innerImage={`https://crafatar.com/avatars/${data.userUUID}?size=64`}
+                                value={data.username} Icon={BsFillPersonFill} subtitle={""} editable={editing}
+                                id={"owner"} />
                             : null
                         }
 
                         {region.isEventRegion ?
-                            <Alert icon={<GiPartyPopper size={16}/>} sx={{width: "100%"}} title="Event Region"
-                                   color="green">
+                            <Alert icon={<GiPartyPopper size={16} />} sx={{width: "100%"}} title="Event Region"
+                                color="green">
                                 This is an Event Region, which was built as part of a BTE Germany Event. Therefore, it
                                 has no owner.
                             </Alert>
@@ -253,8 +267,8 @@ const RegionView = ({data, open, setOpen, setUpdateMap}) => {
                         }
 
                         {region.isPlotRegion ?
-                            <Alert icon={<TbFence size={16}/>} sx={{width: "100%"}} title="Plot Region"
-                                   color="blue">
+                            <Alert icon={<TbFence size={16} />} sx={{width: "100%"}} title="Plot Region"
+                                color="blue">
                                 This is a plot region. Therefore, it has no owner.
                             </Alert>
                             : null
@@ -262,67 +276,67 @@ const RegionView = ({data, open, setOpen, setUpdateMap}) => {
 
                         {region?.additionalBuilder?.length > 0 && !(region.ownerID === user?.data?.id) ?
                             <StatCard title={"Additional Builders"} noBigValue={true}
-                                      value={<AdditionalBuilders showEditButtons={false}
-                                                                 openAdditionalBuilderModal={openAdditionalBuilderModal}
-                                                                 region={region} update={getData}/>}
-                                      Icon={HiUserGroup}
-                                      subtitle={""}/>
+                                value={<AdditionalBuilders showEditButtons={false}
+                                    openAdditionalBuilderModal={openAdditionalBuilderModal}
+                                    region={region} update={getData} />}
+                                Icon={HiUserGroup}
+                                subtitle={""} />
                             : null
                         }
 
                         {(region.ownerID === user?.data?.id) ?
                             <StatCard title={"Additional Builders"} noBigValue={true}
-                                      value={<AdditionalBuilders showEditButtons={true}
-                                                                 openAdditionalBuilderModal={openAdditionalBuilderModal}
-                                                                 region={region} update={getData}
-                                      />}
-                                      Icon={HiUserGroup}
-                                      subtitle={""}/>
+                                value={<AdditionalBuilders showEditButtons={true}
+                                    openAdditionalBuilderModal={openAdditionalBuilderModal}
+                                    region={region} update={getData}
+                                />}
+                                Icon={HiUserGroup}
+                                subtitle={""} />
                             : null
                         }
 
-                        {/*editing ?
+                        {editing ?
                             <Radio.Group name="type" label="Regions Typ"
-                                description="This is anonymous"
-                                value="normal"
+                                value={plotType}
+                                onChange={setPlotType}
                             >
                                 <Radio value="normal" label="Normal" />
                                 <Radio value="event" label="Event" />
                                 <Radio value="plot" label="Plot" />
                             </Radio.Group>
-                            : null*/
+                            : null
                         }
 
                         <StatCard title={"City"} value={region?.city} Icon={FaCity} subtitle={""} editable={editing}
-                                  id={"city"}/>
+                            id={"city"} />
                         <StatCard title={"Area"} value={numberWithCommas(region?.area) + " m²"} Icon={BiArea}
-                                  subtitle={""}/>
+                            subtitle={""} />
                     </Group>
 
 
                     {keycloak?.authenticated ?
                         <Group spacing={"md"} cols={2} grow mt={"md"}>
                             {(region.ownerID === user?.data?.id) || isAdmin ?
-                                <Button color={"red"} leftIcon={<AiFillDelete/>} onClick={showDeleteConfirmation}>Delete
+                                <Button color={"red"} leftIcon={<AiFillDelete />} onClick={showDeleteConfirmation}>Delete
                                     Region</Button>
                                 : null
                             }
                             {user?.data?.minecraftUUID ?
-                                <Button color={"blue"} leftIcon={<MdOutlineShareLocation/>} onClick={teleportToRegion}>Teleport
+                                <Button color={"blue"} leftIcon={<MdOutlineShareLocation />} onClick={teleportToRegion}>Teleport
                                     here</Button>
                                 : null
                             }
 
                             {!user?.data?.minecraftUUID ?
-                                <Button color={"blue"} leftIcon={<MdOutlineShareLocation/>} component={Link}
-                                        to={"/link"}>Teleport
+                                <Button color={"blue"} leftIcon={<MdOutlineShareLocation />} component={Link}
+                                    to={"/link"}>Teleport
                                     here</Button>
                                 : null
                             }
                         </Group>
                         :
-                        <Button leftIcon={<FiLock size={14}/>} fullWidth mt={"md"}
-                                onClick={() => keycloak.login({redirectUri: window.location.origin + "?region=" + region.id + "&details=true"})}>Login
+                        <Button leftIcon={<FiLock size={14} />} fullWidth mt={"md"}
+                            onClick={() => keycloak.login({redirectUri: window.location.origin + "?region=" + region.id + "&details=true"})}>Login
                             to get more features</Button>
                     }
 
@@ -332,42 +346,42 @@ const RegionView = ({data, open, setOpen, setUpdateMap}) => {
                     {isAdmin && editing ?
                         <Button fullWidth mt={"md"} onClick={() => setEditing(false)}>Cancel</Button> : null}
 
-                    <Accordion iconPosition="right" offsetIcon={false} my={"md"}>
+                    <Accordion my={"md"}>
                         <Accordion.Item value="info">
                             <Accordion.Control>More information</Accordion.Control>
                             <Accordion.Panel>
                                 <Table>
                                     <tbody>
-                                    <tr>
-                                        <td>ID</td>
-                                        <td>
-                                            <Tooltip
-                                                label={clipboard.copied ? "Copied" : "Click to copy"}
-                                                position="right"
-                                                color={clipboard.copied ? "green" : "gray"}
-                                                transition="scale"
-                                            >
-                                                <Code onClick={() => copyId(data.id)} sx={{
-                                                    cursor: "pointer"
-                                                }}>{data.id}</Code>
-                                            </Tooltip>
-                                        </td>
-                                    </tr>
-                                    <tr>
-                                        <td>Center coordinates</td>
-                                        <td>
-                                            <Tooltip
-                                                label={clipboard.copied ? "Copied" : "Click to copy"}
-                                                position="right"
-                                                color={clipboard.copied ? "green" : "gray"}
-                                                transition="scale"
-                                            >
-                                                <Code onClick={() => copyCoords(center)} sx={{
-                                                    cursor: "pointer"
-                                                }}>{center[0]}, {center[1]}</Code>
-                                            </Tooltip>
-                                        </td>
-                                    </tr>
+                                        <tr>
+                                            <td>ID</td>
+                                            <td>
+                                                <Tooltip
+                                                    label={clipboard.copied ? "Copied" : "Click to copy"}
+                                                    position="right"
+                                                    color={clipboard.copied ? "green" : "gray"}
+                                                    transition="scale"
+                                                >
+                                                    <Code onClick={() => copyId(data.id)} sx={{
+                                                        cursor: "pointer"
+                                                    }}>{data.id}</Code>
+                                                </Tooltip>
+                                            </td>
+                                        </tr>
+                                        <tr>
+                                            <td>Center coordinates</td>
+                                            <td>
+                                                <Tooltip
+                                                    label={clipboard.copied ? "Copied" : "Click to copy"}
+                                                    position="right"
+                                                    color={clipboard.copied ? "green" : "gray"}
+                                                    transition="scale"
+                                                >
+                                                    <Code onClick={() => copyCoords(center)} sx={{
+                                                        cursor: "pointer"
+                                                    }}>{center[0]}, {center[1]}</Code>
+                                                </Tooltip>
+                                            </td>
+                                        </tr>
                                     </tbody>
                                 </Table>
                             </Accordion.Panel>
@@ -382,7 +396,7 @@ const RegionView = ({data, open, setOpen, setUpdateMap}) => {
                                 position="right">
 
                                 <ActionIcon size="md" variant="light" onClick={openReportModal}>
-                                    <IoMdFlag/>
+                                    <IoMdFlag />
                                 </ActionIcon>
                             </Tooltip>
                             : null
@@ -395,7 +409,7 @@ const RegionView = ({data, open, setOpen, setUpdateMap}) => {
                             ml={"sm"}>
 
                             <ActionIcon size="md" variant="light" onClick={() => copyLink(region.id)}>
-                                <AiOutlineLink/>
+                                <AiOutlineLink />
                             </ActionIcon>
                         </Tooltip>
                     </Box>
@@ -403,7 +417,7 @@ const RegionView = ({data, open, setOpen, setUpdateMap}) => {
             }
         </Drawer>
     );
-}
+};
 
 const AdditionalBuilders = ({region, showEditButtons, openAdditionalBuilderModal, update}) => {
     const {keycloak} = useKeycloak();
@@ -416,7 +430,7 @@ const AdditionalBuilders = ({region, showEditButtons, openAdditionalBuilderModal
                     title: 'Success',
                     message: 'Builder removed',
                     color: "green"
-                })
+                });
                 update();
                 setLoad(false);
             })
@@ -425,10 +439,10 @@ const AdditionalBuilders = ({region, showEditButtons, openAdditionalBuilderModal
                     title: 'Failed',
                     message: 'An unexpected error occurred.',
                     color: "red"
-                })
+                });
                 setLoad(false);
-            })
-    }
+            });
+    };
 
     return (
         <div style={{width: "100%"}}>
@@ -441,19 +455,19 @@ const AdditionalBuilders = ({region, showEditButtons, openAdditionalBuilderModal
                                 <Box sx={{display: "flex", justifyContent: "space-between", width: "100%"}}>
                                     <Box id={idx} sx={{display: "flex", gap: "10px", alignItems: "center"}}>
                                         <img src={`https://crafatar.com/avatars/${builder.minecraftUUID}?size=20`}
-                                             alt=""
-                                             width={20} height={20}/>
+                                            alt=""
+                                            width={20} height={20} />
                                         <Text sx={{fontWeight: "bold"}}>{builder.username}</Text>
                                     </Box>
                                     {
                                         showEditButtons &&
                                         <ActionIcon onClick={() => removeBuilder(builder.id)} loading={load}>
-                                            <AiOutlineDelete/>
+                                            <AiOutlineDelete />
                                         </ActionIcon>
                                     }
 
                                 </Box>
-                            )
+                            );
                         })
                     }
                 </Box>
@@ -461,13 +475,13 @@ const AdditionalBuilders = ({region, showEditButtons, openAdditionalBuilderModal
 
             {
                 showEditButtons &&
-                <Button color={"blue"} mt={"md"} leftIcon={<MdAdd/>} onClick={openAdditionalBuilderModal}>
+                <Button color={"blue"} mt={"md"} leftIcon={<MdAdd />} onClick={openAdditionalBuilderModal}>
                     Add Additional Builder
                 </Button>
             }
         </div>
-    )
+    );
 
 };
 
-export {RegionView}
+export {RegionView};
