@@ -36,7 +36,7 @@ const ImageAddDropzone = () => {
                     />
                 </Dropzone.Reject>
                 <Dropzone.Idle>
-                    <TbPhoto size={50}/>
+                    <TbPhoto size={50} />
                 </Dropzone.Idle>
 
                 <div>
@@ -49,16 +49,16 @@ const ImageAddDropzone = () => {
                 </div>
             </Group>
         </Dropzone>
-    )
-}
+    );
+};
 
 
 const RegionImageView = props => {
     const theme = useMantineTheme();
     const {keycloak} = useKeycloak();
-    return (<div>
-        <ImageAddDropzone/>
+    return (<div style={{marginBottom: 15}}>
+        <ImageAddDropzone />
     </div>);
-}
+};
 
-export default RegionImageView
+export default RegionImageView;
