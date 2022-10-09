@@ -1,15 +1,16 @@
-import React, { useEffect } from 'react';
+import React, {useEffect} from 'react';
 import axios from "axios";
-import { useKeycloak } from "@react-keycloak-fork/web";
-import { Table, ActionIcon, Box, Text } from '@mantine/core';
-import { RegionView } from "../components/RegionView";
-import { BiEdit } from 'react-icons/bi';
-import { MdDelete } from 'react-icons/md';
-import { useModals } from "@mantine/modals";
+import {useKeycloak} from "@react-keycloak-fork/web";
+import {Table, ActionIcon, Box, Text} from '@mantine/core';
+import {RegionView} from "../components/RegionView";
+import {BiEdit} from 'react-icons/bi';
+import {MdDelete} from 'react-icons/md';
+import {useModals} from "@mantine/modals";
+import {showNotification} from "@mantine/notifications";
 
 
 const AdminRegions = () => {
-    const { keycloak } = useKeycloak();
+    const {keycloak} = useKeycloak();
     const modals = useModals();
     const [regions, setRegions] = React.useState([]);
     const [isLoading, setIsLoading] = React.useState(true);
@@ -21,7 +22,7 @@ const AdminRegions = () => {
         "userUUID": ""
     });
 
-    useEffect(() => { getRegions() }, []);
+    useEffect(() => {getRegions();}, []);
 
 
     const showDeleteConfirmation = (region) => {
@@ -33,29 +34,31 @@ const AdminRegions = () => {
                     Are you sure you want to delete this region? <b>This process is irreversible.</b>
                 </Text>
             ),
-            labels: { confirm: 'Delete region', cancel: "No don't delete it" },
-            confirmProps: { color: 'red' },
+            labels: {confirm: 'Delete region', cancel: "No don't delete it"},
+            confirmProps: {color: 'red'},
             onConfirm: () => {
                 deleteRegion(region.id);
             },
         });
-    }
+    };
 
     const deleteRegion = async (id) => {
-        await axios.delete(`/api/v1/region/${id}`, { headers: { authorization: "Bearer " + keycloak.token } });
+        await axios.delete(`/api/v1/region/${id}`, {headers: {authorization: "Bearer " + keycloak.token}});
         showNotification({
             title: 'Region deleted!',
             message: 'This region has been deleted.',
             color: "red"
-        })
-    }
+        });
+        setIsLoading(true);
+        getRegions();
+    };
 
 
     const getRegions = async () => {
-        const { data } = await axios.get(`api/v1/region/all`, { headers: { authorization: "Bearer " + keycloak.token } });
+        const {data} = await axios.get(`api/v1/region/all`, {headers: {authorization: "Bearer " + keycloak.token}});
         setRegions(data);
         setIsLoading(false);
-    }
+    };
 
     const rows = regions.map((element) => (
         <tr key={element.id}>
@@ -63,7 +66,7 @@ const AdminRegions = () => {
             <td>{element.area}</td>
             <td>{element.username}</td>
             <td >
-                <Box sx={{ display: "flex" }}>
+                <Box sx={{display: "flex"}}>
                     <ActionIcon onClick={() => editRegion(element)}>
                         <BiEdit />
                     </ActionIcon>
@@ -78,7 +81,7 @@ const AdminRegions = () => {
     const editRegion = async (regionData) => {
         setOpenRegionView(true);
         setRegionViewData(regionData);
-    }
+    };
 
     return (
         <div>

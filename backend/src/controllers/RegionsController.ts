@@ -88,7 +88,8 @@ class RegionsController {
             }
         });
         if (region) {
-            if (region.owner.ssoId === request.kauth.grant.access_token.content.sub) {
+            if (region.owner.ssoId === request.kauth.grant.access_token.content.sub
+                || request.kauth.grant.access_token.content.realm_access.roles.includes("mapadmin")) {
                 await this.core.getPrisma().region.delete({
                     where: {
                         id: region.id
@@ -113,6 +114,8 @@ class RegionsController {
                 username: request.body.username,
                 userUUID: request.body.player_id,
                 city: request.body.city,
+                isEventRegion: request.body.isEventRegion,
+                isPlotRegion: request.body.isPlotRegion,
             }
         });
         console.log(region);
