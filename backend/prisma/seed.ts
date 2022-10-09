@@ -6,14 +6,14 @@
  * This project is released under the MIT license.                            *
  ******************************************************************************/
 
-import {PrismaClient} from "@prisma/client";
+import { PrismaClient } from "@prisma/client";
 
 (async () => {
     const prisma = new PrismaClient();
 
     console.log("Seeding...");
 
-// Create example user
+    // Create example user
 
     let user = await prisma.user.findFirst({
         where: {
@@ -39,7 +39,18 @@ import {PrismaClient} from "@prisma/client";
             username: "Nachwahl",
             description: "",
             ownerID: user.id
-
+        }
+    });
+    const region2 = await prisma.region.create({
+        data: {
+            data: "[[52.74174758561812, 12.897911059989415],[52.699096145916464, 13.779780473054009],[52.36368567507763, 13.792393054283247],[52.33293472217935, 12.806713519382583]]",
+            userUUID: "f80c14f1-a7ac-438e-aea9-8851ed6704df",
+            city: "Berlin",
+            isPlotRegion: true,
+            area: 4342,
+            username: "Nachwahl",
+            description: "",
+            ownerID: user.id
         }
     });
 
