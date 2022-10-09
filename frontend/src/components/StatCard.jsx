@@ -7,7 +7,7 @@
  +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++*/
 
 import React from 'react';
-import { createStyles, Group, Image, Paper, Text, TextInput, Title, Box, Radio } from "@mantine/core";
+import {createStyles, Group, Image, Paper, Text, TextInput, Title, Box} from "@mantine/core";
 
 
 const useStyles = createStyles((theme) => ({
@@ -32,11 +32,11 @@ const useStyles = createStyles((theme) => ({
     },
 }));
 
-const StatCard = ({ title, Icon, innerImage, value, subtitle, noBigValue, editable, id }) => {
-    const { classes } = useStyles();
+const StatCard = ({title, Icon, innerImage, value, subtitle, noBigValue, editable, id}) => {
+    const {classes} = useStyles();
 
     return (
-        <Paper withBorder p="md" radius="md" shadow="md" sx={{ width: "100%" }}>
+        <Paper withBorder p="md" radius="md" shadow="md" sx={{width: "100%"}}>
             <Group position="apart">
                 <Text size="xs" color="dimmed" className={classes.title}>
                     {title}
@@ -45,25 +45,23 @@ const StatCard = ({ title, Icon, innerImage, value, subtitle, noBigValue, editab
             </Group>
 
             <Group align="flex-end" spacing="xs" mt={15}>
-                <Box sx={{ display: "flex", alignItems: "center" }}>
+                <Box sx={{display: "flex", alignItems: "center"}} style={{width: "100%"}}>
                     {innerImage ?
-                        <Image src={innerImage} alt="" radius={"md"} style={{ width: 64 }} /> :
+                        <Image src={innerImage} alt="" radius={"md"} style={{width: 64, marginRight: 10}} /> :
                         null
                     }
                     {editable ?
-                        <TextInput id={id} defaultValue={value} /> :
-                        !noBigValue ? <Title ml={"md"} order={3} className={classes.value}>{value}</Title> : { value }
+                        <TextInput id={id} defaultValue={value} style={{width: "100%"}} /> :
+                        !noBigValue ? <Title ml={"md"} order={3} className={classes.value}>{value}</Title> : {value}
                     }
                 </Box>
             </Group>
-
-
 
             <Text size="xs" color="dimmed" mt={7}>
                 {subtitle}
             </Text>
         </Paper>
     );
-}
+};
 
-export default StatCard
+export default StatCard;
