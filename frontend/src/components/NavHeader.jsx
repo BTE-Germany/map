@@ -8,7 +8,6 @@
 
 import React, {useEffect, useState} from 'react';
 import {ActionIcon, Box, Burger, Container, createStyles, Group, Header, Paper, Transition} from "@mantine/core";
-import {useBooleanToggle} from "@mantine/hooks";
 import {Link, useLocation} from "react-router-dom";
 import ThemeToggle from "./ThemeToggle";
 import AccountButton from "./AccountButton";
@@ -16,6 +15,7 @@ import {useKeycloak} from "@react-keycloak-fork/web";
 import {AiOutlineUser, AiOutlineSearch} from "react-icons/ai";
 import {openSpotlight} from "@mantine/spotlight";
 import {useUser} from "../hooks/useUser";
+import {useDisclosure} from "@mantine/hooks";
 
 
 const HEADER_HEIGHT = 60;
@@ -124,7 +124,7 @@ const NavHeader = ({mapRef}) => {
             "label": "Stats"
         },
     ];
-    const [opened, toggleOpened] = useBooleanToggle(false);
+    const [opened, handlers] = useDisclosure(false);
     let location = useLocation();
     const [active, setActive] = useState("/");
     const {classes, cx} = useStyles();
@@ -140,7 +140,7 @@ const NavHeader = ({mapRef}) => {
             className={cx(classes.link, {[classes.linkActive]: active === link.link})}
             onClick={() => {
                 setActive(link.link);
-                toggleOpened(false);
+                handlers.close();
             }}
         >
             {link.label}
@@ -164,7 +164,7 @@ const NavHeader = ({mapRef}) => {
                                     className={cx(classes.link, {[classes.linkActive]: active === "/admin"})}
                                     onClick={() => {
                                         setActive("/admin");
-                                        toggleOpened(false);
+                                        handlers.close();
                                     }}
                                 >
                                     Admin
@@ -185,7 +185,7 @@ const NavHeader = ({mapRef}) => {
 
                     <Burger
                         opened={opened}
-                        onClick={() => toggleOpened()}
+                        onClick={() => handlers.toggle()}
                         className={classes.burger}
                         size="sm"
                     />
