@@ -259,7 +259,7 @@ const RegionView = ({data, open, setOpen, setUpdateMap}) => {
 
                         {region.isEventRegion ?
                             <Alert icon={<GiPartyPopper size={16} />} sx={{width: "100%"}} title="Event Region"
-                                color="green">
+                                color="red">
                                 This is an Event Region, which was built as part of a BTE Germany Event. Therefore, it
                                 has no owner.
                             </Alert>
@@ -268,7 +268,7 @@ const RegionView = ({data, open, setOpen, setUpdateMap}) => {
 
                         {region.isPlotRegion ?
                             <Alert icon={<TbFence size={16} />} sx={{width: "100%"}} title="Plot Region"
-                                color="blue">
+                                color="green">
                                 This is a plot region. Therefore, it has no owner.
                             </Alert>
                             : null
