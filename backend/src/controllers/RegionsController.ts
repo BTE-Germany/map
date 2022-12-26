@@ -20,9 +20,20 @@ class RegionsController {
         this.core = core;
     }
 
-    public async getAllRegions(request: Request, response: Response) {
+    public async getAllRegions(request, response: Response) {
         const regions = await this.core.getPrisma().region.findMany();
-        response.send(regions);
+        let page = request.query.page;
+        let size = request.query.size;
+        let count = regions.length;
+        let totalPages = Math.ceil(count / size);
+        let resultList = {
+            currentPage: page,
+            pageSize: size,
+            totalUsers: count,
+            totalPages: totalPages,
+            data: regions.slice((page - 1) * size, page * size)
+        };
+        response.send(resultList);
     }
 
     public async getOneRegion(request: Request, response: Response) {
