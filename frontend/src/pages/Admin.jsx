@@ -6,28 +6,34 @@
  + This project is released under the MIT license.                            +
  +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++*/
 
-import React, { useCallback } from 'react';
-import { Container, Tabs, Title } from "@mantine/core";
+import React, {useCallback} from "react";
+import {Container, Tabs, Title} from "@mantine/core";
 import NavHeader from "../components/NavHeader";
-import { HiOutlineMap } from "react-icons/hi";
-import { FiUsers } from "react-icons/fi";
+import {HiOutlineMap} from "react-icons/hi";
+import {FiUsers} from "react-icons/fi";
 import AdminUsers from "../components/AdminUsers";
-import AdminRegions from '../components/AdminRegions';
-import { useKeycloak } from "@react-keycloak-fork/web";
+import AdminRegions from "../components/AdminRegions";
+import {useKeycloak} from "@react-keycloak-fork/web";
 
 const Admin = () => {
     //simple admin check
-    const { keycloak } = useKeycloak()
+    const {keycloak} = useKeycloak();
     const login = useCallback(() => {
-        keycloak?.login()
-    }, [keycloak])
+        keycloak?.login();
+    }, [keycloak]);
 
-    const isAdmin = keycloak?.tokenParsed?.realm_access.roles.includes("mapadmin");
+    const isAdmin =
+        keycloak?.tokenParsed?.realm_access.roles.includes("mapadmin");
     if (!keycloak?.authenticated) {
-        return <h1>Not logged in! <u onClick={() => login()}>Click here to login</u></h1>
+        return (
+            <h1>
+                Not logged in!{" "}
+                <u onClick={() => login()}>Click here to login</u>
+            </h1>
+        );
     }
     if (!isAdmin) {
-        return <h1>Not authorized - go back</h1>
+        return <h1>Not authorized - go back</h1>;
     }
 
     return (
@@ -35,18 +41,21 @@ const Admin = () => {
             <NavHeader />
             <Container mt={"md"}>
                 <Title>Administration</Title>
-                <Tabs mt={"md"}>
-                    <Tabs.Tab label="Benutzer" icon={<FiUsers size={14} />}>
+                <Tabs defaultValue="Benutzer">
+                    <Tabs.List>
+                        <Tabs.Tab value="Benutzer" icon={<FiUsers size={14} />}></Tabs.Tab>
+                        <Tabs.Tab value="Regionen" icon={<HiOutlineMap size={14} />}></Tabs.Tab>
+                    </Tabs.List>
+                    <Tabs.Panel value="Benutzer">
                         <AdminUsers />
-                    </Tabs.Tab>
-                    <Tabs.Tab label="Regionen" icon={<HiOutlineMap size={14} />}>
+                    </Tabs.Panel>
+                    <Tabs.Panel value="Regionen">
                         <AdminRegions />
-                    </Tabs.Tab>
-
+                    </Tabs.Panel>
                 </Tabs>
             </Container>
         </div>
     );
-}
+};
 
-export default Admin
+export default Admin;
