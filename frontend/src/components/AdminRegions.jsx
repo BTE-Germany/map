@@ -2,6 +2,8 @@ import React, {useEffect} from 'react';
 import axios from "axios";
 import {useKeycloak} from "@react-keycloak-fork/web";
 import {Table, ActionIcon, Group, Select, Pagination, Box, Text} from '@mantine/core';
+import sortBy from 'lodash/sortBy';
+import {DataTable} from 'mantine-datatable';
 import {RegionView} from "../components/RegionView";
 import {BiEdit} from 'react-icons/bi';
 import {MdDelete} from 'react-icons/md';
@@ -24,26 +26,44 @@ const AdminRegions = () => {
     const [activePage, setPage] = React.useState(1);
     const [currentPageSize, setPageSize] = React.useState(25);
     const [totalPages, setTotalPages] = React.useState(12);
+    const [sortBy, setSortBy] = React.useState('id');
+    const [sortOrder, setSortOrder] = React.useState('asc');
 
     useEffect(() => {getRegions();}, []);
 
     const pageSwitch = (page) => {
         setPage(page);
-        getRegions(page, currentPageSize);
+        getRegions(page, currentPageSize, sortBy, sortOrder);
     };
 
     const pageSizeChange = (size) => {
         setPageSize(size);
-        getRegions(activePage, size);
+        getRegions(activePage, size, sortBy, sortOrder);
     };
 
-    const getRegions = async (currentPage, pageSize) => {
+    const sortChange = (sortField) => {
+        setSortBy(sortField);
+        getRegions(activePage, currentPageSize, sortField, sortOrder);
+    };
+
+    const sortOrderChange = (sortOrder_) => {
+        setSortOrder(sortOrder_);
+        getRegions(activePage, currentPageSize, sortBy, sortOrder_);
+    };
+
+    const getRegions = async (currentPage, pageSize, sort, direction) => {
+        //initialize params
         currentPage = currentPage === undefined ? activePage : currentPage;
         pageSize = pageSize === undefined ? currentPageSize : pageSize;
+        sort = sort === undefined ? sortBy : sort;
+        direction = direction === undefined ? sortOrder : direction;
+        console.log('getRegions', {"sort": sort, "direction": direction, "page": currentPage, "pageSize": pageSize});
+
         const {data} = await axios.get(`api/v1/region/all`, {
             headers: {authorization: "Bearer " + keycloak.token},
-            params: {page: currentPage, size: pageSize}
+            params: {page: currentPage, size: pageSize, sort: sort, direction: direction},
         });
+        console.log("response", data);
         setRegions(data.data);
         setIsLoading(false);
         setTotalPages(data.totalPages);
@@ -92,6 +112,7 @@ const AdminRegions = () => {
                     </ActionIcon>
                 </Box>
             </td>
+            <td>{element.createdAt} </td >
         </tr>
     ));
 
@@ -104,22 +125,37 @@ const AdminRegions = () => {
         <div>
             {
                 isLoading ? <p>Loading...</p> :
-                    <Table>
-                        <thead>
-                            <tr>
-                                <th>Stadt</th>
-                                <th>Fläche</th>
-                                <th>Besitzer</th>
-                                <th>Aktionen</th>
-                            </tr>
-                        </thead>
-                        <tbody>{rows}</tbody>
-                    </Table>
+                    <Group>
+                        <Select value={sortBy} placeholder="Sortierung" onChange={sortChange} data={[
+                            {value: 'id', label: 'ID'},
+                            {value: 'city', label: 'Stadt'},
+                            {value: 'area', label: 'Fläche'},
+                            {value: 'username', label: 'Besitzer'},
+                            {value: 'createdAt', label: 'Datum'},
+                        ]} />
+                        <Select value={sortOrder} onChange={sortOrderChange} data={[
+                            {value: 'asc', label: 'aufsteigend'},
+                            {value: 'desc', label: 'absteigend'},
+                        ]} />
+                        <Table>
+                            <thead>
+                                <tr>
+                                    <th>Stadt</th>
+                                    <th>Fläche</th>
+                                    <th>Besitzer</th>
+                                    <th>Aktionen</th>
+                                    <th>Erstellt</th>
+                                </tr>
+                            </thead>
+                            <tbody>{rows}</tbody>
+                        </Table>
+                    </Group>
             }
             <RegionView data={regionViewData} setOpen={setOpenRegionView} open={openRegionView} setUpdateMap={setUpdateMap} />
             <Group>
                 <Pagination page={activePage} onChange={pageSwitch} total={totalPages} />
                 <Select value={currentPageSize} onChange={pageSizeChange} data={[
+                    {label: '2', value: 2},
                     {label: '10', value: 10},
                     {label: '25', value: 25},
                     {label: '50', value: 50},

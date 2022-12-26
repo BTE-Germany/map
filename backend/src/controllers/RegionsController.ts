@@ -21,15 +21,17 @@ class RegionsController {
     }
 
     public async getAllRegions(request, response: Response) {
-        const regions = await this.core.getPrisma().region.findMany();
         let page = request.query.page;
         let size = request.query.size;
+        let sortBy = request.query.sort;
+        let sortDir = request.query.direction;
+        let regions = await this.core.getPrisma().region.findMany({ orderBy: { [sortBy]: sortDir } });
         let count = regions.length;
         let totalPages = Math.ceil(count / size);
         let resultList = {
             currentPage: page,
             pageSize: size,
-            totalUsers: count,
+            totalRegions: count,
             totalPages: totalPages,
             data: regions.slice((page - 1) * size, page * size)
         };
