@@ -1,7 +1,7 @@
 /*+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
  + AccountButton.jsx                                                          +
  +                                                                            +
- + Copyright (c) 2022 Robin Ferch                                             +
+ + Copyright (c) 2022-2023 Robin Ferch                                        +
  + https://robinferch.me                                                      +
  + This project is released under the MIT license.                            +
  +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++*/
@@ -43,43 +43,43 @@ const AccountButton = props => {
     }
 
     return (<div>
-            <Menu trigger="hover" delay={500}>
-                <Menu.Target>
-                    <ActionIcon variant="outline"><BiDotsVerticalRounded/></ActionIcon>
-                </Menu.Target>
+        <Menu trigger="hover" delay={500} width={200}>
+            <Menu.Target>
+                <ActionIcon variant="outline"><BiDotsVerticalRounded/></ActionIcon>
+            </Menu.Target>
 
-                <Menu.Dropdown>
-                    <Menu.Label>Account</Menu.Label>
-                    {keycloak?.authenticated && <Menu.Item icon={<AiOutlineUser size={14}/>}
-                                                           disabled>Hey, {keycloak?.tokenParsed.preferred_username}</Menu.Item>}
-                    {keycloak?.authenticated ?
-                        <Menu.Item icon={<FiLock size={14}/>} onClick={() => logout()}>Logout</Menu.Item> :
-                        <Menu.Item icon={<FiLock size={14}/>} onClick={() => login()}>Login</Menu.Item>}
+            <Menu.Dropdown>
+                <Menu.Label>Account</Menu.Label>
+                {keycloak?.authenticated && <Menu.Item icon={<AiOutlineUser size={14}/>}
+                                                       disabled>Hey, {keycloak?.tokenParsed.preferred_username}</Menu.Item>}
+                {keycloak?.authenticated ?
+                    <Menu.Item icon={<FiLock size={14}/>} onClick={() => logout()}>Logout</Menu.Item> :
+                    <Menu.Item icon={<FiLock size={14}/>} onClick={() => login()}>Login</Menu.Item>}
 
-                    {(keycloak?.authenticated && !user?.data?.minecraftUUID) &&
-                        <Menu.Item icon={<FiLink2 size={14}/>} component={Link} to={"/link"}>Link Minecraft
-                            Account</Menu.Item>}
+                {(keycloak?.authenticated && !user?.data?.minecraftUUID) &&
+                    <Menu.Item icon={<FiLink2 size={14}/>} component={Link} to={"/link"}>Link Minecraft
+                        Account</Menu.Item>}
 
-                    {(keycloak?.authenticated && user?.data?.minecraftUUID) &&
-                        <Menu.Item icon={<FiLink2 size={14}/>} onClick={unlinkUser}>Unlink Minecraft
-                            Account</Menu.Item>}
+                {(keycloak?.authenticated && user?.data?.minecraftUUID) &&
+                    <Menu.Item icon={<FiLink2 size={14}/>} onClick={unlinkUser}>Unlink Minecraft
+                        Account</Menu.Item>}
 
-                    <Menu.Divider/>
-                    <Menu.Label>About</Menu.Label>
-                    <Menu.Item component={"a"} href="https://buildthe.earth/de-d" target={"_blank"}
-                               icon={<FaDiscord size={14}/>}>Discord
-                        Server</Menu.Item>
-                    <Menu.Item component={"a"} href="https://bte-germany.de" target={"_blank"}
-                               icon={<FiGlobe size={14}/>}>Website</Menu.Item>
-                    <Menu.Item component={"a"} href="https://robinferch.me/legal" target={"_blank"}
-                               icon={<IoMdPaper size={14}/>}>Impressum</Menu.Item>
-                    <Menu.Item component={"a"} href="https://robinferch.me/privacy" target={"_blank"}
-                               icon={<MdOutlinePrivacyTip size={14}/>}>Privacy policy</Menu.Item>
-                </Menu.Dropdown>
-            </Menu>
+                <Menu.Divider/>
+                <Menu.Label>About</Menu.Label>
+                <Menu.Item component={"a"} href="https://buildthe.earth/de-d" target={"_blank"}
+                           icon={<FaDiscord size={14}/>}>Discord
+                    Server</Menu.Item>
+                <Menu.Item component={"a"} href="https://bte-germany.de" target={"_blank"}
+                           icon={<FiGlobe size={14}/>}>Website</Menu.Item>
+                <Menu.Item component={"a"} href="https://robinferch.me/legal" target={"_blank"}
+                           icon={<IoMdPaper size={14}/>}>Impressum</Menu.Item>
+                <Menu.Item component={"a"} href="https://robinferch.me/privacy" target={"_blank"}
+                           icon={<MdOutlinePrivacyTip size={14}/>}>Privacy policy</Menu.Item>
+            </Menu.Dropdown>
+        </Menu>
 
 
-        </div>);
+    </div>);
 }
 
 export default AccountButton

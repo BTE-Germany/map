@@ -1,7 +1,7 @@
 /*+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
  + RegionView.jsx                                                             +
  +                                                                            +
- + Copyright (c) 2022 Robin Ferch                                             +
+ + Copyright (c) 2022-2023 Robin Ferch                                        +
  + https://robinferch.me                                                      +
  + This project is released under the MIT license.                            +
  +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++*/
@@ -17,8 +17,7 @@ import {
     Drawer,
     Group,
     Loader,
-    Radio,
-    ScrollArea,
+    Radio, ScrollArea,
     Table,
     Text,
     Tooltip
@@ -27,7 +26,6 @@ import axios from "axios";
 import {useClipboard} from "@mantine/hooks";
 import {centerOfMass, polygon} from "@turf/turf";
 import StatCard from "./StatCard";
-import NewStatCard from "./StatCard";
 import {FaCity} from "react-icons/fa";
 import {BiArea} from "react-icons/bi";
 import {AiFillDelete, AiOutlineDelete, AiOutlineLink} from "react-icons/ai";
@@ -40,7 +38,6 @@ import {useUser} from "../hooks/useUser";
 import {IoMdFlag} from "react-icons/io";
 import ReportDialog from "./ReportDialog";
 import {Link} from "react-router-dom";
-import RegionImageView from "./RegionImageView";
 import {BsFillPersonFill} from "react-icons/bs";
 import {HiUserGroup} from "react-icons/hi";
 import AdditionalBuildersDialog from "./AdditionalBuildersDialog";
@@ -77,11 +74,9 @@ const RegionView = ({data, open, setOpen, setUpdateMap}) => {
         const region = await axios.get(`/api/v1/region/${data.id}`);
         if (region.data.isEventRegion) {
             setPlotType('event');
-        }
-        else if (region.data.isPlotRegion) {
+        } else if (region.data.isPlotRegion) {
             setPlotType('plot');
-        }
-        else if (!region.data.isPlotRegion && !region.data.isEventRegion) {
+        } else if (!region.data.isPlotRegion && !region.data.isEventRegion) {
             setPlotType('normal');
         }
 
@@ -147,7 +142,7 @@ const RegionView = ({data, open, setOpen, setUpdateMap}) => {
             title: 'Report this region',
             centered: true,
             children: (
-                <ReportDialog regionId={region.id} keycloak={keycloak} />
+                <ReportDialog regionId={region.id} keycloak={keycloak}/>
             ),
         });
     };
@@ -197,7 +192,7 @@ const RegionView = ({data, open, setOpen, setUpdateMap}) => {
                 getData();
             },
             children: (
-                <AdditionalBuildersDialog regionId={region.id} keycloak={keycloak} />
+                <AdditionalBuildersDialog regionId={region.id} keycloak={keycloak}/>
             ),
         });
     };
@@ -233,7 +228,16 @@ const RegionView = ({data, open, setOpen, setUpdateMap}) => {
             title={`Region Info`}
             padding="xl"
             size="xl"
-            overlayBlur={3}>
+            overlayBlur={3}
+            lockScroll
+            styles={{
+                body: {
+                    height: "100%",
+                    paddingBottom: "50px",
+                    overflow: "hidden"
+                }
+            }}
+        >
             {loading ?
                 <Box sx={{
                     height: "90%",
@@ -242,116 +246,120 @@ const RegionView = ({data, open, setOpen, setUpdateMap}) => {
                     justifyContent: "center",
                     alignItems: "center"
                 }}>
-                    <Loader mt={"xl"} />
+                    <Loader mt={"xl"}/>
                 </Box>
                 :
-                <Box>
-                    <RegionImageView />
+                <ScrollArea.Autosize maxHeight={"90vh"} style={{maxHeight: "90vh"}}>
+                    <Box sx={{maxHeight: "100%", display: "flex", flexDirection: "column"}}>
+                        {/*<RegionImageView/>*/}
 
-                    <Group spacing={"md"} cols={1}>
-                        {!region.isEventRegion && !region.isPlotRegion ?
-                            <StatCard title={"Owner"}
-                                innerImage={`https://crafatar.com/avatars/${data.userUUID}?size=64`}
-                                value={data.username} Icon={BsFillPersonFill} subtitle={""} editable={editing}
-                                id={"owner"} />
-                            : null
-                        }
-
-                        {region.isEventRegion ?
-                            <Alert icon={<GiPartyPopper size={16} />} sx={{width: "100%"}} title="Event Region"
-                                color="red">
-                                This is an Event Region, which was built as part of a BTE Germany Event. Therefore, it
-                                has no owner.
-                            </Alert>
-                            : null
-                        }
-
-                        {region.isPlotRegion ?
-                            <Alert icon={<TbFence size={16} />} sx={{width: "100%"}} title="Plot Region"
-                                color="green">
-                                This is a plot region. Therefore, it has no owner.
-                            </Alert>
-                            : null
-                        }
-
-                        {region?.additionalBuilder?.length > 0 && !(region.ownerID === user?.data?.id) ?
-                            <StatCard title={"Additional Builders"} noBigValue={true}
-                                value={<AdditionalBuilders showEditButtons={false}
-                                    openAdditionalBuilderModal={openAdditionalBuilderModal}
-                                    region={region} update={getData} />}
-                                Icon={HiUserGroup}
-                                subtitle={""} />
-                            : null
-                        }
-
-                        {(region.ownerID === user?.data?.id) ?
-                            <StatCard title={"Additional Builders"} noBigValue={true}
-                                value={<AdditionalBuilders showEditButtons={true}
-                                    openAdditionalBuilderModal={openAdditionalBuilderModal}
-                                    region={region} update={getData}
-                                />}
-                                Icon={HiUserGroup}
-                                subtitle={""} />
-                            : null
-                        }
-
-                        {editing ?
-                            <Radio.Group name="type" label="Regions Typ"
-                                value={plotType}
-                                onChange={setPlotType}
-                            >
-                                <Radio value="normal" label="Normal" />
-                                <Radio value="event" label="Event" />
-                                <Radio value="plot" label="Plot" />
-                            </Radio.Group>
-                            : null
-                        }
-
-                        <StatCard title={"City"} value={region?.city} Icon={FaCity} subtitle={""} editable={editing}
-                            id={"city"} />
-                        <StatCard title={"Area"} value={numberWithCommas(region?.area) + " m²"} Icon={BiArea}
-                            subtitle={""} />
-                    </Group>
-
-
-                    {keycloak?.authenticated ?
-                        <Group spacing={"md"} cols={2} grow mt={"md"}>
-                            {(region.ownerID === user?.data?.id) || isAdmin ?
-                                <Button color={"red"} leftIcon={<AiFillDelete />} onClick={showDeleteConfirmation}>Delete
-                                    Region</Button>
-                                : null
-                            }
-                            {user?.data?.minecraftUUID ?
-                                <Button color={"blue"} leftIcon={<MdOutlineShareLocation />} onClick={teleportToRegion}>Teleport
-                                    here</Button>
+                        <Group spacing={"md"} cols={1}>
+                            {!region.isEventRegion && !region.isPlotRegion ?
+                                <StatCard title={"Owner"}
+                                          innerImage={`https://crafatar.com/avatars/${data.userUUID}?size=64`}
+                                          value={data.username} Icon={BsFillPersonFill} subtitle={""} editable={editing}
+                                          id={"owner"}/>
                                 : null
                             }
 
-                            {!user?.data?.minecraftUUID ?
-                                <Button color={"blue"} leftIcon={<MdOutlineShareLocation />} component={Link}
-                                    to={"/link"}>Teleport
-                                    here</Button>
+                            {region.isEventRegion ?
+                                <Alert icon={<GiPartyPopper size={16}/>} sx={{width: "100%"}} title="Event Region"
+                                       color="red">
+                                    This is an Event Region, which was built as part of a BTE Germany Event. Therefore,
+                                    it
+                                    has no owner.
+                                </Alert>
                                 : null
                             }
+
+                            {region.isPlotRegion ?
+                                <Alert icon={<TbFence size={16}/>} sx={{width: "100%"}} title="Plot Region"
+                                       color="green">
+                                    This is a plot region. Therefore, it has no owner.
+                                </Alert>
+                                : null
+                            }
+
+                            {region?.additionalBuilder?.length > 0 && !(region.ownerID === user?.data?.id) ?
+                                <StatCard title={"Additional Builders"} noBigValue={true}
+                                          value={<AdditionalBuilders showEditButtons={false}
+                                                                     openAdditionalBuilderModal={openAdditionalBuilderModal}
+                                                                     region={region} update={getData}/>}
+                                          Icon={HiUserGroup}
+                                          subtitle={""}/>
+                                : null
+                            }
+
+                            {(region.ownerID === user?.data?.id) ?
+                                <StatCard title={"Additional Builders"} noBigValue={true}
+                                          value={<AdditionalBuilders showEditButtons={true}
+                                                                     openAdditionalBuilderModal={openAdditionalBuilderModal}
+                                                                     region={region} update={getData}
+                                          />}
+                                          Icon={HiUserGroup}
+                                          subtitle={""}/>
+                                : null
+                            }
+
+                            {editing ?
+                                <Radio.Group name="type" label="Regions Typ"
+                                             value={plotType}
+                                             onChange={setPlotType}
+                                >
+                                    <Radio value="normal" label="Normal"/>
+                                    <Radio value="event" label="Event"/>
+                                    <Radio value="plot" label="Plot"/>
+                                </Radio.Group>
+                                : null
+                            }
+
+                            <StatCard title={"City"} value={region?.city} Icon={FaCity} subtitle={""} editable={editing}
+                                      id={"city"}/>
+                            <StatCard title={"Area"} value={numberWithCommas(region?.area) + " m²"} Icon={BiArea}
+                                      subtitle={""}/>
                         </Group>
-                        :
-                        <Button leftIcon={<FiLock size={14} />} fullWidth mt={"md"}
-                            onClick={() => keycloak.login({redirectUri: window.location.origin + "?region=" + region.id + "&details=true"})}>Login
-                            to get more features</Button>
-                    }
 
-                    {isAdmin && !editing ?
-                        <Button fullWidth mt={"md"} onClick={() => setEditing(true)}>Edit the values</Button> : null}
-                    {isAdmin && editing ? <Button fullWidth mt={"md"} onClick={() => onSave()}>Save</Button> : null}
-                    {isAdmin && editing ?
-                        <Button fullWidth mt={"md"} onClick={() => setEditing(false)}>Cancel</Button> : null}
 
-                    <Accordion my={"md"}>
-                        <Accordion.Item value="info">
-                            <Accordion.Control>More information</Accordion.Control>
-                            <Accordion.Panel>
-                                <Table>
-                                    <tbody>
+                        {keycloak?.authenticated ?
+                            <Group spacing={"md"} cols={2} grow mt={"md"}>
+                                {(region.ownerID === user?.data?.id) || isAdmin ?
+                                    <Button color={"red"} leftIcon={<AiFillDelete/>} onClick={showDeleteConfirmation}>Delete
+                                        Region</Button>
+                                    : null
+                                }
+                                {user?.data?.minecraftUUID ?
+                                    <Button color={"blue"} leftIcon={<MdOutlineShareLocation/>}
+                                            onClick={teleportToRegion}>Teleport
+                                        here</Button>
+                                    : null
+                                }
+
+                                {!user?.data?.minecraftUUID ?
+                                    <Button color={"blue"} leftIcon={<MdOutlineShareLocation/>} component={Link}
+                                            to={"/link"}>Teleport
+                                        here</Button>
+                                    : null
+                                }
+                            </Group>
+                            :
+                            <Button leftIcon={<FiLock size={14}/>} fullWidth mt={"md"}
+                                    onClick={() => keycloak.login({redirectUri: window.location.origin + "?region=" + region.id + "&details=true"})}>Login
+                                to get more features</Button>
+                        }
+
+                        {isAdmin && !editing ?
+                            <Button fullWidth mt={"md"} onClick={() => setEditing(true)}>Edit the
+                                values</Button> : null}
+                        {isAdmin && editing ? <Button fullWidth mt={"md"} onClick={() => onSave()}>Save</Button> : null}
+                        {isAdmin && editing ?
+                            <Button fullWidth mt={"md"} onClick={() => setEditing(false)}>Cancel</Button> : null}
+
+                        <Accordion my={"md"}>
+                            <Accordion.Item value="info">
+                                <Accordion.Control>More information</Accordion.Control>
+                                <Accordion.Panel>
+                                    <Table>
+                                        <tbody>
                                         <tr>
                                             <td>ID</td>
                                             <td>
@@ -382,38 +390,41 @@ const RegionView = ({data, open, setOpen, setUpdateMap}) => {
                                                 </Tooltip>
                                             </td>
                                         </tr>
-                                    </tbody>
-                                </Table>
-                            </Accordion.Panel>
+                                        </tbody>
+                                    </Table>
+                                </Accordion.Panel>
 
-                        </Accordion.Item>
-                    </Accordion>
+                            </Accordion.Item>
+                        </Accordion>
+                        <Box style={{flex: 1}}></Box>
+                        <Box style={{display: "flex", gap: "5px"}}>
+                            <Box style={{flex: 1}}></Box>
+                            {(!user?.data?.blockedFromReports && !region.isPlotRegion && !region.isEventRegion) ?
+                                <Tooltip
+                                    label="Report this region"
+                                    position="right">
 
-                    <Box style={{position: "absolute", bottom: 15, right: 15, display: "flex", gap: "5px"}}>
-                        {(!user?.data?.blockedFromReports && !region.isPlotRegion && !region.isEventRegion) ?
+                                    <ActionIcon size="md" variant="light" onClick={openReportModal}>
+                                        <IoMdFlag/>
+                                    </ActionIcon>
+                                </Tooltip>
+                                : null
+                            }
+
                             <Tooltip
-                                label="Report this region"
-                                position="right">
+                                label={clipboard.copied ? "Copied" : "Copy a link to this region"}
+                                position="right"
+                                color={clipboard.copied ? "green" : "gray"}
+                                ml={"sm"}>
 
-                                <ActionIcon size="md" variant="light" onClick={openReportModal}>
-                                    <IoMdFlag />
+                                <ActionIcon size="md" variant="light" onClick={() => copyLink(region.id)}>
+                                    <AiOutlineLink/>
                                 </ActionIcon>
                             </Tooltip>
-                            : null
-                        }
-
-                        <Tooltip
-                            label={clipboard.copied ? "Copied" : "Copy a link to this region"}
-                            position="right"
-                            color={clipboard.copied ? "green" : "gray"}
-                            ml={"sm"}>
-
-                            <ActionIcon size="md" variant="light" onClick={() => copyLink(region.id)}>
-                                <AiOutlineLink />
-                            </ActionIcon>
-                        </Tooltip>
+                        </Box>
                     </Box>
-                </Box>
+                </ScrollArea.Autosize>
+
             }
         </Drawer>
     );
@@ -455,14 +466,14 @@ const AdditionalBuilders = ({region, showEditButtons, openAdditionalBuilderModal
                                 <Box sx={{display: "flex", justifyContent: "space-between", width: "100%"}}>
                                     <Box id={idx} sx={{display: "flex", gap: "10px", alignItems: "center"}}>
                                         <img src={`https://crafatar.com/avatars/${builder.minecraftUUID}?size=20`}
-                                            alt=""
-                                            width={20} height={20} />
+                                             alt=""
+                                             width={20} height={20}/>
                                         <Text sx={{fontWeight: "bold"}}>{builder.username}</Text>
                                     </Box>
                                     {
                                         showEditButtons &&
                                         <ActionIcon onClick={() => removeBuilder(builder.id)} loading={load}>
-                                            <AiOutlineDelete />
+                                            <AiOutlineDelete/>
                                         </ActionIcon>
                                     }
 
@@ -475,7 +486,7 @@ const AdditionalBuilders = ({region, showEditButtons, openAdditionalBuilderModal
 
             {
                 showEditButtons &&
-                <Button color={"blue"} mt={"md"} leftIcon={<MdAdd />} onClick={openAdditionalBuilderModal}>
+                <Button color={"blue"} mt={"md"} leftIcon={<MdAdd/>} onClick={openAdditionalBuilderModal}>
                     Add Additional Builder
                 </Button>
             }

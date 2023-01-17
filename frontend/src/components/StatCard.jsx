@@ -1,7 +1,7 @@
 /*+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
  + StatCard.jsx                                                               +
  +                                                                            +
- + Copyright (c) 2022 Robin Ferch                                             +
+ + Copyright (c) 2022-2023 Robin Ferch                                        +
  + https://robinferch.me                                                      +
  + This project is released under the MIT license.                            +
  +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++*/
@@ -41,18 +41,19 @@ const StatCard = ({title, Icon, innerImage, value, subtitle, noBigValue, editabl
                 <Text size="xs" color="dimmed" className={classes.title}>
                     {title}
                 </Text>
-                <Icon className={classes.icon} size={22} />
+                <Icon className={classes.icon} size={22}/>
             </Group>
 
             <Group align="flex-end" spacing="xs" mt={15}>
                 <Box sx={{display: "flex", alignItems: "center"}} style={{width: "100%"}}>
                     {innerImage ?
-                        <Image src={innerImage} alt="" radius={"md"} style={{width: 64, marginRight: 10}} /> :
+                        <Image src={innerImage} alt="" radius={"md"} style={{width: 64, marginRight: 10}}/> :
                         null
                     }
                     {editable ?
-                        <TextInput id={id} defaultValue={value} style={{width: "100%"}} /> :
-                        !noBigValue ? <Title ml={"md"} order={3} className={classes.value}>{value}</Title> : {value}
+                        <TextInput id={id} defaultValue={value} style={{width: "100%"}}/> :
+                        !noBigValue ?
+                            <Title ml={"md"} order={3} className={classes.value}>{value}</Title> : <>{value}</>
                     }
                 </Box>
             </Group>

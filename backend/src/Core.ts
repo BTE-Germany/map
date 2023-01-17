@@ -1,7 +1,7 @@
 /******************************************************************************
  * Core.ts                                                                    *
  *                                                                            *
- * Copyright (c) 2022 Robin Ferch                                             *
+ * Copyright (c) 2022-2023 Robin Ferch                                        *
  * https://robinferch.me                                                      *
  * This project is released under the MIT license.                            *
  ******************************************************************************/
@@ -39,6 +39,7 @@ class Core {
             this.web.startWebserver();
         })
         this.discord = new DiscordIntegration(this);
+        this.s3 = new S3Controller(this);
 
     }
 

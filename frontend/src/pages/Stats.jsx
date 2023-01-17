@@ -1,12 +1,12 @@
 /*+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
  + Stats.jsx                                                                  +
  +                                                                            +
- + Copyright (c) 2022 Robin Ferch                                             +
+ + Copyright (c) 2022-2023 Robin Ferch                                        +
  + https://robinferch.me                                                      +
  + This project is released under the MIT license.                            +
  +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++*/
 
-import React, { useEffect, useState } from 'react';
+import React, {useEffect, useState} from 'react';
 import NavHeader from "../components/NavHeader";
 import {
     Box,
@@ -23,8 +23,8 @@ import {
     Pagination
 } from "@mantine/core";
 import axios from "axios";
-import { FiList } from "react-icons/fi";
-import { BiArea } from "react-icons/bi";
+import {FiList} from "react-icons/fi";
+import {BiArea} from "react-icons/bi";
 
 const useStyles = createStyles((theme) => ({
     root: {
@@ -52,8 +52,8 @@ const Stats = props => {
     }, [activePage])
 
     const getData = async () => {
-        const { data: generalData } = await axios.get("/api/v1/stats/general")
-        const { data: leaderboardData } = await axios.get("/api/v1/stats/leaderboard?page=" + (activePage - 1))
+        const {data: generalData} = await axios.get("/api/v1/stats/general")
+        const {data: leaderboardData} = await axios.get("/api/v1/stats/leaderboard?page=" + (activePage - 1))
         setGeneralStats(generalData);
         setLeaderboard(leaderboardData.leaderboard);
         setTotalPages(Math.ceil(leaderboardData.count / 10));
@@ -62,7 +62,7 @@ const Stats = props => {
     }
 
     const getLeaderboard = async () => {
-        const { data: leaderboardData } = await axios.get("/api/v1/stats/leaderboard?page=" + (activePage - 1))
+        const {data: leaderboardData} = await axios.get("/api/v1/stats/leaderboard?page=" + (activePage - 1))
         setLeaderboard(leaderboardData.leaderboard);
         setTotalPages(Math.ceil(leaderboardData.count / 10));
     }
@@ -74,54 +74,54 @@ const Stats = props => {
 
     return (
         <div>
-            <NavHeader />
+            <NavHeader/>
             <Container mt={"md"}>
                 {
-                    loading ? <Loader /> :
+                    loading ? <Loader/> :
                         <Box>
                             <Title mb={"md"}>Stats</Title>
                             <Grid>
-                                <Grid.Col sm={12} lg={6}><StatsCard icon={<FiList />} title={"Total number of regions"}
-                                    value={generalStats.regionCount}
+                                <Grid.Col sm={12} lg={6}><StatsCard icon={<FiList/>} title={"Total number of regions"}
+                                                                    value={generalStats.regionCount}
                                 /></Grid.Col>
-                                <Grid.Col sm={12} lg={6}><StatsCard icon={<BiArea />} title={"Total area of all regions"}
-                                    value={numberWithCommas(generalStats.totalArea) + " m²"}
-                                    valueSmall={"this is about " + ((generalStats.totalArea / 357386000000) * 100).toFixed(10).toLocaleString() + "% of Germany's area"} /></Grid.Col>
+                                <Grid.Col sm={12} lg={6}><StatsCard icon={<BiArea/>} title={"Total area of all regions"}
+                                                                    value={numberWithCommas(generalStats.totalArea) + " m²"}
+                                                                    valueSmall={"this is about " + ((generalStats.totalArea / 357386000000) * 100).toFixed(10).toLocaleString() + "% of Germany's area"}/></Grid.Col>
                             </Grid>
 
                             <Title mb={"md"}>Leaderboard</Title>
 
                             <Table>
                                 <thead>
-                                    <tr>
-                                        <th>Builder</th>
-                                        <th>Area</th>
-                                    </tr>
+                                <tr>
+                                    <th>Builder</th>
+                                    <th>Area</th>
+                                </tr>
                                 </thead>
                                 <tbody>
-                                    {
-                                        leaderboard.map((player, idx) => {
-                                            return (
-                                                <tr key={idx}>
-                                                    {
-                                                        player.username === "BTE Germany Event" || player.username == "Plot Region" ?
-                                                            <td style={{ display: "flex", alignItems: "center", gap: "5px" }}>
-                                                                <img
-                                                                    src={`https://bte-germany.de/logo.gif`}
-                                                                    alt="" width={20} /> {player.username}</td> :
-                                                            <td style={{ display: "flex", alignItems: "center", gap: "5px" }}>
-                                                                <img
-                                                                    src={`https://minotar.net/avatar/${player.username}/20`}
-                                                                    alt="" /> {player.username}</td>
-                                                    }
-                                                    <td>{player.area} m²</td>
-                                                </tr>
-                                            )
-                                        })
-                                    }
+                                {
+                                    leaderboard.map((player, idx) => {
+                                        return (
+                                            <tr key={idx}>
+                                                {
+                                                    player.username === "BTE Germany Event" || player.username == "Plot Region" ?
+                                                        <td style={{display: "flex", alignItems: "center", gap: "5px"}}>
+                                                            <img
+                                                                src={`https://bte-germany.de/logo.gif`}
+                                                                alt="" width={20}/> {player.username}</td> :
+                                                        <td style={{display: "flex", alignItems: "center", gap: "5px"}}>
+                                                            <img
+                                                                src={`https://minotar.net/avatar/${encodeURIComponent(player.username)}/20`}
+                                                                alt=""/> {player.username}</td>
+                                                }
+                                                <td>{player.area} m²</td>
+                                            </tr>
+                                        )
+                                    })
+                                }
                                 </tbody>
                             </Table>
-                            <Pagination page={activePage} onChange={setPage} total={totalPages} mt={"md"} />
+                            <Pagination page={activePage} onChange={setPage} total={totalPages} mt={"md"}/>
                         </Box>
                 }
             </Container>
@@ -130,8 +130,8 @@ const Stats = props => {
     );
 }
 
-const StatsCard = ({ title, value, icon, valueSmall }) => {
-    const { classes } = useStyles();
+const StatsCard = ({title, value, icon, valueSmall}) => {
+    const {classes} = useStyles();
     return (
         <Paper withBorder p="md" radius="md">
             <Group position="apart">
@@ -152,7 +152,7 @@ const StatsCard = ({ title, value, icon, valueSmall }) => {
                 <ThemeIcon
                     color="gray"
                     variant="light"
-                    sx={(theme) => ({ color: theme.colors.teal[6] })}
+                    sx={(theme) => ({color: theme.colors.teal[6]})}
                     size={38}
                     radius="md"
                 >

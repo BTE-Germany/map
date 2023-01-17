@@ -1,7 +1,7 @@
 /******************************************************************************
  * S3Controller.ts                                                            *
  *                                                                            *
- * Copyright (c) 2022 Robin Ferch                                             *
+ * Copyright (c) 2022-2023 Robin Ferch                                        *
  * https://robinferch.me                                                      *
  * This project is released under the MIT license.                            *
  ******************************************************************************/
@@ -25,6 +25,7 @@ class S3Controller {
             accessKey: process.env.S3_ACCESS_KEY,
             secretKey: process.env.S3_SECRET_KEY
         });
+        this.core.getLogger().debug("Started S3 Controller.")
     }
 
 
