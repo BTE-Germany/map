@@ -1,7 +1,7 @@
 /******************************************************************************
  * DiscordIntegration.ts                                                      *
  *                                                                            *
- * Copyright (c) 2022 Robin Ferch                                             *
+ * Copyright (c) 2022-2023 Robin Ferch                                        *
  * https://robinferch.me                                                      *
  * This project is released under the MIT license.                            *
  ******************************************************************************/
@@ -50,12 +50,12 @@ class DiscordIntegration {
             .setTitle('New region report')
             .setDescription('There is a new reported region. Please check it!')
             .setThumbnail('https://i.imgur.com/iaGxG9Y.png')
-            .addField("Region ID", regionId, true)
+            .addField("Region ID", regionId || "", true)
             .addField("Link to Region", `[Click here](https://map.bte-germany.de?region=${regionId}&details=true)`, true)
-            .addField("Region Owner", region.username, true)
-            .addField("Report by", reportedBy, true)
-            .addField("Report Reason", reason, true)
-            .addField("Comment", comment, true)
+            .addField("Region Owner", region.username || "", true)
+            .addField("Report by", reportedBy || "", true)
+            .addField("Report Reason", reason || "", true)
+            .addField("Comment", comment || "", true)
             .setTimestamp()
 
         this.client.channels.fetch(process.env.DISCORD_LOG_CHANNEL)

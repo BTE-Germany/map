@@ -1,7 +1,7 @@
 /*+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
  + ReportDialog.jsx                                                           +
  +                                                                            +
- + Copyright (c) 2022 Robin Ferch                                             +
+ + Copyright (c) 2022-2023 Robin Ferch                                        +
  + https://robinferch.me                                                      +
  + This project is released under the MIT license.                            +
  +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++*/
@@ -22,7 +22,7 @@ const ReportDialog = ({regionId, keycloak}) => {
     const form = useForm({
         initialValues: {
             comment: '',
-            reason: '',
+            reason: 'incorrectBuilder',
             disclaimer: false,
         },
         validate: {

@@ -141,6 +141,13 @@ class RegionsController {
 
 
     public async reportRegion(request: Request, response: Response) {
+        const errors = validationResult(request);
+        if (!errors.isEmpty()) {
+            return response.status(400).json({errors: errors.array()});
+        }
+
+        console.log(request.body)
+
         let region = await this.core.getPrisma().region.findUnique({
             where: {
                 id: request.params.id
