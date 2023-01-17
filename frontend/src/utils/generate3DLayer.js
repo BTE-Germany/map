@@ -1,7 +1,7 @@
 /*+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
  + generate3DLayer.js                                                         +
  +                                                                            +
- + Copyright (c) 2022 Robin Ferch                                             +
+ + Copyright (c) 2022-2023 Robin Ferch                                        +
  + https://robinferch.me                                                      +
  + This project is released under the MIT license.                            +
  +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++*/
@@ -50,9 +50,14 @@ const generate3DLayer = (id, origin, altitude, rotate, modelURL, mapInstance) =>
             this.camera = new THREE.Camera();
             this.scene = new THREE.Scene();
 
-            const light = new THREE.AmbientLight(0x404040, 5); // soft white light
+            const light = new THREE.AmbientLight(0x282828, 0.72); // soft white light
             this.scene.add(light);
+            const spotLight = new THREE.PointLight(16775643, 1.04); // soft white light
+            spotLight.position.set(33, 50, 65);
 
+            spotLight.castShadow = true;
+
+            this.scene.add(spotLight);
 
             loader.setDRACOLoader(dracoLoader);
             loader.load(

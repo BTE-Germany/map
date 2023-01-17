@@ -1,16 +1,16 @@
 /******************************************************************************
  * RegionsController.ts                                                       *
  *                                                                            *
- * Copyright (c) 2022 Robin Ferch                                             *
+ * Copyright (c) 2022-2023 Robin Ferch                                        *
  * https://robinferch.me                                                      *
  * This project is released under the MIT license.                            *
  ******************************************************************************/
 
-import { Request, Response } from "express";
+import {Request, Response} from "express";
 import Core from "../Core";
 import * as turf from "@turf/turf";
 import axios from "axios";
-import { validationResult } from "express-validator";
+import {validationResult} from "express-validator";
 
 class RegionsController {
 
@@ -25,7 +25,7 @@ class RegionsController {
         let size = request.query.size;
         let sortBy = request.query.sort;
         let sortDir = request.query.direction;
-        let regions = await this.core.getPrisma().region.findMany({ orderBy: { [sortBy]: sortDir } });
+        let regions = await this.core.getPrisma().region.findMany({orderBy: {[sortBy]: sortDir}});
         let count = regions.length;
         let totalPages = Math.ceil(count / size);
         let resultList = {
@@ -108,7 +108,7 @@ class RegionsController {
                         id: region.id
                     }
                 });
-                response.send({ "success": true });
+                response.send({"success": true});
             } else {
                 response.status(403).send("You are not the owner of this region");
             }
@@ -133,7 +133,7 @@ class RegionsController {
         });
         console.log(region);
         if (region) {
-            response.send({ "success": true });
+            response.send({"success": true});
         } else {
             response.status(404).send("Region not found");
         }
@@ -148,7 +148,7 @@ class RegionsController {
         });
         if (region) {
             await this.core.getDiscord().sendReportMessage(region.id, request.kauth.grant.access_token.content.sub, request.body.comment, request.body.reason);
-            response.send({ "success": true });
+            response.send({"success": true});
         } else {
             response.status(404).send("Region not found");
         }
@@ -157,7 +157,7 @@ class RegionsController {
     public async addAdditionalBuilder(request: Request, response: Response) {
         const errors = validationResult(request);
         if (!errors.isEmpty()) {
-            return response.status(400).json({ errors: errors.array() });
+            return response.status(400).json({errors: errors.array()});
         }
 
 
@@ -176,7 +176,7 @@ class RegionsController {
                 return;
             }
 
-            const { data: mcApiData } = await axios.get(`https://playerdb.co/api/player/minecraft/${request.body.username}`)
+            const {data: mcApiData} = await axios.get(`https://playerdb.co/api/player/minecraft/${request.body.username}`)
             if (mcApiData.code === "player.found") {
                 let additionalBuilder = await this.core.getPrisma().additionalBuilder.findFirst({
                     where: {
@@ -202,7 +202,7 @@ class RegionsController {
                     }
                 })
                 this.core.getLogger().debug(b);
-                response.send({ "success": true });
+                response.send({"success": true});
             } else {
                 response.status(400).send("Minecraft user doesn't exist");
             }
@@ -241,9 +241,35 @@ class RegionsController {
                         id: additionalBuilder.id
                     }
                 });
-                response.send({ "success": true });
+                response.send({"success": true});
             } else {
                 response.status(404).send("Additional builder not found");
+            }
+
+        } else {
+            response.status(404).send("Region not found");
+        }
+    }
+
+    async handleImageUpload(request: Request, response: Response) {
+        const errors = validationResult(request);
+        if (!errors.isEmpty()) {
+            return response.status(400).json({errors: errors.array()});
+        }
+
+        let region = await this.core.getPrisma().region.findUnique({
+            where: {
+                id: request.params.id
+            },
+            include: {
+                owner: true
+            }
+        });
+        if (region) {
+
+            if (region.owner.ssoId !== request.kauth.grant.access_token.content.sub) {
+                response.status(403).send("You are not the owner of this region");
+                return;
             }
 
         } else {
