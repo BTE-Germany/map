@@ -16,7 +16,7 @@ model Region {
   description       String
   userUUID          String
   ownerID           String?
-  owner             User?                @relation(fields: [ownerID], references: [id])
+  owner             User?               @relation(fields: [ownerID], references: [id])
   data              String              @db.Text
   city              String
   area              Int
@@ -25,6 +25,7 @@ model Region {
   additionalBuilder AdditionalBuilder[]
   isEventRegion     Boolean             @default(false)
   isPlotRegion      Boolean             @default(false)
+  buildings         Int                 @default(0)
 }
 
 model User {
@@ -59,10 +60,10 @@ model AdditionalBuilder {
 }
 
 model InteractiveBuilding {
-    id            String @id @default(uuid())
-    name            String
-    fileURL     String
-    origin      String
-    altitude    Int
-    rotate      String
+  id       String @id @default(uuid())
+  name     String
+  fileURL  String
+  origin   String
+  altitude Int
+  rotate   String
 }

@@ -1,7 +1,7 @@
 /*+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
  + Admin.jsx                                                                  +
  +                                                                            +
- + Copyright (c) 2022 Robin Ferch                                             +
+ + Copyright (c) 2022-2023 Robin Ferch                                        +
  + https://robinferch.me                                                      +
  + This project is released under the MIT license.                            +
  +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++*/
@@ -11,9 +11,11 @@ import {Container, Tabs, Title} from "@mantine/core";
 import NavHeader from "../components/NavHeader";
 import {HiOutlineMap} from "react-icons/hi";
 import {FiUsers} from "react-icons/fi";
+import {BiCog} from "react-icons/bi";
 import AdminUsers from "../components/AdminUsers";
 import AdminRegions from "../components/AdminRegions";
 import {useKeycloak} from "@react-keycloak-fork/web";
+import AdminGeneral from "../components/AdminGeneral";
 
 const Admin = () => {
     //simple admin check
@@ -38,19 +40,23 @@ const Admin = () => {
 
     return (
         <div>
-            <NavHeader />
+            <NavHeader/>
             <Container mt={"md"}>
                 <Title>Administration</Title>
-                <Tabs defaultValue="Benutzer">
+                <Tabs defaultValue="Allgemein" mt={"md"}>
                     <Tabs.List>
-                        <Tabs.Tab value="Benutzer" icon={<FiUsers size={14} />}></Tabs.Tab>
-                        <Tabs.Tab value="Regionen" icon={<HiOutlineMap size={14} />}></Tabs.Tab>
+                        <Tabs.Tab value="Allgemein" icon={<BiCog size={20}/>}>Allgemein</Tabs.Tab>
+                        <Tabs.Tab value="Benutzer" icon={<FiUsers size={20}/>}>Benutzer</Tabs.Tab>
+                        <Tabs.Tab value="Regionen" icon={<HiOutlineMap size={20}/>}>Regionen</Tabs.Tab>
                     </Tabs.List>
                     <Tabs.Panel value="Benutzer">
-                        <AdminUsers />
+                        <AdminUsers/>
                     </Tabs.Panel>
                     <Tabs.Panel value="Regionen">
-                        <AdminRegions />
+                        <AdminRegions/>
+                    </Tabs.Panel>
+                    <Tabs.Panel value="Allgemein">
+                        <AdminGeneral/>
                     </Tabs.Panel>
                 </Tabs>
             </Container>

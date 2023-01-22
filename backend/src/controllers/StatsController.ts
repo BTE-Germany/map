@@ -1,7 +1,7 @@
 /******************************************************************************
  * StatsController.ts                                                         *
  *                                                                            *
- * Copyright (c) 2022 Robin Ferch                                             *
+ * Copyright (c) 2022-2023 Robin Ferch                                        *
  * https://robinferch.me                                                      *
  * This project is released under the MIT license.                            *
  ******************************************************************************/
@@ -20,13 +20,15 @@ export default class StatsController {
 
     public async getGeneralStats(request: Request, response: Response) {
         const regionCount = await this.core.getPrisma().region.count();
-        const {_sum: regionSum} = await this.core.getPrisma().region.aggregate({
+        const {_sum: sums} = await this.core.getPrisma().region.aggregate({
             _sum: {
-                area: true
+                area: true,
+                buildings: true
             }
         })
-        const totalArea = regionSum.area;
-        response.send({regionCount, totalArea});
+        const totalArea = sums.area;
+        const totalBuildings = sums.buildings;
+        response.send({regionCount, totalArea, totalBuildings});
     }
 
     public async getLeaderboard(request: Request, response: Response) {

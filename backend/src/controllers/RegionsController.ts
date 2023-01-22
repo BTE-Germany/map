@@ -8,9 +8,9 @@
 
 import {Request, Response} from "express";
 import Core from "../Core";
-import * as turf from "@turf/turf";
 import axios from "axios";
 import {validationResult} from "express-validator";
+import * as FormData from "form-data";
 
 class RegionsController {
 
@@ -278,6 +278,58 @@ class RegionsController {
                 response.status(403).send("You are not the owner of this region");
                 return;
             }
+
+        } else {
+            response.status(404).send("Region not found");
+        }
+    }
+
+    async handleCalculateBuildings(request: Request, response: Response) {
+        const errors = validationResult(request);
+        if (!errors.isEmpty()) {
+            return response.status(400).json({errors: errors.array()});
+        }
+        let region = await this.core.getPrisma().region.findUnique({
+            where: {
+                id: request.params.id
+            },
+            include: {
+                owner: true
+            }
+        });
+        if (region) {
+
+
+            let poly = "";
+
+            let polyJson = JSON.parse(region.data);
+            polyJson.forEach((coord) => {
+                poly += ` ${coord[0]} ${coord[1]}`
+            })
+
+            let overpassQuery = `
+                [out:json][timeout:25];
+                (
+                    node["building"]["building"!~"grandstand"]["building"!~"roof"](poly: "${poly}");
+                    way["building"]["building"!~"grandstand"]["building"!~"roof"](poly: "${poly}");
+                    relation["building"]["building"!~"grandstand"]["building"!~"roof"](poly: "${poly}");
+                );
+                out count;
+               `;
+
+
+            const {data} = await axios.get(`https://overpass.kumi.systems/api/interpreter?data=${overpassQuery.replace("\n", "")}`)
+
+            const newRegion = await this.core.getPrisma().region.update({
+                where: {
+                    id: region.id
+                },
+                data: {
+                    buildings: parseInt(data?.elements[0]?.tags?.total) || 0
+                }
+            })
+
+            response.send(newRegion)
 
         } else {
             response.status(404).send("Region not found");

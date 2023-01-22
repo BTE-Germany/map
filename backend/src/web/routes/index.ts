@@ -1,17 +1,17 @@
 /******************************************************************************
  * index.ts                                                                   *
  *                                                                            *
- * Copyright (c) 2022 Robin Ferch                                             *
+ * Copyright (c) 2022-2023 Robin Ferch                                        *
  * https://robinferch.me                                                      *
  * This project is released under the MIT license.                            *
  ******************************************************************************/
 
 import Web from '../Web';
 import Router from './utils/Router';
-import { RequestMethods } from './utils/RequestMethods';
-import { Keycloak } from "keycloak-connect";
+import {RequestMethods} from './utils/RequestMethods';
+import {Keycloak} from "keycloak-connect";
 import RegionsController from "../../controllers/RegionsController";
-import { body, query } from "express-validator";
+import {body, query} from "express-validator";
 import checkNewUser from "./utils/CheckNewUserMiddleware";
 import UserController from "../../controllers/UserController";
 import AdminController from "../../controllers/AdminController";
@@ -65,26 +65,31 @@ class Routes {
         })
 
         router.addRoute(RequestMethods.POST, "/region/:id/report", async (request, response) => {
-            await regionsController.reportRegion(request, response);
-        },
+                await regionsController.reportRegion(request, response);
+            },
             this.keycloak.protect(),
             checkNewUser(this.web.getCore().getPrisma(), this.web.getCore()),
             body('reason').isString(),
-            body('comment').isString().isLength({ min: 50 }))
+            body('comment').isString().isLength({min: 50}))
 
         router.addRoute(RequestMethods.POST, "/region/:id/additionalBuilder", async (request, response) => {
-            await regionsController.addAdditionalBuilder(request, response);
-        },
+                await regionsController.addAdditionalBuilder(request, response);
+            },
             this.keycloak.protect(),
             checkNewUser(this.web.getCore().getPrisma(), this.web.getCore()),
             body('username').isString())
 
 
         router.addRoute(RequestMethods.DELETE, "/region/:id/additionalBuilder/:builderId", async (request, response) => {
-            await regionsController.removeAdditionalBuilder(request, response);
-        },
+                await regionsController.removeAdditionalBuilder(request, response);
+            },
             this.keycloak.protect(),
-            checkNewUser(this.web.getCore().getPrisma(), this.web.getCore()))
+            checkNewUser(this.web.getCore().getPrisma(), this.web.getCore()));
+
+
+        router.addRoute(RequestMethods.GET, "/region/:id/calculateBuildings", async (request, response) => {
+            await regionsController.handleCalculateBuildings(request, response);
+        })
 
         router.addRoute(RequestMethods.GET, "/user/@me", async (request, response) => {
             await userController.getCurrentUser(request, response);
@@ -117,6 +122,14 @@ class Routes {
             await adminController.unlockUser(request, response);
         }, this.keycloak.protect("realm:mapadmin"), checkNewUser(this.web.getCore().getPrisma(), this.web.getCore()), body('userId').isString())
 
+        router.addRoute(RequestMethods.GET, "/admin/recalculateBuildings", async (request, response) => {
+            await adminController.calculateAllBuildings(request, response);
+        }, this.keycloak.protect("realm:mapadmin"), checkNewUser(this.web.getCore().getPrisma(), this.web.getCore()), body('userId').isString())
+
+        router.addRoute(RequestMethods.GET, "/admin/calculateProgress", async (request, response) => {
+            await adminController.getCalculationProgess(request, response);
+        }, this.keycloak.protect("realm:mapadmin"), checkNewUser(this.web.getCore().getPrisma(), this.web.getCore()), body('userId').isString())
+
 
         router.addRoute(RequestMethods.GET, "/stats/general", async (request, response) => {
             await statsController.getGeneralStats(request, response);
@@ -124,7 +137,7 @@ class Routes {
 
         router.addRoute(RequestMethods.GET, "/stats/leaderboard", async (request, response) => {
             await statsController.getLeaderboard(request, response);
-        }, query('page').isInt({ min: 0 }))
+        }, query('page').isInt({min: 0}))
 
 
         router.addRoute(RequestMethods.GET, "/interactiveBuildings/all", async (request, response) => {
