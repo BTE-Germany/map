@@ -101,9 +101,9 @@ class AdminController {
             let overpassQuery = `
                 [out:json][timeout:25];
                 (
-                    node["building"]["building"!~"grandstand"]["building"!~"roof"](poly: "${poly}");
-                    way["building"]["building"!~"grandstand"]["building"!~"roof"](poly: "${poly}");
-                    relation["building"]["building"!~"grandstand"]["building"!~"roof"](poly: "${poly}");
+                    node["building"]["building"!~"grandstand"]["building"!~"roof"]["building"!~"garage"]["building"!~"hut"]["building"!~"shed"](poly: "${poly}");
+                    way["building"]["building"!~"grandstand"]["building"!~"roof"]["building"!~"garage"]["building"!~"hut"]["building"!~"shed"](poly: "${poly}");
+                    relation["building"]["building"!~"grandstand"]["building"!~"roof"]["building"!~"garage"]["building"!~"hut"]["building"!~"shed"](poly: "${poly}");
                 );
                 out count;
                `;
