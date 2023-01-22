@@ -27,7 +27,7 @@ import {useClipboard} from "@mantine/hooks";
 import {centerOfMass, polygon} from "@turf/turf";
 import StatCard from "./StatCard";
 import {FaCity} from "react-icons/fa";
-import {BiArea} from "react-icons/bi";
+import {BiArea, BiBuilding} from "react-icons/bi";
 import {AiFillDelete, AiOutlineDelete, AiOutlineLink} from "react-icons/ai";
 import {MdAdd, MdOutlineShareLocation} from "react-icons/md";
 import {useModals} from "@mantine/modals";
@@ -316,6 +316,8 @@ const RegionView = ({data, open, setOpen, setUpdateMap}) => {
                             <StatCard title={"City"} value={region?.city} Icon={FaCity} subtitle={""} editable={editing}
                                       id={"city"}/>
                             <StatCard title={"Area"} value={numberWithCommas(region?.area) + " m²"} Icon={BiArea}
+                                      subtitle={""}/>
+                            <StatCard title={"Buildings"} value={numberWithCommas(region?.buildings)} Icon={BiBuilding}
                                       subtitle={""}/>
                         </Group>
 

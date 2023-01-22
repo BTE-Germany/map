@@ -24,7 +24,7 @@ import {
 } from "@mantine/core";
 import axios from "axios";
 import {FiList} from "react-icons/fi";
-import {BiArea} from "react-icons/bi";
+import {BiArea, BiBuilding} from "react-icons/bi";
 
 const useStyles = createStyles((theme) => ({
     root: {
@@ -82,20 +82,24 @@ const Stats = props => {
                             <Title mb={"md"}>Stats</Title>
                             <Grid>
                                 <Grid.Col sm={12} lg={6}><StatsCard icon={<FiList/>} title={"Total number of regions"}
-                                                                    value={generalStats.regionCount}
+                                                                    value={parseInt(generalStats.regionCount).toLocaleString()}
+                                /></Grid.Col>
+                                <Grid.Col sm={12} lg={6}><StatsCard icon={<BiBuilding/>} title={"Finished Buildings"}
+                                                                    value={parseInt(generalStats.totalBuildings).toLocaleString()}
                                 /></Grid.Col>
                                 <Grid.Col sm={12} lg={6}><StatsCard icon={<BiArea/>} title={"Total area of all regions"}
                                                                     value={numberWithCommas(generalStats.totalArea) + " m²"}
                                                                     valueSmall={"this is about " + ((generalStats.totalArea / 357386000000) * 100).toFixed(10).toLocaleString() + "% of Germany's area"}/></Grid.Col>
                             </Grid>
 
-                            <Title mb={"md"}>Leaderboard</Title>
+                            <Title my={"md"}>Leaderboard</Title>
 
                             <Table>
                                 <thead>
                                 <tr>
                                     <th>Builder</th>
                                     <th>Area</th>
+                                    <th>Buildings</th>
                                 </tr>
                                 </thead>
                                 <tbody>
@@ -115,6 +119,7 @@ const Stats = props => {
                                                                 alt=""/> {player.username}</td>
                                                 }
                                                 <td>{player.area} m²</td>
+                                                <td>{player.buildings}</td>
                                             </tr>
                                         )
                                     })

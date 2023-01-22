@@ -41,6 +41,7 @@ export default class StatsController {
             by: ['username'],
             _sum: {
                 area: true,
+                buildings: true
             },
         })
         let count = groupUsers.length;
@@ -49,10 +50,11 @@ export default class StatsController {
             by: ['userUUID', 'username'],
             _sum: {
                 area: true,
+                buildings: true
             },
             orderBy: {
                 _sum: {
-                    area: 'desc',
+                    area: 'desc'
                 },
             },
             skip: parseInt(<string>request.query.page) * 10,
@@ -65,6 +67,7 @@ export default class StatsController {
             return {
                 username: u.username,
                 area: u._sum.area,
+                buildings: u._sum.buildings,
             }
         });
 
