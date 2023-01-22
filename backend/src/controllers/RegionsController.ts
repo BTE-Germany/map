@@ -101,7 +101,7 @@ class RegionsController {
             }
         });
         if (region) {
-            if (region.owner.ssoId === request.kauth.grant.access_token.content.sub
+            if (region.owner?.ssoId === request.kauth.grant.access_token.content.sub
                 || request.kauth.grant.access_token.content.realm_access.roles.includes("mapadmin")) {
                 await this.core.getPrisma().region.delete({
                     where: {
