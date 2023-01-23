@@ -1,7 +1,7 @@
 /*+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
  + SearchEngine.jsx                                                           +
  +                                                                            +
- + Copyright (c) 2022 Robin Ferch                                             +
+ + Copyright (c) 2022-2023 Robin Ferch                                        +
  + https://robinferch.me                                                      +
  + This project is released under the MIT license.                            +
  +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++*/
@@ -11,11 +11,15 @@ import {BiMapPin} from "react-icons/bi";
 import axios from "axios";
 import {OSMTagTranslations} from "./OSMTagTranslations";
 import {getIcon} from "./OSMTagIcons";
+import {MeiliSearch} from "meilisearch";
+import {TbPolygon} from "react-icons/all";
 
-const searchInOSM = async (query, flyTo) => {
+const meilisearch = new MeiliSearch({host: import.meta.env.VITE_SEARCH_URL, apiKey: import.meta.env.VITE_SEARCH_KEY})
+
+export const searchInOSM = async (query, flyTo) => {
     const result = [];
     const {data} = await axios.get(`https://photon.komoot.io/api/?q=${query}`);
-    data.features.forEach(feature => {
+    data.features.slice(0, 5).forEach(feature => {
         let featureType = feature.properties.osm_key;
         let tagTranslation = OSMTagTranslations["tag:" + featureType];
         let name = feature.properties.name;
@@ -42,11 +46,30 @@ const searchInOSM = async (query, flyTo) => {
         })
     });
 
-    console.log(result)
 
     return result;
 
 }
 
+export const searchInRegions = async (query, flyTo) => {
+    console.log(query)
+    const results = await meilisearch.index(import.meta.env.VITE_SEARCH_INDEX).search(query, {limit: 5})
+    let end = [];
+    if (results?.hits) {
+        end = results.hits.map((region) => {
+            return {
+                title: `${region.city}`,
+                description: `${region.osmDisplayName} by ${region.username}`,
+                onTrigger: () => flyTo(region._geo.lat, region._geo.lng),
+                icon: <TbPolygon size={18}/>,
+                group: "Regions",
+            }
+        })
+    }
 
-export default searchInOSM;
+    console.log(end)
+
+    return end;
+}
+
+

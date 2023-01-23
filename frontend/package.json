@@ -29,6 +29,7 @@
     "mantine-datatable": "^1.7.34",
     "mapbox-gl": "^2.12.0",
     "mapbox-gl-style-switcher": "^1.0.11",
+    "meilisearch": "^0.30.0",
     "react": "^18.0.0",
     "react-dom": "^18.0.0",
     "react-icons": "^4.7.1",

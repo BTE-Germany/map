@@ -10,8 +10,8 @@ import React, {forwardRef, useEffect, useImperativeHandle, useRef, useState} fro
 import axios from "axios";
 import mapboxgl from "mapbox-gl";
 import "mapbox-gl/dist/mapbox-gl.css";
-import {Box, Button, Loader, LoadingOverlay} from "@mantine/core";
-import {useClipboard} from "@mantine/hooks";
+import {Box, Loader, LoadingOverlay} from "@mantine/core";
+import {useClipboard, useDebouncedState} from "@mantine/hooks";
 import {showNotification} from "@mantine/notifications";
 import {BsCheck2} from "react-icons/bs";
 import "mapbox-gl-style-switcher/styles.css";
@@ -19,15 +19,12 @@ import {MapboxStyleSwitcherControl} from "mapbox-gl-style-switcher";
 import useQuery from "../hooks/useQuery";
 import {centerOfMass, polygon} from "@turf/turf";
 import {AiOutlineSearch} from "react-icons/ai";
-import {SpotlightProvider, useSpotlight} from "@mantine/spotlight";
+import {SpotlightProvider} from "@mantine/spotlight";
 import {BiMapPin} from "react-icons/bi";
-import searchInOSM from "../utils/SearchEngine";
+import {searchInRegions, searchInOSM} from "../utils/SearchEngine";
 import socketIOClient from "socket.io-client";
 
 import {TbPlugConnectedX} from "react-icons/tb";
-
-import * as THREE from 'three';
-import {GLTFLoader} from "three/examples/jsm/loaders/GLTFLoader";
 import generate3DLayer from "../utils/generate3DLayer";
 
 
@@ -343,6 +340,12 @@ const Map = forwardRef(({openDialog, setRegionViewData, updateMap, setUpdateMap}
         });
     }
 
+    const [searchQuery, setSearchQuery] = useDebouncedState('', 200);
+
+    useEffect(() => {
+        handleQueryChange(searchQuery)
+    }, [searchQuery]);
+
     const handleQueryChange = (query) => {
         if (!query) {
             setActions([])
@@ -362,19 +365,36 @@ const Map = forwardRef(({openDialog, setRegionViewData, updateMap, setUpdateMap}
             return;
         }
 
-        setShowSearchLoading(true);
-        searchInOSM(query, changeLatLon).then(r => {
-            setActions(r);
-            setShowSearchLoading(false);
+
+        searchInRegions(query, changeLatLon).then(r => {
+            let finished = r;
+            searchInOSM(query, changeLatLon).then((r1) => {
+                console.log("test1234")
+                r1.forEach((osmResult) => {
+                    finished.push(osmResult)
+                })
+                setActions(finished);
+                setShowSearchLoading(false);
+            })
+
+
         })
+
 
     }
 
 
     return (
-        <SpotlightProvider shortcut={['mod + S']} actions={actions} onQueryChange={handleQueryChange}
+        <SpotlightProvider shortcut={['mod + S']} actions={actions} onQueryChange={(query) => {
+            if (query) {
+                setShowSearchLoading(true);
+                setSearchQuery(query);
+            } else {
+                setShowSearchLoading(false);
+            }
+        }}
                            searchIcon={showSearchLoading ? <Loader size={"xs"}/> : <AiOutlineSearch/>}
-                           filter={(query, actions) => actions}>
+                           filter={(query, actions) => actions} limit={50}>
             <div style={{width: "100%", position: 'relative', flex: 1}}>
                 {
                     !socketConnected &&

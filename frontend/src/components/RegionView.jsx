@@ -392,6 +392,21 @@ const RegionView = ({data, open, setOpen, setUpdateMap}) => {
                                                 </Tooltip>
                                             </td>
                                         </tr>
+                                        <tr>
+                                            <td>OSM display name</td>
+                                            <td>
+                                                <Tooltip
+                                                    label={clipboard.copied ? "Copied" : "Click to copy"}
+                                                    position="right"
+                                                    color={clipboard.copied ? "green" : "gray"}
+                                                    transition="scale"
+                                                >
+                                                    <Code onClick={() => copyId(region.osmDisplayName)} sx={{
+                                                        cursor: "pointer"
+                                                    }}>{region.osmDisplayName}</Code>
+                                                </Tooltip>
+                                            </td>
+                                        </tr>
                                         </tbody>
                                     </Table>
                                 </Accordion.Panel>

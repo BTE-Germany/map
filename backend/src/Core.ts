@@ -14,6 +14,8 @@ import KeycloakAdmin from "./util/KeycloakAdmin";
 import {PrismaClient} from "@prisma/client";
 import DiscordIntegration from "./util/DiscordIntegration";
 import S3Controller from "./util/S3Controller";
+import SearchController from "./util/SearchController";
+import {MeiliSearch} from "meilisearch";
 
 class Core {
     web: Web;
@@ -23,6 +25,8 @@ class Core {
     prisma: PrismaClient;
     discord: DiscordIntegration;
     s3: S3Controller;
+
+    search: SearchController;
 
 
     constructor() {
@@ -40,6 +44,7 @@ class Core {
         })
         this.discord = new DiscordIntegration(this);
         this.s3 = new S3Controller(this);
+        this.search = new SearchController(this);
 
     }
 
@@ -54,7 +59,8 @@ class Core {
     public getPrisma = (): PrismaClient => this.prisma;
     public getDiscord = (): DiscordIntegration => this.discord;
     public getWeb = (): Web => this.web;
-    public getS3 = (): S3Controller => this.s3;
+    public getS3 = (): S3Controller => this.s3.getMinioInstance();
+    public getSearch = (): MeiliSearch => this.search.getMeiliInstance();
 
 }
 

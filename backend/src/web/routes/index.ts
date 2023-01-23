@@ -127,7 +127,20 @@ class Routes {
         }, this.keycloak.protect("realm:mapadmin"), checkNewUser(this.web.getCore().getPrisma(), this.web.getCore()), body('userId').isString())
 
         router.addRoute(RequestMethods.GET, "/admin/calculateProgress", async (request, response) => {
-            await adminController.getCalculationProgess(request, response);
+            await adminController.getCalculationProgress(request, response);
+        }, this.keycloak.protect("realm:mapadmin"), checkNewUser(this.web.getCore().getPrisma(), this.web.getCore()), body('userId').isString())
+
+        router.addRoute(RequestMethods.GET, "/admin/getOsmDisplayNames", async (request, response) => {
+            await adminController.getOsmDisplayNames(request, response);
+        }, this.keycloak.protect("realm:mapadmin"), checkNewUser(this.web.getCore().getPrisma(), this.web.getCore()), body('userId').isString())
+
+        router.addRoute(RequestMethods.GET, "/admin/osmDisplayNameProgress", async (request, response) => {
+            await adminController.getOsmDisplayNameProgress(request, response);
+        }, this.keycloak.protect("realm:mapadmin"), checkNewUser(this.web.getCore().getPrisma(), this.web.getCore()), body('userId').isString())
+
+
+        router.addRoute(RequestMethods.GET, "/admin/syncWithSearchDB", async (request, response) => {
+            await adminController.syncWithSearchDB(request, response);
         }, this.keycloak.protect("realm:mapadmin"), checkNewUser(this.web.getCore().getPrisma(), this.web.getCore()), body('userId').isString())
 
 

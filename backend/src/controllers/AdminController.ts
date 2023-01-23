@@ -9,15 +9,18 @@
 import Core from "../Core";
 import axios from "axios";
 import {response} from "express";
+import {centerOfMass, polygon} from "@turf/turf";
 
 class AdminController {
     private core: Core;
 
     private reCalcProgress: number;
+    private osmDisplayNameProgress: number;
 
     constructor(core: Core) {
         this.core = core;
         this.reCalcProgress = 0;
+        this.osmDisplayNameProgress = 0;
     }
 
     public async getAllUsers(req, res) {
@@ -130,8 +133,100 @@ class AdminController {
         this.reCalcProgress = 0;
     }
 
-    public async getCalculationProgess(req, res) {
+    public async getCalculationProgress(req, res) {
         res.send(this.reCalcProgress.toString());
+    }
+
+    public async getOsmDisplayNames(req, res) {
+        if (this.osmDisplayNameProgress > 0) {
+            response.send("Already started.")
+            return;
+        }
+        let regions = await this.core.getPrisma().region.findMany();
+        res.send({status: "ok", count: regions.length})
+
+        for (const [i, region] of regions.entries()) {
+            if (req.query?.skipOld === "true" && region.osmDisplayName !== "") {
+                continue;
+            }
+            let coords = JSON.parse(region.data);
+            coords.push(coords[0]);
+            let poly = polygon([coords]);
+            let centerMass = centerOfMass(poly);
+            let center = centerMass.geometry.coordinates;
+            try {
+                const {data} = await axios.get(`https://nominatim.openstreetmap.org/reverse?lat=${center[0]}&lon=${center[1]}&format=json&accept-language=de`, {headers: {'User-Agent': 'BTEMAP/1.0'}});
+                this.core.getLogger().debug(`Got data for ${region.id}`)
+                if (data?.display_name) {
+                    await this.core.getPrisma().region.update({
+                        where: {
+                            id: region.id
+                        },
+                        data: {
+                            osmDisplayName: data.display_name
+                        }
+                    })
+                }
+            } catch (e) {
+                this.core.getLogger().error(e);
+            }
+
+            this.osmDisplayNameProgress = i;
+
+
+        }
+
+        this.osmDisplayNameProgress = 0;
+
+    }
+
+
+    public async getOsmDisplayNameProgress(req, res) {
+        res.send(this.osmDisplayNameProgress.toString());
+    }
+
+    public async syncWithSearchDB(req, res) {
+
+        // reset index
+        try {
+            let oldIndex = await this.core.getSearch().getIndex(process.env.MEILISEARCH_INDEX);
+            if (oldIndex) {
+                await this.core.getSearch().deleteIndex(process.env.MEILISEARCH_INDEX)
+            }
+        } catch (e) {
+
+        }
+
+
+        await this.core.getSearch().createIndex(process.env.MEILISEARCH_INDEX);
+        await this.core.getSearch().index(process.env.MEILISEARCH_INDEX).updateFilterableAttributes(['_geo']);
+        await this.core.getSearch().index(process.env.MEILISEARCH_INDEX).updateSortableAttributes(['_geo']);
+
+        const regions = await this.core.getPrisma().region.findMany();
+
+        let formattedRegions = regions.map((region) => {
+            let coords = JSON.parse(region.data);
+            coords.push(coords[0]);
+            let poly = polygon([coords]);
+            let centerMass = centerOfMass(poly);
+            let center = centerMass.geometry.coordinates;
+            return {
+                id: region.id,
+                city: region.city,
+                "_geo": {
+                    "lat": center[0],
+                    "lng": center[1]
+                },
+                osmDisplayName: region.osmDisplayName,
+                username: region.username
+            }
+        })
+
+        await this.core.getSearch().index(process.env.MEILISEARCH_INDEX).addDocuments(formattedRegions)
+
+        res.send("ok")
+
+
     }
 }
 
