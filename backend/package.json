@@ -54,7 +54,7 @@
     "inquirer": "^8.0.0",
     "jsonwebtoken": "^8.5.1",
     "keycloak-connect": "^20.0.3",
-    "log4js": "^6.3.0",
+    "log4js": "^6.4.0",
     "meilisearch": "^0.30.0",
     "minio": "^7.0.32",
     "reflect-metadata": "^0.1.13",
