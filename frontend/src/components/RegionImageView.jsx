@@ -151,7 +151,7 @@ const RegionImageView = ({regionId, getData, regionImages, isOwner}) => {
     }
 
     if (!isOwner && regionImages?.length === 0) {
-        return <>{isOwner ? "yes" : "no"}</>
+        return <></>
     }
 
     if (isOwner && regionImages?.length === 0) {
