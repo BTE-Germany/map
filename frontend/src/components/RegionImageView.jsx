@@ -152,11 +152,11 @@ const RegionImageView = ({regionId, getData, regionImages, isOwner}) => {
         });
     }
 
-    if (!isOwner && regionImages?.length === 0) {
+    if ((!isOwner && !isAdmin) && regionImages?.length === 0) {
         return <></>
     }
 
-    if (isOwner && regionImages?.length === 0) {
+    if ((isOwner || isAdmin) && regionImages?.length === 0) {
         return (
             <div style={{marginBottom: 15}}>
                 <ImageAddDropzone regionId={regionId} getData={getData}/>
@@ -187,7 +187,7 @@ const RegionImageView = ({regionId, getData, regionImages, isOwner}) => {
             }
             {
                 ((isOwner || isAdmin) && regionImages?.length < 5) && <Carousel.Slide>
-                    <ImageAddDropzone regionId={regionId} getData={getData} isOwner={isOwner} isAdmin={isAdmin}/>
+                    <ImageAddDropzone regionId={regionId} getData={getData} isOwner={isOwner}/>
                 </Carousel.Slide>
             }
 
