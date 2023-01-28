@@ -122,6 +122,8 @@ const ImageAddDropzone = ({regionId, getData}) => {
 const RegionImageView = ({regionId, getData, regionImages, isOwner}) => {
     const theme = useMantineTheme();
     const {keycloak} = useKeycloak();
+    const isAdmin = keycloak?.tokenParsed?.realm_access.roles.includes("mapadmin");
+
 
     const [deleteLoading, setDeleteLoading] = useState(false);
 
@@ -171,8 +173,9 @@ const RegionImageView = ({regionId, getData, regionImages, isOwner}) => {
                     return (
                         <Carousel.Slide>
                             {
-                                isOwner && <ActionIcon sx={{position: "absolute", zIndex: 50}} m={"sm"} color={"red"}
-                                                       onClick={() => deleteImage(img.id)} loading={deleteLoading}>
+                                (isOwner || isAdmin) &&
+                                <ActionIcon sx={{position: "absolute", zIndex: 50}} m={"sm"} color={"red"}
+                                            onClick={() => deleteImage(img.id)} loading={deleteLoading}>
                                     <AiFillDelete/>
                                 </ActionIcon>
                             }
@@ -183,8 +186,8 @@ const RegionImageView = ({regionId, getData, regionImages, isOwner}) => {
                 })
             }
             {
-                (isOwner && regionImages?.length < 5) && <Carousel.Slide>
-                    <ImageAddDropzone regionId={regionId} getData={getData} isOwner={isOwner}/>
+                ((isOwner || isAdmin) && regionImages?.length < 5) && <Carousel.Slide>
+                    <ImageAddDropzone regionId={regionId} getData={getData} isOwner={isOwner} isAdmin={isAdmin}/>
                 </Carousel.Slide>
             }
 
