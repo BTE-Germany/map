@@ -6,7 +6,7 @@
  * This project is released under the MIT license.                            *
  ******************************************************************************/
 
-import Core from "../Core";
+import Core from "../Core.js";
 import {Request, Response} from "express";
 import {validationResult} from "express-validator";
 

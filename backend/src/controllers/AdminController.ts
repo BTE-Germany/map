@@ -6,10 +6,11 @@
  * This project is released under the MIT license.                            *
  ******************************************************************************/
 
-import Core from "../Core";
-import axios from "axios";
+import Core from "../Core.js";
 import {response} from "express";
 import {centerOfMass, polygon} from "@turf/turf";
+import axios from "axios";
+
 
 class AdminController {
     private core: Core;

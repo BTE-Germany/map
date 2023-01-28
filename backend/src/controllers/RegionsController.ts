@@ -7,14 +7,16 @@
  ******************************************************************************/
 
 import {Request, Response} from "express";
-import Core from "../Core";
+import Core from "../Core.js";
 import axios from "axios";
 import {validationResult} from "express-validator";
-import * as FormData from "form-data";
+import imageminWebp from "imagemin-webp";
+import imagemin from "imagemin";
 
 class RegionsController {
 
     private core: Core;
+
 
     constructor(core: Core) {
         this.core = core;
@@ -44,7 +46,8 @@ class RegionsController {
                 id: request.params.id
             },
             include: {
-                additionalBuilder: true
+                additionalBuilder: true,
+                images: true
             }
         });
         response.send(regions);
@@ -269,16 +272,155 @@ class RegionsController {
                 id: request.params.id
             },
             include: {
-                owner: true
+                owner: true,
+                images: true
             }
         });
         if (region) {
-
-            if (region.owner.ssoId !== request.kauth.grant.access_token.content.sub) {
+            if (region.owner.ssoId !== request.kauth.grant.access_token.content.sub && !(request.kauth.grant.access_token.content.realm_access.roles.includes("mapadmin"))) {
                 response.status(403).send("You are not the owner of this region");
                 return;
             }
 
+            if (region.images.length >= 5) {
+                response.status(400).send("Upload limit for region reached.");
+                return;
+            }
+
+            if (!request.files || Object.keys(request.files).length === 0 || !request.files.image) {
+                response.status(400).send("No files uploaded");
+                return;
+            }
+
+            // @ts-ignore
+            if (request.files.image?.data) {
+                // @ts-ignore
+                const webp = await imagemin.buffer(request.files.image.data, {
+                    plugins: [
+                        imageminWebp({quality: 50})
+                    ]
+                })
+                const image = await this.core.getPrisma().image.create({
+                    data: {
+                        region: {
+                            connect: {
+                                id: region.id
+                            }
+                        },
+                        imageData: ""
+                    }
+                })
+                try {
+                    // @ts-ignore
+                    await this.core.getS3().getMinioInstance().putObject(process.env.S3_BUCKET, `${image.id}-${request.files.image.name}.webp`, webp)
+                    await this.core.getPrisma().image.update({
+                        where: {
+                            id: image.id
+                        },
+                        data: {
+                            // @ts-ignore
+                            imageData: `${process.env.S3_PUBLIC_URL}/${process.env.S3_BUCKET}/${image.id}-${request.files.image.name}.webp`
+                        }
+                    })
+
+                } catch (e) {
+                    this.core.getLogger().error(e)
+                    response.status(500).send("Error uploading file")
+                    return;
+                }
+            } else {
+                for (const imageKey in request.files.image) {
+                    const webp = await imagemin.buffer(request.files.image[imageKey].data, {
+                        plugins: [
+                            imageminWebp({quality: 50})
+                        ]
+                    })
+                    const image = await this.core.getPrisma().image.create({
+                        data: {
+                            region: {
+                                connect: {
+                                    id: region.id
+                                }
+                            },
+                            imageData: ""
+                        }
+                    })
+                    try {
+                        await this.core.getS3().getMinioInstance().putObject(process.env.S3_BUCKET, `${image.id}-${request.files.image[imageKey].name}.webp`, webp)
+                        await this.core.getPrisma().image.update({
+                            where: {
+                                id: image.id
+                            },
+                            data: {
+                                imageData: `${process.env.S3_PUBLIC_URL}/${process.env.S3_BUCKET}/${image.id}-${request.files.image[imageKey].name}.webp`
+                            }
+                        })
+
+                    } catch (e) {
+                        this.core.getLogger().error(e.message)
+                        response.status(500).send("Error uploading file")
+                        return;
+                    }
+                }
+            }
+
+
+            response.send("Uploaded successfully")
+
+
+        } else {
+            response.status(404).send("Region not found");
+        }
+    }
+
+    async handleImageDelete(request: Request, response: Response) {
+        const errors = validationResult(request);
+        if (!errors.isEmpty()) {
+            return response.status(400).json({errors: errors.array()});
+        }
+
+        let region = await this.core.getPrisma().region.findUnique({
+            where: {
+                id: request.params.id
+            },
+            include: {
+                owner: true
+            }
+        });
+        if (region) {
+            if (region.owner.ssoId !== request.kauth.grant.access_token.content.sub && !(request.kauth.grant.access_token.content.realm_access.roles.includes("mapadmin"))) {
+                response.status(403).send("You are not the owner of this region");
+                return;
+            }
+
+            let image = await this.core.getPrisma().image.findUnique({
+                where: {
+                    id: request.params.imageId
+                }
+            })
+
+            if (image) {
+
+                try {
+                    await this.core.getS3().getMinioInstance().removeObject(
+                        process.env.S3_BUCKET,
+                        image.imageData.replace(`${process.env.S3_PUBLIC_URL}/${process.env.S3_BUCKET}/`, "")
+                    )
+
+                    await this.core.getPrisma().image.delete({
+                        where: {
+                            id: image.id
+                        }
+                    })
+                    response.send("Image deleted")
+                } catch (e) {
+                    response.status(500).send("Failed to delete image.")
+                }
+
+
+            } else {
+                response.status(404).send("Image not found");
+            }
         } else {
             response.status(404).send("Region not found");
         }

@@ -6,17 +6,17 @@
  * This project is released under the MIT license.                            *
  ******************************************************************************/
 
-import Web from '../Web';
-import Router from './utils/Router';
-import {RequestMethods} from './utils/RequestMethods';
+import Web from '../Web.js';
+import Router from './utils/Router.js';
+import {RequestMethods} from './utils/RequestMethods.js';
 import {Keycloak} from "keycloak-connect";
-import RegionsController from "../../controllers/RegionsController";
+import RegionsController from "../../controllers/RegionsController.js";
 import {body, query} from "express-validator";
-import checkNewUser from "./utils/CheckNewUserMiddleware";
-import UserController from "../../controllers/UserController";
-import AdminController from "../../controllers/AdminController";
-import StatsController from "../../controllers/StatsController";
-import InteractiveBuildingsController from "../../controllers/InteractiveBuildingsController";
+import checkNewUser from "./utils/CheckNewUserMiddleware.js";
+import UserController from "../../controllers/UserController.js";
+import AdminController from "../../controllers/AdminController.js";
+import StatsController from "../../controllers/StatsController.js";
+import InteractiveBuildingsController from "../../controllers/InteractiveBuildingsController.js";
 
 class Routes {
     app;
@@ -90,6 +90,17 @@ class Routes {
         router.addRoute(RequestMethods.GET, "/region/:id/calculateBuildings", async (request, response) => {
             await regionsController.handleCalculateBuildings(request, response);
         })
+
+        router.addRoute(RequestMethods.PUT, "/region/:id/image/upload", async (request, response) => {
+                await regionsController.handleImageUpload(request, response);
+            }, this.keycloak.protect(),
+            checkNewUser(this.web.getCore().getPrisma(), this.web.getCore()))
+
+        router.addRoute(RequestMethods.DELETE, "/region/:id/image/:imageId", async (request, response) => {
+                await regionsController.handleImageDelete(request, response);
+            }, this.keycloak.protect(),
+            checkNewUser(this.web.getCore().getPrisma(), this.web.getCore()))
+
 
         router.addRoute(RequestMethods.GET, "/user/@me", async (request, response) => {
             await userController.getCurrentUser(request, response);

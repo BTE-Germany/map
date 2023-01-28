@@ -42,6 +42,7 @@ import {BsFillPersonFill} from "react-icons/bs";
 import {HiUserGroup} from "react-icons/hi";
 import AdditionalBuildersDialog from "./AdditionalBuildersDialog";
 import {GiPartyPopper, TbFence} from "react-icons/all";
+import RegionImageView from "./RegionImageView";
 
 const RegionView = ({data, open, setOpen, setUpdateMap}) => {
 
@@ -251,7 +252,8 @@ const RegionView = ({data, open, setOpen, setUpdateMap}) => {
                 :
                 <ScrollArea.Autosize maxHeight={"90vh"} style={{maxHeight: "90vh"}}>
                     <Box sx={{maxHeight: "100%", display: "flex", flexDirection: "column"}}>
-                        {/*<RegionImageView/>*/}
+                        <RegionImageView regionId={region.id} getData={getData} regionImages={region.images}
+                                         isOwner={(region.ownerID === user?.data?.id)}/>
 
                         <Group spacing={"md"} cols={1}>
                             {!region.isEventRegion && !region.isPlotRegion ?

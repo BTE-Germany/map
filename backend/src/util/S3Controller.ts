@@ -6,7 +6,7 @@
  * This project is released under the MIT license.                            *
  ******************************************************************************/
 
-import Core from "../Core";
+import Core from "../Core.js";
 import * as Minio from "minio";
 
 class S3Controller {

@@ -6,16 +6,16 @@
  * This project is released under the MIT license.                            *
  ******************************************************************************/
 
-import {configure, getLogger, Logger} from 'log4js';
-import Web from './web/Web';
-import * as Keycloak from "keycloak-connect";
+import Web from './web/Web.js';
 import * as session from "express-session";
-import KeycloakAdmin from "./util/KeycloakAdmin";
+import KeycloakAdmin from "./util/KeycloakAdmin.js";
 import {PrismaClient} from "@prisma/client";
-import DiscordIntegration from "./util/DiscordIntegration";
-import S3Controller from "./util/S3Controller";
-import SearchController from "./util/SearchController";
+import DiscordIntegration from "./util/DiscordIntegration.js";
+import S3Controller from "./util/S3Controller.js";
+import SearchController from "./util/SearchController.js";
 import {MeiliSearch} from "meilisearch";
+import * as winston from "winston";
+import Keycloak from "keycloak-connect";
 
 class Core {
     web: Web;
@@ -25,8 +25,8 @@ class Core {
     prisma: PrismaClient;
     discord: DiscordIntegration;
     s3: S3Controller;
-
     search: SearchController;
+    logger: winston.Logger;
 
 
     constructor() {
@@ -45,21 +45,45 @@ class Core {
         this.discord = new DiscordIntegration(this);
         this.s3 = new S3Controller(this);
         this.search = new SearchController(this);
-
     }
 
     private setUpLogger(): void {
-        const logger = this.getLogger();
-        logger.level = process.env.LOGLEVEL;
+        const logger = winston.createLogger({
+            level: process.env.LOGLEVEL,
+            format: winston.format.combine(
+                winston.format.timestamp(),
+                winston.format.json(),
+            ),
+            transports: [
+                new winston.transports.File({filename: 'logs/error.log', level: 'error'}),
+                new winston.transports.File({filename: 'logs/combined.log'}),
+            ],
+        });
+
+        if (process.env.NODE_ENV !== 'production') {
+            const consoleFormat = winston.format.printf(({level, message, timestamp}) => {
+                return `${timestamp} | ${level} » ${message}`;
+            });
+
+            logger.add(new winston.transports.Console({
+                format: winston.format.combine(
+                    winston.format.colorize(),
+                    winston.format.simple(),
+                    consoleFormat
+                ),
+            }));
+        }
+
+        this.logger = logger;
     }
 
-    public getLogger = (): Logger => getLogger();
+    public getLogger = (): winston.Logger => this.logger;
     public getKeycloak = (): Keycloak.Keycloak => this.keycloak;
     public getKeycloakAdmin = (): KeycloakAdmin => this.keycloakAdmin;
     public getPrisma = (): PrismaClient => this.prisma;
     public getDiscord = (): DiscordIntegration => this.discord;
     public getWeb = (): Web => this.web;
-    public getS3 = (): S3Controller => this.s3.getMinioInstance();
+    public getS3 = (): S3Controller => this.s3;
     public getSearch = (): MeiliSearch => this.search.getMeiliInstance();
 
 }

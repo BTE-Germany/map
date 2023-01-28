@@ -1,13 +1,15 @@
 /******************************************************************************
  * KeycloakAdmin.ts                                                           *
  *                                                                            *
- * Copyright (c) 2022 Robin Ferch                                             *
+ * Copyright (c) 2022-2023 Robin Ferch                                        *
  * https://robinferch.me                                                      *
  * This project is released under the MIT license.                            *
  ******************************************************************************/
 
-import KcAdminClient from "@keycloak/keycloak-admin-client";
-import Core from "../Core";
+
+import Core from "../Core.js";
+import KcAdminClient from '@keycloak/keycloak-admin-client';
+
 
 class KeycloakAdmin {
     private kcAdminClient: KcAdminClient;

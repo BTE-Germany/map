@@ -1,14 +1,13 @@
 /******************************************************************************
  * SocketIOController.ts                                                      *
  *                                                                            *
- * Copyright (c) 2022 Robin Ferch                                             *
+ * Copyright (c) 2022-2023 Robin Ferch                                        *
  * https://robinferch.me                                                      *
  * This project is released under the MIT license.                            *
  ******************************************************************************/
-import Core from "../Core";
+import Core from "../Core.js";
 import * as Http from "http";
-import {Server} from "socket.io";
-import {Socket} from "socket.io/dist/socket";
+import {Server, Socket} from "socket.io";
 
 
 interface AuthenticatedSocket extends Socket {

@@ -7,7 +7,7 @@
  ******************************************************************************/
 
 import {Client, Intents, MessageEmbed} from "discord.js";
-import Core from "../Core";
+import Core from "../Core.js";
 
 class DiscordIntegration {
     private core: Core;

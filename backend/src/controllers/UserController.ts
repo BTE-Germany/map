@@ -1,13 +1,13 @@
 /******************************************************************************
  * UserController.ts                                                          *
  *                                                                            *
- * Copyright (c) 2022 Robin Ferch                                             *
+ * Copyright (c) 2022-2023 Robin Ferch                                        *
  * https://robinferch.me                                                      *
  * This project is released under the MIT license.                            *
  ******************************************************************************/
 
 import axios from "axios";
-import Core from "../Core";
+import Core from "../Core.js";
 import {validationResult} from "express-validator";
 
 class UserController {

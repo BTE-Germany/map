@@ -1,14 +1,14 @@
 /******************************************************************************
  * CheckNewUserMiddleware.ts                                                  *
  *                                                                            *
- * Copyright (c) 2022 Robin Ferch                                             *
+ * Copyright (c) 2022-2023 Robin Ferch                                        *
  * https://robinferch.me                                                      *
  * This project is released under the MIT license.                            *
  ******************************************************************************/
 
 import {NextFunction, Request, Response} from "express";
 import {PrismaClient} from "@prisma/client";
-import Core from "../../../Core";
+import Core from "../../../Core.js";
 
 const checkNewUser = (prisma: PrismaClient, core: Core) => {
     return async (req: Request, res: Response, next: NextFunction) => {

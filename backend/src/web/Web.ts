@@ -1,21 +1,27 @@
 /******************************************************************************
  * Web.ts                                                                     *
  *                                                                            *
- * Copyright (c) 2022 Robin Ferch                                             *
+ * Copyright (c) 2022-2023 Robin Ferch                                        *
  * https://robinferch.me                                                      *
  * This project is released under the MIT license.                            *
  ******************************************************************************/
 
-import * as express from 'express';
-import * as bodyParser from 'body-parser';
-import Core from '../Core';
-import Routes from './routes';
-import * as session from "express-session";
-import * as cors from "cors";
-import * as http from "http";
+import express from "express"
+import bodyParser from 'body-parser';
+import Core from '../Core.js';
+import Routes from './routes/index.js';
+import session from "express-session";
+import cors from "cors";
+import http from "http";
 import {Express} from "express";
-import SocketIOController from "../util/SocketIOController";
-import * as path from "path";
+import SocketIOController from "../util/SocketIOController.js";
+import path from "path";
+import fileUpload from "express-fileupload";
+import {dirname} from 'path';
+import {fileURLToPath} from "url";
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
 
 class Web {
     private app: Express;
@@ -55,12 +61,17 @@ class Web {
         }));
         this.core.getLogger().debug("Enabled keycloak-connect adapter")
 
+        this.app.use(fileUpload({
+            limits: {fileSize: 10 * 1024 * 1024},
+        }));
+
 
         this.server.listen(this.getPort(), () => {
             this.core.getLogger().info(`Starting webserver on port ${this.getPort()}`);
             this.routes = new Routes(this);
 
             this.app.get("*", (req, res) => {
+
                 res.sendFile(
                     path.join(__dirname, "../../../frontend/dist/index.html")
                 );

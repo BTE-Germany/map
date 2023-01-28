@@ -1,15 +1,15 @@
 /******************************************************************************
  * Router.ts                                                                  *
  *                                                                            *
- * Copyright (c) 2022 Robin Ferch                                             *
+ * Copyright (c) 2022-2023 Robin Ferch                                        *
  * https://robinferch.me                                                      *
  * This project is released under the MIT license.                            *
  ******************************************************************************/
 
 import {Request, Response} from 'express';
-import {Executor} from './Executor';
-import {RequestMethods} from './RequestMethods';
-import Web from '../../Web';
+import {Executor} from './Executor.js';
+import {RequestMethods} from './RequestMethods.js';
+import Web from '../../Web.js';
 
 export default class Router {
     web: Web;

@@ -1,14 +1,16 @@
 /******************************************************************************
  * index.ts                                                                   *
  *                                                                            *
- * Copyright (c) 2022 Robin Ferch                                             *
+ * Copyright (c) 2022-2023 Robin Ferch                                        *
  * https://robinferch.me                                                      *
  * This project is released under the MIT license.                            *
  ******************************************************************************/
 
-import Core from './src/Core';
+import Core from './src/Core.js';
 
-require('dotenv').config();
+import * as dotenv from 'dotenv'
+
+dotenv.config()
 
 const core = new Core();
 core.getLogger().info('Starting Polymap backend');
