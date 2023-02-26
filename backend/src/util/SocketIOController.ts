@@ -18,7 +18,8 @@ interface Player {
     uuid: string,
     lat: number,
     lon: number,
-    username: string
+    username: string,
+    server: string
 }
 
 class SocketIOController {
@@ -74,6 +75,7 @@ class SocketIOController {
                             "lat": parseFloat(decodedMsg[1]),
                             "lon": parseFloat(decodedMsg[2]),
                             "username": decodedMsg[3],
+                            "server": decodedMsg[4]
                         }
                         usersFromServer.push(data)
                     })
@@ -116,6 +118,16 @@ class SocketIOController {
                 if (socket.authenticated) {
                     if (this.players.findIndex((pl) => pl.uuid === data) != -1) {
                         let idx = this.players.findIndex((pl) => pl.uuid === data);
+                        this.players.splice(idx, 1);
+                        this.core.getLogger().debug("Removed player " + data)
+                    }
+                }
+            });
+
+            socket.on('serverStartup', (data) => {
+                if (socket.authenticated) {
+                    if (this.players.findIndex((pl) => pl.server === data) != -1) {
+                        let idx = this.players.findIndex((pl) => pl.server === data);
                         this.players.splice(idx, 1);
                         this.core.getLogger().debug("Removed player " + data)
                     }
