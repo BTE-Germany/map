@@ -41,6 +41,8 @@ import { PrismaClient } from "@prisma/client";
             ownerID: user.id
         }
     });
+
+
     const region2 = await prisma.region.create({
         data: {
             data: "[[52.74174758561812, 12.897911059989415],[52.699096145916464, 13.779780473054009],[52.36368567507763, 13.792393054283247],[52.33293472217935, 12.806713519382583]]",
