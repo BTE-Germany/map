@@ -51,13 +51,8 @@ const AdminRegions = () => {
         getRegions(activePage, currentPageSize, sortBy, sortOrder_);
     };
 
-    const getRegions = async (currentPage, pageSize, sort, direction) => {
-        //initialize params
-        currentPage = currentPage === undefined ? activePage : currentPage;
-        pageSize = pageSize === undefined ? currentPageSize : pageSize;
-        sort = sort === undefined ? sortBy : sort;
-        direction = direction === undefined ? sortOrder : direction;
-        console.log('getRegions', {"sort": sort, "direction": direction, "page": currentPage, "pageSize": pageSize});
+    const getRegions = async (currentPage=activePage, pageSize=currentPageSize, sort=sortBy, direction=sortOrder) => {
+        //console.log('getRegions', {"sort": sort, "direction": direction, "page": currentPage, "pageSize": pageSize});
 
         const {data} = await axios.get(`api/v1/region/all`, {
             headers: {authorization: "Bearer " + keycloak.token},
