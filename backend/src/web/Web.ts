@@ -6,19 +6,16 @@
  * This project is released under the MIT license.                            *
  ******************************************************************************/
 
-import express from "express"
-import bodyParser from 'body-parser';
-import Core from '../Core.js';
-import Routes from './routes/index.js';
-import session from "express-session";
 import cors from "cors";
-import http from "http";
-import {Express} from "express";
-import SocketIOController from "../util/SocketIOController.js";
-import path from "path";
+import express, { Express } from "express";
 import fileUpload from "express-fileupload";
-import {dirname} from 'path';
-import {fileURLToPath} from "url";
+import session from "express-session";
+import http from "http";
+import path, { dirname } from "path";
+import { fileURLToPath } from "url";
+import Core from '../Core.js';
+import SocketIOController from "../util/SocketIOController.js";
+import Routes from './routes/index.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -42,7 +39,7 @@ class Web {
     }
 
     public startWebserver() {
-        this.app.use(bodyParser.json());
+        this.app.use(express.json());
         this.app.use(session({
             secret: process.env.SESSION_SECRET,
             resave: false,
@@ -62,7 +59,7 @@ class Web {
         this.core.getLogger().debug("Enabled keycloak-connect adapter")
 
         this.app.use(fileUpload({
-            limits: {fileSize: 10 * 1024 * 1024},
+            limits: { fileSize: 10 * 1024 * 1024 },
         }));
 
 
