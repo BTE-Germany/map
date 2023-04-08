@@ -53,7 +53,7 @@ const Map = forwardRef(({openDialog, setRegionViewData, updateMap, setUpdateMap}
         });
 
         socket.on("playerLocations", data => {
-            setPlayers(JSON.parse(data))
+            setPlayers(JSON.parse(data));
 
 
         });
@@ -63,10 +63,10 @@ const Map = forwardRef(({openDialog, setRegionViewData, updateMap, setUpdateMap}
             showNotification({
                 title: 'Whoops',
                 message: 'It looks like we have no connection to the server... Some features might not work.',
-                icon: (<TbPlugConnectedX size={18}/>),
+                icon: (<TbPlugConnectedX size={18} />),
                 color: "red",
-            })
-        })
+            });
+        });
 
     }, []);
 
@@ -75,8 +75,8 @@ const Map = forwardRef(({openDialog, setRegionViewData, updateMap, setUpdateMap}
             if (playerMarkers.length > 0) {
                 playerMarkers.forEach((m) => {
                     m.remove();
-                })
-                setPlayerMarkers([])
+                });
+                setPlayerMarkers([]);
             }
 
 
@@ -84,23 +84,23 @@ const Map = forwardRef(({openDialog, setRegionViewData, updateMap, setUpdateMap}
                 const el = document.createElement('div');
                 el.className = 'marker';
                 el.id = "marker";
-                el.style.backgroundImage = `url('https://mc-heads.net/avatar/${feature.properties.uuid}')`
+                el.style.backgroundImage = `url('https://mc-heads.net/avatar/${feature.properties.uuid}')`;
                 el.style.width = `32px`;
                 el.style.height = `32px`;
                 el.style.backgroundSize = '100%';
                 el.style.borderRadius = "5px";
 
-                el.setAttribute("data-text", feature.properties.username)
+                el.setAttribute("data-text", feature.properties.username);
                 let marker = new mapboxgl.Marker(el)
                     .setLngLat(feature.geometry.coordinates)
                     .addTo(map);
                 playerMarkers.push(marker);
-                setPlayerMarkers(playerMarkers)
+                setPlayerMarkers(playerMarkers);
             }
 
 
         }
-    }, [players])
+    }, [players]);
 
     useImperativeHandle(ref, () => ({
 
@@ -141,20 +141,19 @@ const Map = forwardRef(({openDialog, setRegionViewData, updateMap, setUpdateMap}
                 this.playerButton = document.createElement("button");
                 this.playerButton.type = "button";
                 this.playerButton.classList.add("mapboxgl-ctrl-player-icon");
-                this.playerButton.style.backgroundImage = 'url("background-image: url("data:image/svg+xml,%3Csvg xmlns=\'http://www.w3.org/2000/svg\' width=\'24\' height=\'24\' viewBox=\'0 0 24 24\' fill=\'none\' stroke=\'currentColor\' stroke-width=\'2\' stroke-linecap=\'round\' stroke-linejoin=\'round\' class=\'feather feather-users\'%3E%3Cpath d=\'M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2\'/%3E%3Ccircle cx=\'9\' cy=\'7\' r=\'4\'/%3E%3Cpath d=\'M23 21v-2a4 4 0 0 0-3-3.87\'/%3E%3Cpath d=\'M16 3.13a4 4 0 0 1 0 7.75\'/%3E%3C/svg%3E");")'
-                this.container.appendChild(this.playerButton)
+                this.playerButton.style.backgroundImage = 'url("background-image: url("data:image/svg+xml,%3Csvg xmlns=\'http://www.w3.org/2000/svg\' width=\'24\' height=\'24\' viewBox=\'0 0 24 24\' fill=\'none\' stroke=\'currentColor\' stroke-width=\'2\' stroke-linecap=\'round\' stroke-linejoin=\'round\' class=\'feather feather-users\'%3E%3Cpath d=\'M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2\'/%3E%3Ccircle cx=\'9\' cy=\'7\' r=\'4\'/%3E%3Cpath d=\'M23 21v-2a4 4 0 0 0-3-3.87\'/%3E%3Cpath d=\'M16 3.13a4 4 0 0 1 0 7.75\'/%3E%3C/svg%3E");")';
+                this.container.appendChild(this.playerButton);
                 this.playerButton.addEventListener('click', () => {
                     if (hidePlayers) {
-                        console.log(hidePlayers)
-                        document.documentElement.style.setProperty('--marker-display', 1)
+                        document.documentElement.style.setProperty('--marker-display', 1);
                         hidePlayers = false;
                     } else {
-                        document.documentElement.style.setProperty('--marker-display', 0)
+                        document.documentElement.style.setProperty('--marker-display', 0);
                         hidePlayers = true;
                     }
 
 
-                })
+                });
                 return this.container;
             }
 
@@ -173,21 +172,21 @@ const Map = forwardRef(({openDialog, setRegionViewData, updateMap, setUpdateMap}
         mapInstance.addControl(new mapboxgl.NavigationControl());
         mapInstance.addControl(new MapboxStyleSwitcherControl(styles, {defaultStyle: "Dark"}));
         mapInstance.addControl(new HidePlayerControl());
-        setMap(mapInstance)
+        setMap(mapInstance);
 
 
         mapInstance.on('style.load', () => {
             let buildings = [];
-
+            addLayer(mapInstance);
             axios.get("/api/v1/interactiveBuildings/all").then(({data}) => {
 
                 data.forEach((building) => {
-                    let b = generate3DLayer(building.id, JSON.parse(building.origin), building.altitude, JSON.parse(building.rotate), building.fileURL, mapInstance)
+                    let b = generate3DLayer(building.id, JSON.parse(building.origin), building.altitude, JSON.parse(building.rotate), building.fileURL, mapInstance);
                     mapInstance.addLayer(b);
-                })
+                });
 
 
-            })
+            });
         });
 
 
@@ -203,21 +202,21 @@ const Map = forwardRef(({openDialog, setRegionViewData, updateMap, setUpdateMap}
         if (!map) return;
         if (!updateMap) return;
         updateRegions();
-    }, [updateMap])
+    }, [updateMap]);
 
     const updateRegions = async () => {
-
-        let regions = await axios.get("/api/v1/region/all/geojson")
+        let regions = await axios.get("/api/v1/region/all/geojson");
         map.getSource('regions').setData(regions.data);
         setUpdateMap(false);
-    }
+    };
+
     useEffect(() => {
         if (map) {
             map.on('load', () => {
-                addLayer().then(() => testQuery());
-            })
+                addLayer(map).then(() => testQuery());
+            });
         }
-    }, [map])
+    }, [map]);
 
     useEffect(() => {
         testQuery();
@@ -232,23 +231,22 @@ const Map = forwardRef(({openDialog, setRegionViewData, updateMap, setUpdateMap}
                     .then(region => {
                         let coords = JSON.parse(region.data.data);
                         coords.push(coords[0]);
-                        let poly = polygon([coords])
+                        let poly = polygon([coords]);
                         let centerMass = centerOfMass(poly);
-                        changeLatLon(centerMass.geometry.coordinates[0], centerMass.geometry.coordinates[1])
+                        changeLatLon(centerMass.geometry.coordinates[0], centerMass.geometry.coordinates[1]);
                         if (query.get("details") === "true") {
                             openDialog({id: regionId, userUUID: region.data.userUUID, username: region.data.username});
                         }
-                    })
-
+                    });
 
             } else {
-                console.error("string in region query is not a valid uuid. maybe a directory climbing attack?")
+                console.error("string in region query is not a valid uuid. maybe a directory climbing attack?");
             }
         }
-    }
+    };
 
-    const addLayer = async () => {
-        const layers = map.getStyle().layers;
+    const addLayer = async (_map) => {
+        const layers = _map.getStyle().layers;
         let firstSymbolId;
         for (const layer of layers) {
             if (layer.type === 'symbol') {
@@ -256,14 +254,14 @@ const Map = forwardRef(({openDialog, setRegionViewData, updateMap, setUpdateMap}
                 break;
             }
         }
-        let regions = await axios.get("/api/v1/region/all/geojson")
+        let regions = await axios.get("/api/v1/region/all/geojson");
         setShowLoadingOverlay(false);
-        map.addSource('regions', {
+        _map.addSource('regions', {
             'type': 'geojson',
             'data': regions.data
         });
 
-        map.addLayer({
+        _map.addLayer({
             'id': 'regions-layer',
             'type': 'fill',
             'source': 'regions',
@@ -282,7 +280,7 @@ const Map = forwardRef(({openDialog, setRegionViewData, updateMap, setUpdateMap}
             }
         }, firstSymbolId);
 
-        map.addLayer({
+        _map.addLayer({
             'id': 'outline',
             'type': 'line',
             'source': "regions",
@@ -305,29 +303,29 @@ const Map = forwardRef(({openDialog, setRegionViewData, updateMap, setUpdateMap}
 
         }, firstSymbolId);
 
-        map.on('click', 'regions-layer', (e) => {
-            openDialog(e.features[0].properties)
+        _map.on('click', 'regions-layer', (e) => {
+            openDialog(e.features[0].properties);
         });
 
-        map.on('mouseenter', 'regions-layer', () => {
-            map.getCanvas().style.cursor = 'pointer';
+        _map.on('mouseenter', 'regions-layer', () => {
+            _map.getCanvas().style.cursor = 'pointer';
         });
 
-        map.on('mouseleave', 'regions-layer', () => {
-            map.getCanvas().style.cursor = '';
+        _map.on('mouseleave', 'regions-layer', () => {
+            _map.getCanvas().style.cursor = '';
         });
 
-        map.on('contextmenu', (e) => {
-            clipboard.copy(e.lngLat.lat + ", " + e.lngLat.lng)
+        _map.on('contextmenu', (e) => {
+            clipboard.copy(e.lngLat.lat + ", " + e.lngLat.lng);
             showNotification({
                 title: 'Copied successfully',
                 message: 'The coordinates have been copied to your clipboard!',
-                icon: <BsCheck2 size={18}/>,
+                icon: <BsCheck2 size={18} />,
                 color: "teal"
-            })
-        })
+            });
+        });
 
-    }
+    };
 
     const changeLatLon = (lat, lon) => {
         map.flyTo({
@@ -338,20 +336,20 @@ const Map = forwardRef(({openDialog, setRegionViewData, updateMap, setUpdateMap}
             zoom: 16,
             essential: true
         });
-    }
+    };
 
     const [searchQuery, setSearchQuery] = useDebouncedState('', 200);
 
     useEffect(() => {
-        handleQueryChange(searchQuery)
+        handleQueryChange(searchQuery);
     }, [searchQuery]);
 
     const handleQueryChange = (query) => {
         if (!query) {
-            setActions([])
+            setActions([]);
         }
 
-        const regexForCoords = /^[-+]?([1-8]?\d(\.\d+)?|90(\.0+)?),\s*[-+]?(180(\.0+)?|((1[0-7]\d)|([1-9]?\d))(\.\d+)?)$/
+        const regexForCoords = /^[-+]?([1-8]?\d(\.\d+)?|90(\.0+)?),\s*[-+]?(180(\.0+)?|((1[0-7]\d)|([1-9]?\d))(\.\d+)?)$/;
         if (regexForCoords.test(query)) {
             let coords = query.replace(" ", "").split(",");
             setActions([
@@ -359,9 +357,9 @@ const Map = forwardRef(({openDialog, setRegionViewData, updateMap, setUpdateMap}
                     title: 'Go to coordinates',
                     description: query,
                     onTrigger: () => changeLatLon(coords[0], coords[1]),
-                    icon: <BiMapPin size={18}/>,
+                    icon: <BiMapPin size={18} />,
                 },
-            ])
+            ]);
             return;
         }
 
@@ -369,19 +367,18 @@ const Map = forwardRef(({openDialog, setRegionViewData, updateMap, setUpdateMap}
         searchInRegions(query, changeLatLon).then(r => {
             let finished = r;
             searchInOSM(query, changeLatLon).then((r1) => {
-                console.log("test1234")
                 r1.forEach((osmResult) => {
-                    finished.push(osmResult)
-                })
+                    finished.push(osmResult);
+                });
                 setActions(finished);
                 setShowSearchLoading(false);
-            })
+            });
 
 
-        })
+        });
 
 
-    }
+    };
 
 
     return (
@@ -393,8 +390,8 @@ const Map = forwardRef(({openDialog, setRegionViewData, updateMap, setUpdateMap}
                 setShowSearchLoading(false);
             }
         }}
-                           searchIcon={showSearchLoading ? <Loader size={"xs"}/> : <AiOutlineSearch/>}
-                           filter={(query, actions) => actions} limit={50}>
+            searchIcon={showSearchLoading ? <Loader size={"xs"} /> : <AiOutlineSearch />}
+            filter={(query, actions) => actions} limit={50}>
             <div style={{width: "100%", position: 'relative', flex: 1}}>
                 {
                     !socketConnected &&
@@ -411,15 +408,15 @@ const Map = forwardRef(({openDialog, setRegionViewData, updateMap, setUpdateMap}
                         alignItems: "center",
                         borderRadius: "99px"
                     })}>
-                        <TbPlugConnectedX size={15}/>
+                        <TbPlugConnectedX size={15} />
                     </Box>
                 }
-                <LoadingOverlay visible={showLoadingOverlay}/>
-                <div ref={mapContainer} style={{width: "100%", height: "100%"}}/>
+                <LoadingOverlay visible={showLoadingOverlay} />
+                <div ref={mapContainer} style={{width: "100%", height: "100%"}} />
             </div>
         </SpotlightProvider>
 
     );
 });
 
-export default Map
+export default Map;
