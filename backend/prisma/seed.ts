@@ -54,7 +54,21 @@ import { PrismaClient } from "@prisma/client";
         }
     });
 
-    console.log("Created region: " + region.id + " with owner: " + user.id);
+
+    const region3 = await prisma.region.create({
+        data: {
+            data: "[[52.26425978865353, 11.334045485778917],[52.25577490850775, 11.903898558947764],[51.871281145643074, 11.989787489245444],[52.0204949500123, 11.091241059626594]]",
+            userUUID: "f80c14f1-a7ac-438e-aea9-8851ed6704df",
+            city: "Berlin",
+            isPlotRegion: true,
+            area: 4342,
+            username: "Nachwahl",
+            description: "",
+            ownerID: user.id
+        }
+    });
+
+    console.log("Created 3 region: " + region.id + " with owner: " + user.id);
 
 
 })();
