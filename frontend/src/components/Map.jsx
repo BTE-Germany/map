@@ -176,6 +176,10 @@ const Map = forwardRef(({openDialog, setRegionViewData, updateMap, setUpdateMap}
 
 
         mapInstance.on('style.load', () => {
+            let styleList = document.getElementsByClassName("mapboxgl-style-list")[0].children;
+            for (let i = 0; i < styleList.length; i++) {
+                styleList[i].style.color = "black";
+            }
             let buildings = [];
             addLayer(mapInstance);
             axios.get("/api/v1/interactiveBuildings/all").then(({data}) => {
