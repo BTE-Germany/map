@@ -16,7 +16,7 @@ model Region {
   description       String
   userUUID          String
   ownerID           String?
-  owner             User?               @relation(fields: [ownerID], references: [id])
+  owner             User?               @relation(fields: [ownerID], references: [id], onDelete: Cascade)
   data              String              @db.Text
   city              String
   area              Int
@@ -47,7 +47,7 @@ model LinkCodes {
 
 model Image {
   id        String @id @default(uuid())
-  region    Region @relation(fields: [regionId], references: [id])
+  region    Region @relation(fields: [regionId], references: [id], onDelete: Cascade)
   regionId  String
   imageData String
 }
@@ -56,7 +56,7 @@ model AdditionalBuilder {
   id            String @id @default(uuid())
   minecraftUUID String
   username      String
-  region        Region @relation(fields: [regionId], references: [id])
+  region        Region @relation(fields: [regionId], references: [id], onDelete: Cascade)
   regionId      String
 }
 
