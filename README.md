@@ -1,6 +1,6 @@
 # Map
 
-
+run it with `npm run dev`
 
 Map Preview:
 
