@@ -27,6 +27,7 @@ model Region {
   isPlotRegion      Boolean             @default(false)
   buildings         Int                 @default(0)
   osmDisplayName    String              @default("")
+  isFinished        Boolean?            @default(false)
 }
 
 model User {
