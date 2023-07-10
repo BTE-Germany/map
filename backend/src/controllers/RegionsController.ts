@@ -6,10 +6,10 @@
  * This project is released under the MIT license.                            *
  ******************************************************************************/
 
-import {Request, Response} from "express";
+import { Request, Response } from "express";
 import Core from "../Core.js";
 import axios from "axios";
-import {validationResult} from "express-validator";
+import { validationResult } from "express-validator";
 import imageminWebp from "imagemin-webp";
 import imagemin from "imagemin";
 
@@ -27,7 +27,7 @@ class RegionsController {
         let size = request.query.size;
         let sortBy = request.query.sort;
         let sortDir = request.query.direction;
-        let regions = await this.core.getPrisma().region.findMany({orderBy: {[sortBy]: sortDir}});
+        let regions = await this.core.getPrisma().region.findMany({ orderBy: { [sortBy]: sortDir } });
         let count = regions.length;
         let totalPages = Math.ceil(count / size);
         let resultList = {
@@ -68,6 +68,9 @@ class RegionsController {
             }
             if (r.isPlotRegion) {
                 regionType = "plot";
+            }
+            if (r.isFinished) {
+                regionType = "finished";
             }
             geoJsonFeatures.push({
                 "type": "Feature",
@@ -111,7 +114,7 @@ class RegionsController {
                         id: region.id
                     }
                 });
-                response.send({"success": true});
+                response.send({ "success": true });
             } else {
                 response.status(403).send("You are not the owner of this region");
             }
@@ -132,11 +135,11 @@ class RegionsController {
                 city: request.body.city,
                 isEventRegion: request.body.isEventRegion,
                 isPlotRegion: request.body.isPlotRegion,
+                isFinished: request.body.isFinished,
             }
         });
-        console.log(region);
         if (region) {
-            response.send({"success": true});
+            response.send({ "success": true });
         } else {
             response.status(404).send("Region not found");
         }
@@ -146,7 +149,7 @@ class RegionsController {
     public async reportRegion(request: Request, response: Response) {
         const errors = validationResult(request);
         if (!errors.isEmpty()) {
-            return response.status(400).json({errors: errors.array()});
+            return response.status(400).json({ errors: errors.array() });
         }
 
         console.log(request.body)
@@ -158,7 +161,7 @@ class RegionsController {
         });
         if (region) {
             await this.core.getDiscord().sendReportMessage(region.id, request.kauth.grant.access_token.content.sub, request.body.comment, request.body.reason);
-            response.send({"success": true});
+            response.send({ "success": true });
         } else {
             response.status(404).send("Region not found");
         }
@@ -167,7 +170,7 @@ class RegionsController {
     public async addAdditionalBuilder(request: Request, response: Response) {
         const errors = validationResult(request);
         if (!errors.isEmpty()) {
-            return response.status(400).json({errors: errors.array()});
+            return response.status(400).json({ errors: errors.array() });
         }
 
 
@@ -186,7 +189,7 @@ class RegionsController {
                 return;
             }
 
-            const {data: mcApiData} = await axios.get(`https://playerdb.co/api/player/minecraft/${request.body.username}`)
+            const { data: mcApiData } = await axios.get(`https://playerdb.co/api/player/minecraft/${request.body.username}`)
             if (mcApiData.code === "player.found") {
                 let additionalBuilder = await this.core.getPrisma().additionalBuilder.findFirst({
                     where: {
@@ -212,7 +215,7 @@ class RegionsController {
                     }
                 })
                 this.core.getLogger().debug(b);
-                response.send({"success": true});
+                response.send({ "success": true });
             } else {
                 response.status(400).send("Minecraft user doesn't exist");
             }
@@ -251,7 +254,7 @@ class RegionsController {
                         id: additionalBuilder.id
                     }
                 });
-                response.send({"success": true});
+                response.send({ "success": true });
             } else {
                 response.status(404).send("Additional builder not found");
             }
@@ -264,7 +267,7 @@ class RegionsController {
     async handleImageUpload(request: Request, response: Response) {
         const errors = validationResult(request);
         if (!errors.isEmpty()) {
-            return response.status(400).json({errors: errors.array()});
+            return response.status(400).json({ errors: errors.array() });
         }
 
         let region = await this.core.getPrisma().region.findUnique({
@@ -297,7 +300,7 @@ class RegionsController {
                 // @ts-ignore
                 const webp = await imagemin.buffer(request.files.image.data, {
                     plugins: [
-                        imageminWebp({quality: 50})
+                        imageminWebp({ quality: 50 })
                     ]
                 })
                 const image = await this.core.getPrisma().image.create({
@@ -332,7 +335,7 @@ class RegionsController {
                 for (const imageKey in request.files.image) {
                     const webp = await imagemin.buffer(request.files.image[imageKey].data, {
                         plugins: [
-                            imageminWebp({quality: 50})
+                            imageminWebp({ quality: 50 })
                         ]
                     })
                     const image = await this.core.getPrisma().image.create({
@@ -376,7 +379,7 @@ class RegionsController {
     async handleImageDelete(request: Request, response: Response) {
         const errors = validationResult(request);
         if (!errors.isEmpty()) {
-            return response.status(400).json({errors: errors.array()});
+            return response.status(400).json({ errors: errors.array() });
         }
 
         let region = await this.core.getPrisma().region.findUnique({
@@ -429,7 +432,7 @@ class RegionsController {
     async handleCalculateBuildings(request: Request, response: Response) {
         const errors = validationResult(request);
         if (!errors.isEmpty()) {
-            return response.status(400).json({errors: errors.array()});
+            return response.status(400).json({ errors: errors.array() });
         }
         let region = await this.core.getPrisma().region.findUnique({
             where: {
@@ -460,7 +463,7 @@ class RegionsController {
                `;
 
 
-            const {data} = await axios.get(`https://overpass.kumi.systems/api/interpreter?data=${overpassQuery.replace("\n", "")}`)
+            const { data } = await axios.get(`https://overpass.kumi.systems/api/interpreter?data=${overpassQuery.replace("\n", "")}`)
 
             const newRegion = await this.core.getPrisma().region.update({
                 where: {

@@ -63,7 +63,7 @@ const Map = forwardRef(({openDialog, setRegionViewData, updateMap, setUpdateMap}
             showNotification({
                 title: 'Whoops',
                 message: 'It looks like we have no connection to the server... Some features might not work.',
-                icon: (<TbPlugConnectedX size={18}/>),
+                icon: (<TbPlugConnectedX size={18} />),
                 color: "red",
             });
         });
@@ -282,6 +282,8 @@ const Map = forwardRef(({openDialog, setRegionViewData, updateMap, setUpdateMap}
                     'match',
                     ['get', 'regionType'],
                     'normal',
+                    'rgba(255, 149, 0, 0.37)',
+                    'finished',
                     'rgba(3,80,203,0.37)',
                     'event',
                     'rgba(225,4,4,0.37)',
@@ -302,6 +304,8 @@ const Map = forwardRef(({openDialog, setRegionViewData, updateMap, setUpdateMap}
                     'match',
                     ['get', 'regionType'],
                     'normal',
+                    'rgb(255, 149, 0)',
+                    'finished',
                     'rgb(0,90,229)',
                     'event',
                     'rgb(149,5,5)',
@@ -332,7 +336,7 @@ const Map = forwardRef(({openDialog, setRegionViewData, updateMap, setUpdateMap}
             showNotification({
                 title: 'Copied successfully',
                 message: 'The coordinates have been copied to your clipboard!',
-                icon: <BsCheck2 size={18}/>,
+                icon: <BsCheck2 size={18} />,
                 color: "teal"
             });
         });
@@ -369,7 +373,7 @@ const Map = forwardRef(({openDialog, setRegionViewData, updateMap, setUpdateMap}
                     title: 'Go to coordinates',
                     description: query,
                     onTrigger: () => changeLatLon(coords[0], coords[1]),
-                    icon: <BiMapPin size={18}/>,
+                    icon: <BiMapPin size={18} />,
                 },
             ]);
             return;
@@ -402,8 +406,8 @@ const Map = forwardRef(({openDialog, setRegionViewData, updateMap, setUpdateMap}
                 setShowSearchLoading(false);
             }
         }}
-                           searchIcon={showSearchLoading ? <Loader size={"xs"}/> : <AiOutlineSearch/>}
-                           filter={(query, actions) => actions} limit={50}>
+            searchIcon={showSearchLoading ? <Loader size={"xs"} /> : <AiOutlineSearch />}
+            filter={(query, actions) => actions} limit={50}>
             <div style={{width: "100%", position: 'relative', flex: 1}}>
                 {
                     !socketConnected &&
@@ -420,11 +424,11 @@ const Map = forwardRef(({openDialog, setRegionViewData, updateMap, setUpdateMap}
                         alignItems: "center",
                         borderRadius: "99px"
                     })}>
-                        <TbPlugConnectedX size={15}/>
+                        <TbPlugConnectedX size={15} />
                     </Box>
                 }
-                <LoadingOverlay visible={showLoadingOverlay}/>
-                <div ref={mapContainer} style={{width: "100%", height: "100%"}}/>
+                <LoadingOverlay visible={showLoadingOverlay} />
+                <div ref={mapContainer} style={{width: "100%", height: "100%"}} />
             </div>
         </SpotlightProvider>
 
