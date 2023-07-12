@@ -59,7 +59,7 @@ const RegionView = ({data, open, setOpen, setUpdateMap}) => {
     const [normalEditing, setnormalEditing] = useState(false);
     const [plotType, setPlotType] = useState("normal");
     const [isFinished, setisFinished] = useState(true);
-    const [description, setDescription] = useState("");
+    const [description, setDescription] = useState(null);
 
     const {keycloak} = useKeycloak();
     const isAdmin = keycloak?.tokenParsed?.realm_access.roles.includes("mapadmin");
@@ -85,11 +85,15 @@ const RegionView = ({data, open, setOpen, setUpdateMap}) => {
         } else {
             setPlotType('normal');
         }
-
         setRegion(region_.data);
-        setDescription(region_.data.description);
-        console.log(region_.data);
-        console.log(user);
+
+        // use the description only if it contains any words and not only html tags
+        if (region_.data.description.replace(/<[^>]*>/g, '').trim().length > 0) {
+            setDescription(region_.data.description);
+        }
+        else {
+            setDescription(null);
+        }
         let coords = JSON.parse(region_.data.data);
         coords.push(coords[0]);
         let poly = polygon([coords]);
