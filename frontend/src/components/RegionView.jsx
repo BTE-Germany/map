@@ -74,23 +74,26 @@ const RegionView = ({data, open, setOpen, setUpdateMap}) => {
 
     const getData = async () => {
         if (!data?.id) return;
-        const region = await axios.get(`/api/v1/region/${data.id}`);
-        if (region.data.isEventRegion) {
+        const region_ = await axios.get(`/api/v1/region/${data.id}`);
+        if (region_.data.isEventRegion) {
             setPlotType('event');
-        } else if (region.data.isPlotRegion) {
+        } else if (region_.data.isPlotRegion) {
             setPlotType('plot');
-        } else if (!region.data.isPlotRegion && !region.data.isEventRegion) {
+        } else {
             setPlotType('normal');
         }
 
-        setRegion(region.data);
-        let coords = JSON.parse(region.data.data);
+        setRegion(region_.data);
+        setDescription(region_.data.description);
+        console.log(region_.data);
+        console.log(user);
+        let coords = JSON.parse(region_.data.data);
         coords.push(coords[0]);
         let poly = polygon([coords]);
         let centerMass = centerOfMass(poly);
         setCenter(centerMass.geometry.coordinates);
-        if ('isFinished' in region.data) {
-            setisFinished(region.data.isFinished);
+        if ('isFinished' in region_.data) {
+            setisFinished(region_.data.isFinished);
         } else {
             setisFinished(true);
         }
