@@ -13,7 +13,7 @@ datasource db {
 model Region {
   id                String              @id @default(uuid())
   username          String
-  description       String
+  description       String              @db.Text
   userUUID          String
   ownerID           String?
   owner             User?               @relation(fields: [ownerID], references: [id], onDelete: Cascade)

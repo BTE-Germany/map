@@ -26,11 +26,12 @@ import {
 import axios from "axios";
 import {useClipboard} from "@mantine/hooks";
 import {centerOfMass, polygon} from "@turf/turf";
+import {RichTextEditor} from '@mantine/rte';
 import StatCard from "./StatCard";
 import {FaCity} from "react-icons/fa";
 import {BiArea, BiBuilding} from "react-icons/bi";
 import {AiFillDelete, AiOutlineDelete, AiOutlineLink} from "react-icons/ai";
-import {MdAdd, MdOutlineShareLocation, MdConstruction} from "react-icons/md";
+import {MdAdd, MdOutlineShareLocation, MdConstruction, MdDescription} from "react-icons/md";
 import {useModals} from "@mantine/modals";
 import {showNotification} from "@mantine/notifications";
 import {useKeycloak} from "@react-keycloak-fork/web";
@@ -58,6 +59,7 @@ const RegionView = ({data, open, setOpen, setUpdateMap}) => {
     const [normalEditing, setnormalEditing] = useState(false);
     const [plotType, setPlotType] = useState("normal");
     const [isFinished, setisFinished] = useState(true);
+    const [description, setDescription] = useState("");
 
     const {keycloak} = useKeycloak();
     const isAdmin = keycloak?.tokenParsed?.realm_access.roles.includes("mapadmin");
@@ -222,6 +224,7 @@ const RegionView = ({data, open, setOpen, setUpdateMap}) => {
                 isEventRegion: plotType === 'event',
                 isPlotRegion: plotType === 'plot',
                 isFinished: isFinished,
+                description: description,
             };
             await axios.post(`api/v1/region/${data.id}/edit`, params, {headers: {authorization: "Bearer " + keycloak.token}});
         } catch (error) {
@@ -283,24 +286,44 @@ const RegionView = ({data, open, setOpen, setUpdateMap}) => {
                                         <Alert icon={<MdConstruction size={16} />} sx={{width: "100%"}} title="Under Construction" color="orange">
                                             This region is still under construction.
                                         </Alert>
+                                        : null
+                            }
+                            {description ?
+                                < StatCard title={"DESCRIPTION"} Icon={MdDescription} noBigValue={true} skinny={true}
+                                    additionalElement={
+                                        <ScrollArea.Autosize maxHeight={"20vh"}>
+                                            <RichTextEditor
+                                                readOnly={true}
+                                                value={description}
+                                                sx={{
+                                                    backgroundColor: 'transparent',
+                                                    border: 'none',
+                                                    padding: 0,
+                                                    width: '100%',
+                                                    lineBreak: 'anywhere',
+                                                }}
+                                            />
+                                        </ScrollArea.Autosize>
+                                    } />
                                 : null
                             }
 
-                            {region.isPlotRegion ?
-                                <Alert icon={<TbFence size={16} />} sx={{width: "100%"}} title="Plot Region"
-                                    color="green">
-                                    This is a plot region. Therefore, it has no owner.
-                                </Alert>
-                                : null
-                            }
-
-                            {region?.additionalBuilder?.length > 0 && !(region.ownerID === user?.data?.id) ?
-                                <StatCard title={"Additional Builders"} noBigValue={true}
-                                    value={<AdditionalBuilders showEditButtons={false}
-                                        openAdditionalBuilderModal={openAdditionalBuilderModal}
-                                        region={region} update={getData} />}
-                                    Icon={HiUserGroup}
-                                    subtitle={""} />
+                            {normalEditing ?
+                                <StatCard title={"DESCRIPTION"} Icon={MdDescription} noBigValue={true}
+                                    additionalElement={
+                                        <ScrollArea.Autosize maxHeight={"40vh"}>
+                                            <RichTextEditor value={description} onChange={setDescription} controls={[
+                                                ['bold', 'italic', 'underline', 'link'],
+                                                ['unorderedList', 'h1', 'h2', 'h3'],
+                                                ['sup', 'sub'],
+                                                ['alignLeft', 'alignCenter', 'alignRight']]}
+                                                sx={{
+                                                    maxWidth: '400px',
+                                                    lineBreak: 'anywhere',
+                                                }}
+                                            />
+                                        </ScrollArea.Autosize>
+                                    } visible={normalEditing} />
                                 : null
                             }
                             <StatCard title={"Owner"}
