@@ -283,12 +283,12 @@ const Map = forwardRef(({openDialog, setRegionViewData, updateMap, setUpdateMap}
                     ['get', 'regionType'],
                     'normal',
                     'rgba(255, 149, 0, 0.37)',
-                    'finished',
-                    'rgba(3,80,203,0.37)',
                     'event',
                     'rgba(225,4,4,0.37)',
                     'plot',
                     'rgba(30,203,3,0.37)',
+                    'finished',
+                    'rgba(3,80,203,0.37)',
                     /* other */ 'rgba(3,80,203,0.37)'
                 ],
             }
@@ -304,13 +304,13 @@ const Map = forwardRef(({openDialog, setRegionViewData, updateMap, setUpdateMap}
                     'match',
                     ['get', 'regionType'],
                     'normal',
-                    'rgb(255, 149, 0)',
-                    'finished',
-                    'rgb(0,90,229)',
+                    'rgb(200, 120, 0)',
                     'event',
                     'rgb(149,5,5)',
                     'plot',
                     'rgb(25,118,2)',
+                    'finished',
+                    'rgb(0,90,229)',
                     /* other */ 'rgb(0,90,229)'
                 ],
                 'line-width': 3

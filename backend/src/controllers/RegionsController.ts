@@ -66,10 +66,10 @@ class RegionsController {
             if (r.isEventRegion) {
                 regionType = "event";
             }
-            if (r.isPlotRegion) {
+            else if (r.isPlotRegion) {
                 regionType = "plot";
             }
-            if (r.isFinished) {
+            else if (r.isFinished) {
                 regionType = "finished";
             }
             geoJsonFeatures.push({
