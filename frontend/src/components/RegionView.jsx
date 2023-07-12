@@ -54,7 +54,8 @@ const RegionView = ({data, open, setOpen, setUpdateMap}) => {
     const clipboard = useClipboard({timeout: 800});
     const [center, setCenter] = useState([0, 0]);
     const [region, setRegion] = useState(null);
-    const [editing, setEditing] = useState(false);
+    const [adminEditing, setadminEditing] = useState(false);
+    const [normalEditing, setnormalEditing] = useState(false);
     const [plotType, setPlotType] = useState("normal");
     const [isFinished, setisFinished] = useState(true);
 
@@ -227,7 +228,8 @@ const RegionView = ({data, open, setOpen, setUpdateMap}) => {
             alert("User does not exist! Error: " + error);
             return;
         }
-        setEditing(false);
+        setadminEditing(false);
+        setnormalEditing(false);
         setLoading(true);
         setUpdateMap(true);
         getData();
@@ -264,31 +266,23 @@ const RegionView = ({data, open, setOpen, setUpdateMap}) => {
                 <ScrollArea.Autosize maxHeight={"90vh"} style={{maxHeight: "90vh"}}>
                     <Box sx={{maxHeight: "100%", display: "flex", flexDirection: "column"}}>
                         <RegionImageView regionId={region.id} getData={getData} regionImages={region.images}
-                            isOwner={(region.ownerID === user?.data?.id)} />
+                            normalEditing={normalEditing} />
 
                         <Group spacing={"md"} cols={1}>
-                            {!region.isFinished && !region.isEventRegion && !region.isPlotRegion ?
-                                <Alert icon={<MdConstruction size={16} />} sx={{width: "100%"}} title="This region is not finished yet."
-                                    color="orange">
-                                </Alert>
-                                : null
-                            }
-
-                            {!region.isEventRegion && !region.isPlotRegion ?
-                                <StatCard title={"Owner"}
-                                    innerImage={`https://crafatar.com/avatars/${data.userUUID}?size=64`}
-                                    value={data.username} Icon={BsFillPersonFill} subtitle={""} editable={editing}
-                                    id={"owner"} />
-                                : null
-                            }
-
-                            {region.isEventRegion ?
+                            {plotType == "event" ?
                                 <Alert icon={<GiPartyPopper size={16} />} sx={{width: "100%"}} title="Event Region"
                                     color="red">
-                                    This is an Event Region, which was built as part of a BTE Germany Event. Therefore,
-                                    it
-                                    has no owner.
+                                    This is an Event Region. Therefore, it has no owner.
                                 </Alert>
+                                : plotType == "plot" ?
+                                    <Alert icon={<TbFence size={16} />} sx={{width: "100%"}} title="Plot Region"
+                                        color="green">
+                                        This is a plot region. Therefore, it has no owner.
+                                    </Alert>
+                                    : !isFinished ?
+                                        <Alert icon={<MdConstruction size={16} />} sx={{width: "100%"}} title="Under Construction" color="orange">
+                                            This region is still under construction.
+                                        </Alert>
                                 : null
                             }
 
@@ -309,39 +303,35 @@ const RegionView = ({data, open, setOpen, setUpdateMap}) => {
                                     subtitle={""} />
                                 : null
                             }
+                            <StatCard title={"Owner"}
+                                innerImage={`https://crafatar.com/avatars/${data.userUUID}?size=64`}
+                                value={data.username} Icon={BsFillPersonFill} subtitle={""} editable={adminEditing} id={"owner"} visible={plotType == "normal"} />
 
-                            {(region.ownerID === user?.data?.id) ?
-                                <StatCard title={"Additional Builders"} noBigValue={true}
-                                    value={<AdditionalBuilders showEditButtons={true}
+                            <StatCard title={"Additional Builders"} noBigValue={true}
+                                Icon={HiUserGroup} subtitle={""} visible={normalEditing | region.additionalBuilder.length > 0 && plotType == "normal"}
+                                additionalElement={
+                                    <AdditionalBuilders showEditButtons={normalEditing}
                                         openAdditionalBuilderModal={openAdditionalBuilderModal}
                                         region={region} update={getData}
-                                    />}
-                                    Icon={HiUserGroup}
-                                    subtitle={""} />
-                                : null
-                            }
+                                    />
+                                } />
 
-                            {editing | region.ownerID === user?.data?.id ?
-                                <Box sx={{display: "flex", alignItems: "center", justifyContent: "center", marginTop: "1rem"}}>
-                                    <Checkbox checked={isFinished} onChange={(event) => setisFinished(event.currentTarget.checked)} />
-                                    <label style={{marginLeft: "0.5rem"}}>is Finished</label>
-                                </Box>
-                                : null
-                            }
+                            <StatCard title={"Region Properties"} value={null} Icon={MdConstruction} subtitle={""} visible={normalEditing}
+                                additionalElement={
+                                    <Box>
+                                        {adminEditing ?
+                                            <Radio.Group name="type" label="Region Type" value={plotType} onChange={setPlotType}>
+                                                <Radio value="normal" label="Normal" />
+                                                <Radio value="event" label="Event" />
+                                                <Radio value="plot" label="Plot" />
+                                            </Radio.Group>
+                                            : null
+                                        }
+                                        <Checkbox checked={isFinished} onChange={(event) => setisFinished(event.currentTarget.checked)} label="mark as finished" mt={20} />
+                                    </Box>
+                                } showAdditionalElement={true} id={"status"} />
 
-                            {editing ?
-                                <Radio.Group name="type" label="Regions Typ"
-                                    value={plotType}
-                                    onChange={setPlotType}
-                                >
-                                    <Radio value="normal" label="Normal" />
-                                    <Radio value="event" label="Event" />
-                                    <Radio value="plot" label="Plot" />
-                                </Radio.Group>
-                                : null
-                            }
-
-                            <StatCard title={"City"} value={region?.city} Icon={FaCity} subtitle={""} editable={editing}
+                            <StatCard title={"City"} value={region?.city} Icon={FaCity} subtitle={""} editable={adminEditing}
                                 id={"city"} />
                             <StatCard title={"Area"} value={numberWithCommas(region?.area) + " m²"} Icon={BiArea}
                                 subtitle={""} />
@@ -349,10 +339,9 @@ const RegionView = ({data, open, setOpen, setUpdateMap}) => {
                                 subtitle={""} />
                         </Group>
 
-
                         {keycloak?.authenticated ?
                             <Group spacing={"md"} cols={2} grow mt={"md"}>
-                                {(region.ownerID === user?.data?.id) || isAdmin ?
+                                {normalEditing ?
                                     <Button color={"red"} leftIcon={<AiFillDelete />} onClick={showDeleteConfirmation}>Delete
                                         Region</Button>
                                     : null
@@ -377,12 +366,14 @@ const RegionView = ({data, open, setOpen, setUpdateMap}) => {
                                 to get more features</Button>
                         }
 
-                        {isAdmin && !editing ?
-                            <Button fullWidth mt={"md"} onClick={() => setEditing(true)}>Edit the
+                        {!normalEditing && (isAdmin | region.ownerID === user?.data?.id) ?
+                            <Button fullWidth mt={"md"} onClick={() => {
+                                setnormalEditing(true);
+                                if (isAdmin) setadminEditing(true);
+                            }}>Edit the
                                 values</Button> : null}
-                        {isAdmin && editing ? <Button fullWidth mt={"md"} onClick={() => onSave()}>Save</Button> : null}
-                        {isAdmin && editing ?
-                            <Button fullWidth mt={"md"} onClick={() => setEditing(false)}>Cancel</Button> : null}
+                        {normalEditing ? <Button fullWidth mt={"md"} onClick={() => onSave()}>Save</Button> : null}
+                        {normalEditing ? <Button fullWidth mt={"md"} onClick={() => {setadminEditing(false); setnormalEditing(false);}}>Cancel</Button> : null}
 
                         <Accordion my={"md"}>
                             <Accordion.Item value="info">
