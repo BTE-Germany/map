@@ -23,6 +23,8 @@ COPY ./backend/package.json .
 RUN yarn install --prod
 COPY --from=1 /app/backend/dist .
 RUN npx prisma generate
+
+RUN ["chmod", "+x", "/app/entrypoint.sh"]
 EXPOSE 8899
 
 ENTRYPOINT /app/entrypoint.sh
