@@ -43,7 +43,8 @@ import {Link} from "react-router-dom";
 import {BsFillPersonFill} from "react-icons/bs";
 import {HiUserGroup} from "react-icons/hi";
 import AdditionalBuildersDialog from "./AdditionalBuildersDialog";
-import {GiPartyPopper, TbFence} from "react-icons/all";
+import {GiPartyPopper} from "react-icons/gi";
+import {TbFence} from "react-icons/tb";
 import RegionImageView from "./RegionImageView";
 
 const RegionView = ({data, open, setOpen, setUpdateMap}) => {

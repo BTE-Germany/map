@@ -10,7 +10,7 @@ import React, {useEffect, useState} from 'react';
 import {Button, Checkbox, Paper, Progress, Title, Badge, Group, Alert} from "@mantine/core";
 import axios from "axios";
 import {useKeycloak} from "@react-keycloak-fork/web";
-import {AiFillWarning, AiOutlineWarning, IoWarningOutline} from "react-icons/all";
+import {IoIosWarning} from "react-icons/io";
 import {showNotification} from "@mantine/notifications";
 
 const AdminGeneral = props => {
@@ -107,7 +107,7 @@ const AdminGeneral = props => {
 
                 </Group>
 
-                <Alert color={"red"} icon={<IoWarningOutline size={18}/>} mt={"sm"}>
+                <Alert color={"red"} icon={<IoIosWarning size={18}/>} mt={"sm"}>
                     Der gesamte Index wird gelöscht und danach neu erstellt!
                 </Alert>
                 <Button color={"red"} mt={"md"} onClick={() => syncSearch()}>Daten neu synchronisieren</Button>

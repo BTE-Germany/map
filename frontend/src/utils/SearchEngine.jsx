@@ -12,7 +12,7 @@ import axios from "axios";
 import {OSMTagTranslations} from "./OSMTagTranslations";
 import {getIcon} from "./OSMTagIcons";
 import {MeiliSearch} from "meilisearch";
-import {TbPolygon} from "react-icons/all";
+import {TbPolygon} from "react-icons/tb";
 
 const meilisearch = new MeiliSearch({host: import.meta.env.VITE_SEARCH_URL, apiKey: import.meta.env.VITE_SEARCH_KEY})
 

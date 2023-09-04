@@ -18,7 +18,7 @@ import {MdOutlinePrivacyTip} from "react-icons/md";
 import {useUser} from "../hooks/useUser";
 import {showNotification} from "@mantine/notifications";
 import axios from "axios";
-import {BiDotsVerticalRounded} from "react-icons/all";
+import {BiDotsVerticalRounded} from "react-icons/bi";
 
 const AccountButton = props => {
 
