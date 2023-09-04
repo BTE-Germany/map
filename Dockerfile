@@ -16,7 +16,7 @@ WORKDIR /app
 COPY ./entrypoint.sh .
 
 COPY --from=1 /app/backend/prisma/schema.prisma ./backend/prisma/schema.prisma
-COPY --from=0 /app/frontend/dist ./frontend
+COPY --from=0 /app/frontend/dist ./frontend/dist
 
 WORKDIR /app/backend
 COPY ./backend/package.json .
