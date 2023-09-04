@@ -10,7 +10,8 @@
 
 cd /app/frontend || exit
 npm i -D @import-meta-env/cli
-npx import-meta-env -x .env
+npx import-meta-env -x ./.env
+echo "Injected env variables"
 
 cd /app/backend || exit
 npm run start
