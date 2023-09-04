@@ -13,7 +13,7 @@ import importMetaEnv from "@import-meta-env/unplugin";
 
 // https://vitejs.dev/config/
 export default defineConfig({
-  plugins: [react(), importMetaEnv.vite({ example: ".env" })],
+  plugins: [react(), importMetaEnv.vite({ example: ".example.env" })],
   server: {
     proxy: {
       '/api': 'http://localhost:8899',
