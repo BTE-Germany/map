@@ -13,6 +13,8 @@ RUN yarn run build
 FROM node:lts
 WORKDIR /app
 
+COPY ./entrypoint.sh .
+
 COPY --from=1 /app/backend/prisma/schema.prisma ./backend/prisma/schema.prisma
 COPY --from=0 /app/frontend/dist ./frontend
 
@@ -22,4 +24,5 @@ RUN yarn install --prod
 COPY --from=1 /app/backend/dist .
 RUN npx prisma generate
 EXPOSE 8899
-CMD ["npm", "run", "start"]
+
+ENTRYPOINT /app/entrypoint.sh

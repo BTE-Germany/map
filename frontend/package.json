@@ -38,6 +38,7 @@
     "three": "^0.148.0"
   },
   "devDependencies": {
+    "@import-meta-env/cli": "^0.6.5",
     "@types/react": "^18.0.26",
     "@types/react-dom": "^18.0.10",
     "@vitejs/plugin-react": "^3.0.1",

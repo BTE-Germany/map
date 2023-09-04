@@ -14,7 +14,7 @@ import {getIcon} from "./OSMTagIcons";
 import {MeiliSearch} from "meilisearch";
 import {TbPolygon} from "react-icons/tb";
 
-const meilisearch = new MeiliSearch({host: import.meta.env.VITE_SEARCH_URL, apiKey: import.meta.env.VITE_SEARCH_KEY})
+const meilisearch = new MeiliSearch({host: import.meta.env.SEARCH_URL, apiKey: import.meta.env.SEARCH_KEY})
 
 export const searchInOSM = async (query, flyTo) => {
     const result = [];
@@ -53,7 +53,7 @@ export const searchInOSM = async (query, flyTo) => {
 
 export const searchInRegions = async (query, flyTo) => {
     console.log(query)
-    const results = await meilisearch.index(import.meta.env.VITE_SEARCH_INDEX).search(query, {limit: 5})
+    const results = await meilisearch.index(import.meta.env.SEARCH_INDEX).search(query, {limit: 5})
     let end = [];
     if (results?.hits) {
         end = results.hits.map((region) => {
