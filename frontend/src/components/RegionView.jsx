@@ -89,7 +89,7 @@ const RegionView = ({data, open, setOpen, setUpdateMap}) => {
         setRegion(region_.data);
 
         // use the description only if it contains any words and not only html tags
-        if (region_.data.description.replace(/<[^>]*>/g, '').trim().length > 0) {
+        if (region_.data.description && region_.data.description.replace(/<[^>]*>/g, '').trim().length > 0) {
             setDescription(region_.data.description);
         }
         else {
