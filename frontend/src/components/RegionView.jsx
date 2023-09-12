@@ -60,7 +60,7 @@ const RegionView = ({data, open, setOpen, setUpdateMap}) => {
     const [normalEditing, setnormalEditing] = useState(false);
     const [plotType, setPlotType] = useState("normal");
     const [isFinished, setisFinished] = useState(true);
-    const [description, setDescription] = useState(null);
+    const [description, setDescription] = useState("");
 
     const {keycloak} = useKeycloak();
     const isAdmin = keycloak?.tokenParsed?.realm_access.roles.includes("mapadmin");
@@ -93,7 +93,7 @@ const RegionView = ({data, open, setOpen, setUpdateMap}) => {
             setDescription(region_.data.description);
         }
         else {
-            setDescription(null);
+            setDescription("");
         }
         let coords = JSON.parse(region_.data.data);
         coords.push(coords[0]);
