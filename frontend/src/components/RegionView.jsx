@@ -217,7 +217,7 @@ const RegionView = ({data, open, setOpen, setUpdateMap}) => {
     };
 
     const onSave = async () => {
-        const city = document.getElementById('city').value;
+        const city = document.getElementById('city')?.value;
         const owner = document.getElementById('owner')?.value;
         try {
             const {data: mcApiData} = await axios.get(`https://playerdb.co/api/player/minecraft/${owner}`);
