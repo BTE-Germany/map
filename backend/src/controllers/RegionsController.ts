@@ -137,6 +137,7 @@ class RegionsController {
                 isPlotRegion: request.body.isPlotRegion,
                 isFinished: request.body.isFinished,
                 description: request.body.description,
+                lastModified: new Date()
             }
         });
         if (region) {

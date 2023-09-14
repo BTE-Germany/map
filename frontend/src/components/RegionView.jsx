@@ -61,6 +61,7 @@ const RegionView = ({data, open, setOpen, setUpdateMap}) => {
     const [plotType, setPlotType] = useState("normal");
     const [isFinished, setisFinished] = useState(true);
     const [description, setDescription] = useState("");
+    const [additionalBuilders, setAdditionalBuilder] = useState([]);
 
     const {keycloak} = useKeycloak();
     const isAdmin = keycloak?.tokenParsed?.realm_access.roles.includes("mapadmin");
@@ -79,6 +80,7 @@ const RegionView = ({data, open, setOpen, setUpdateMap}) => {
     const getData = async () => {
         if (!data?.id) return;
         const region_ = await axios.get(`/api/v1/region/${data.id}`);
+        setAdditionalBuilder(region_.data.additionalBuilder)
         if (region_.data.isEventRegion) {
             setPlotType('event');
         } else if (region_.data.isPlotRegion) {
@@ -185,6 +187,74 @@ const RegionView = ({data, open, setOpen, setUpdateMap}) => {
         setUpdateMap(true);
     };
 
+    const addNewBuilder = (newBuilder) => {
+        setAdditionalBuilder([...additionalBuilders, newBuilder]);
+    };
+
+    const addBuilderToDB = (name) => {
+        setSending(true);
+        axios.post(`/api/v1/region/${regionId}/additionalBuilder`, {
+            username: name
+        }, {headers: {authorization: "Bearer " + keycloak.token}})
+            .then(({data}) => {
+                showNotification({
+                    title: 'Success',
+                    message: 'Builder added',
+                    color: "green"
+                })
+                setSending(false);
+                setUsername("");
+                modals.closeAll();
+            })
+            .catch((e) => {
+                setSending(false);
+                setUsername("");
+                if (e.response.data === "Builder already exists") {
+                    showNotification({
+                        title: 'Error',
+                        message: 'Builder already exists',
+                        color: "red"
+                    })
+                    return;
+                }
+                showNotification({
+                    title: 'Failed',
+                    message: 'An unexpected error occurred.',
+                    color: "red"
+                })
+
+            })
+    }
+
+    const removeBuilder = (builder) => {
+        const index = additionalBuilders.indexOf(builder);
+        if (index > -1) { // only splice array when item is found
+          additionalBuilders.splice(index, 1); // 2nd parameter means remove one item only
+        }
+    }
+
+    const removeBuilderFromDB = (builder) => {
+        setLoad(true);
+        axios.delete(`/api/v1/region/${region.id}/additionalBuilder/${builder}`, {headers: {authorization: "Bearer " + keycloak.token}})
+            .then(() => {
+                showNotification({
+                    title: 'Success',
+                    message: 'Builder removed',
+                    color: "green"
+                });
+                update();
+                setLoad(false);
+            })
+            .catch((e) => {
+                showNotification({
+                    title: 'Failed',
+                    message: 'An unexpected error occurred.',
+                    color: "red"
+                });
+                setLoad(false);
+            });
+    };
+    
     const openAdditionalBuilderModal = () => {
         if (!keycloak.authenticated) {
             showNotification({
@@ -211,7 +281,7 @@ const RegionView = ({data, open, setOpen, setUpdateMap}) => {
                 getData();
             },
             children: (
-                <AdditionalBuildersDialog regionId={region.id} keycloak={keycloak} />
+                <AdditionalBuildersDialog regionId={region.id} keycloak={keycloak} onUsers={addNewBuilder} />
             ),
         });
     };
@@ -219,6 +289,14 @@ const RegionView = ({data, open, setOpen, setUpdateMap}) => {
     const onSave = async () => {
         const city = document.getElementById('city')?.value ?? region.city; 
         const owner = document.getElementById('owner')?.value ?? region.username;
+        const addedBuilders = additionalBuilders.filter((item) => !region.AdditionalBuilders.includes(item));
+        const removedBuilders = region.AdditionalBuilders.filter((item) => !additionalBuilders.includes(item));
+        for (let builder of addedBuilders) {
+            addBuilderToDB(builder);
+        }
+        for (let builder of removedBuilders) {
+            removeBuilderFromDB(builder);
+        }
         try {
             const {data: mcApiData} = await axios.get(`https://playerdb.co/api/player/minecraft/${owner}`);
             console.log(mcApiData);
@@ -454,6 +532,22 @@ const RegionView = ({data, open, setOpen, setUpdateMap}) => {
                                                     </Tooltip>
                                                 </td>
                                             </tr>
+                                            <tr>
+                                                <td>Created at: </td>
+                                                <td>
+                                                    <Tooltip>
+                                                        <Code>{new Date(region.createdAt)}</Code>
+                                                    </Tooltip>
+                                                </td>
+                                            </tr>
+                                            <tr>
+                                                <td>Last modified at: </td>
+                                                <td>
+                                                    <Tooltip>
+                                                        <Code>{new Date(region.lastModified)}</Code>
+                                                    </Tooltip>
+                                                </td>
+                                            </tr>
                                         </tbody>
                                     </Table>
                                 </Accordion.Panel>
@@ -497,27 +591,6 @@ const RegionView = ({data, open, setOpen, setUpdateMap}) => {
 const AdditionalBuilders = ({region, showEditButtons, openAdditionalBuilderModal, update}) => {
     const {keycloak} = useKeycloak();
     const [load, setLoad] = useState(false);
-    const removeBuilder = (builder) => {
-        setLoad(true);
-        axios.delete(`/api/v1/region/${region.id}/additionalBuilder/${builder}`, {headers: {authorization: "Bearer " + keycloak.token}})
-            .then(() => {
-                showNotification({
-                    title: 'Success',
-                    message: 'Builder removed',
-                    color: "green"
-                });
-                update();
-                setLoad(false);
-            })
-            .catch((e) => {
-                showNotification({
-                    title: 'Failed',
-                    message: 'An unexpected error occurred.',
-                    color: "red"
-                });
-                setLoad(false);
-            });
-    };
 
     return (
         <div style={{width: "100%"}}>

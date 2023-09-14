@@ -13,7 +13,7 @@ import axios from "axios";
 import {showNotification} from "@mantine/notifications";
 import {useModals} from "@mantine/modals";
 
-const AdditionalBuildersDialog = ({regionId, keycloak}) => {
+const AdditionalBuildersDialog = ({regionId, keycloak, onUsers}) => {
     const modals = useModals();
     const [loading, setLoading] = useState(false);
     const [username, setUsername] = useState('');
@@ -44,46 +44,47 @@ const AdditionalBuildersDialog = ({regionId, keycloak}) => {
         }
     }
 
-    const addUser = () => {
-        setSending(true);
-        axios.post(`/api/v1/region/${regionId}/additionalBuilder`, {
-            username: username
-        }, {headers: {authorization: "Bearer " + keycloak.token}})
-            .then(({data}) => {
-                showNotification({
-                    title: 'Success',
-                    message: 'Builder added',
-                    color: "green"
-                })
-                setSending(false);
-                setUsername("");
-                modals.closeAll();
-            })
-            .catch((e) => {
-                setSending(false);
-                setUsername("");
-                if (e.response.data === "Builder already exists") {
-                    showNotification({
-                        title: 'Error',
-                        message: 'Builder already exists',
-                        color: "red"
-                    })
-                    return;
-                }
-                showNotification({
-                    title: 'Failed',
-                    message: 'An unexpected error occurred.',
-                    color: "red"
-                })
+    // const addUser = () => {
+    //     setSending(true);
+    //     axios.post(`/api/v1/region/${regionId}/additionalBuilder`, {
+    //         username: username
+    //     }, {headers: {authorization: "Bearer " + keycloak.token}})
+    //         .then(({data}) => {
+    //             showNotification({
+    //                 title: 'Success',
+    //                 message: 'Builder added',
+    //                 color: "green"
+    //             })
+    //             setSending(false);
+    //             setUsername("");
+    //             modals.closeAll();
+    //         })
+    //         .catch((e) => {
+    //             setSending(false);
+    //             setUsername("");
+    //             if (e.response.data === "Builder already exists") {
+    //                 showNotification({
+    //                     title: 'Error',
+    //                     message: 'Builder already exists',
+    //                     color: "red"
+    //                 })
+    //                 return;
+    //             }
+    //             showNotification({
+    //                 title: 'Failed',
+    //                 message: 'An unexpected error occurred.',
+    //                 color: "red"
+    //             })
 
-            })
-    }
+    //         })
+    // }
     return (
         <div>
             <form onSubmit={(e) => {
                 e.preventDefault();
                 if (userData) {
-                    addUser();
+                    onUsers(username)
+                    //addUser();
                 }
             }}>
                 <Input
