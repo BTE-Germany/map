@@ -23,7 +23,7 @@ const AdditionalBuildersDialog = ({regionId, keycloak, onUsers}) => {
         if (username) {
             searchUser();
         } else {
-            setUserData(null)
+            setUserData(null);
         }
 
     }, [username]);
@@ -32,17 +32,17 @@ const AdditionalBuildersDialog = ({regionId, keycloak, onUsers}) => {
         setLoading(true);
         let {data: userData} = await axios.get('https://playerdb.co/api/player/minecraft/' + username)
             .catch(() => {
-                setUserData(null)
+                setUserData(null);
                 setLoading(false);
             });
         if (!userData.success) {
             setLoading(false);
-            setUserData(null)
+            setUserData(null);
         } else {
             setUserData(userData.data.player);
             setLoading(false);
         }
-    }
+    };
 
     // const addUser = () => {
     //     setSending(true);
@@ -83,18 +83,20 @@ const AdditionalBuildersDialog = ({regionId, keycloak, onUsers}) => {
             <form onSubmit={(e) => {
                 e.preventDefault();
                 if (userData) {
-                    onUsers(username)
+                    console.log(userData);
+                    onUsers(userData);
+                    modals.closeAll();
                     //addUser();
                 }
             }}>
                 <Input
-                    icon={!userData ? <BsFillPersonFill/> :
-                        <img src={`https://crafatar.com/avatars/${userData.id}?size=20`} alt=""/>}
+                    icon={!userData ? <BsFillPersonFill /> :
+                        <img src={`https://crafatar.com/avatars/${userData.id}?size=20`} alt="" />}
                     placeholder="Minecraft username or UUID"
                     value={username}
                     onChange={(e) => setUsername(e.target.value)}
                     rightSection={
-                        loading && <Loader width={20}/>
+                        loading && <Loader width={20} />
                     }
                     disabled={sending}
                 />
@@ -106,6 +108,6 @@ const AdditionalBuildersDialog = ({regionId, keycloak, onUsers}) => {
 
         </div>
     );
-}
+};
 
-export default AdditionalBuildersDialog
+export default AdditionalBuildersDialog;

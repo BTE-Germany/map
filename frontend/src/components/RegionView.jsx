@@ -61,7 +61,7 @@ const RegionView = ({data, open, setOpen, setUpdateMap}) => {
     const [plotType, setPlotType] = useState("normal");
     const [isFinished, setisFinished] = useState(true);
     const [description, setDescription] = useState("");
-    const [additionalBuilders, setAdditionalBuilder] = useState([]);
+    const [additionalBuildersArray, setAdditionalBuilders] = useState([]);
 
     const {keycloak} = useKeycloak();
     const isAdmin = keycloak?.tokenParsed?.realm_access.roles.includes("mapadmin");
@@ -80,7 +80,10 @@ const RegionView = ({data, open, setOpen, setUpdateMap}) => {
     const getData = async () => {
         if (!data?.id) return;
         const region_ = await axios.get(`/api/v1/region/${data.id}`);
-        setAdditionalBuilder(region_.data.additionalBuilder)
+        console.log("region: ", region_.data);
+
+        setAdditionalBuilders(region_.data.additionalBuilder);
+
         if (region_.data.isEventRegion) {
             setPlotType('event');
         } else if (region_.data.isPlotRegion) {
@@ -187,13 +190,15 @@ const RegionView = ({data, open, setOpen, setUpdateMap}) => {
         setUpdateMap(true);
     };
 
-    const addNewBuilder = (newBuilder) => {
-        setAdditionalBuilder([...additionalBuilders, newBuilder]);
+    const addNewBuilder = async (newBuilder) => {
+        console.log("new", newBuilder);
+        const {data: mcApiData} = await axios.get(`https://playerdb.co/api/player/minecraft/${newBuilder.username}`);
+        newBuilder.minecraftUUID = mcApiData.data.player.id;
+        setAdditionalBuilders([...additionalBuildersArray, newBuilder]);
     };
 
     const addBuilderToDB = (name) => {
-        setSending(true);
-        axios.post(`/api/v1/region/${regionId}/additionalBuilder`, {
+        axios.post(`/api/v1/region/${region.id}/additionalBuilder`, {
             username: name
         }, {headers: {authorization: "Bearer " + keycloak.token}})
             .then(({data}) => {
@@ -201,40 +206,33 @@ const RegionView = ({data, open, setOpen, setUpdateMap}) => {
                     title: 'Success',
                     message: 'Builder added',
                     color: "green"
-                })
-                setSending(false);
-                setUsername("");
-                modals.closeAll();
+                });
             })
             .catch((e) => {
-                setSending(false);
-                setUsername("");
                 if (e.response.data === "Builder already exists") {
                     showNotification({
                         title: 'Error',
                         message: 'Builder already exists',
                         color: "red"
-                    })
+                    });
                     return;
                 }
                 showNotification({
                     title: 'Failed',
                     message: 'An unexpected error occurred.',
                     color: "red"
-                })
+                });
 
-            })
-    }
+            });
+    };
 
     const removeBuilder = (builder) => {
-        const index = additionalBuilders.indexOf(builder);
-        if (index > -1) { // only splice array when item is found
-          additionalBuilders.splice(index, 1); // 2nd parameter means remove one item only
-        }
-    }
+        console.log("removeBuilder", builder);
+        setAdditionalBuilders(additionalBuildersArray.filter(b => b.id !== builder.id));
+    };
 
     const removeBuilderFromDB = (builder) => {
-        setLoad(true);
+        setLoading(true);
         axios.delete(`/api/v1/region/${region.id}/additionalBuilder/${builder}`, {headers: {authorization: "Bearer " + keycloak.token}})
             .then(() => {
                 showNotification({
@@ -242,8 +240,7 @@ const RegionView = ({data, open, setOpen, setUpdateMap}) => {
                     message: 'Builder removed',
                     color: "green"
                 });
-                update();
-                setLoad(false);
+                setLoading(false);
             })
             .catch((e) => {
                 showNotification({
@@ -251,10 +248,10 @@ const RegionView = ({data, open, setOpen, setUpdateMap}) => {
                     message: 'An unexpected error occurred.',
                     color: "red"
                 });
-                setLoad(false);
+                setLoading(false);
             });
     };
-    
+
     const openAdditionalBuilderModal = () => {
         if (!keycloak.authenticated) {
             showNotification({
@@ -264,7 +261,7 @@ const RegionView = ({data, open, setOpen, setUpdateMap}) => {
             });
             return;
         }
-        if (region.ownerID !== user?.data?.id) {
+        if (region.ownerID !== user?.data?.id && !adminEditing) {
             showNotification({
                 title: 'Ehhhhh...',
                 message: 'You are not the owner of this region.',
@@ -278,7 +275,6 @@ const RegionView = ({data, open, setOpen, setUpdateMap}) => {
             centered: true,
             onClose: () => {
                 setOpen(true);
-                getData();
             },
             children: (
                 <AdditionalBuildersDialog regionId={region.id} keycloak={keycloak} onUsers={addNewBuilder} />
@@ -287,10 +283,11 @@ const RegionView = ({data, open, setOpen, setUpdateMap}) => {
     };
 
     const onSave = async () => {
-        const city = document.getElementById('city')?.value ?? region.city; 
+        console.log("save-region:", region);
+        const city = document.getElementById('city')?.value ?? region.city;
         const owner = document.getElementById('owner')?.value ?? region.username;
-        const addedBuilders = additionalBuilders.filter((item) => !region.AdditionalBuilders.includes(item));
-        const removedBuilders = region.AdditionalBuilders.filter((item) => !additionalBuilders.includes(item));
+        const addedBuilders = additionalBuildersArray.filter((item) => !region.additionalBuilder.includes(item));
+        const removedBuilders = region.additionalBuilder.filter((item) => !additionalBuildersArray.includes(item));
         for (let builder of addedBuilders) {
             addBuilderToDB(builder);
         }
@@ -308,6 +305,7 @@ const RegionView = ({data, open, setOpen, setUpdateMap}) => {
                 isPlotRegion: plotType === 'plot',
                 isFinished: isFinished,
                 description: description,
+                lastModified: new Date(),
             };
             await axios.post(`api/v1/region/${data.id}/edit`, params, {headers: {authorization: "Bearer " + keycloak.token}});
         } catch (error) {
@@ -351,7 +349,7 @@ const RegionView = ({data, open, setOpen, setUpdateMap}) => {
                 :
                 <ScrollArea.Autosize maxHeight={"90vh"} style={{maxHeight: "90vh"}}>
                     <Box sx={{maxHeight: "100%", display: "flex", flexDirection: "column"}}>
-                        <RegionImageView regionId={region.id} getData={getData} regionImages={region.images}
+                        <RegionImageView regionId={region.id} regionImages={region.images}
                             normalEditing={normalEditing} />
 
                         <Group spacing={"md"} cols={1}>
@@ -418,7 +416,8 @@ const RegionView = ({data, open, setOpen, setUpdateMap}) => {
                                 additionalElement={
                                     <AdditionalBuilders showEditButtons={normalEditing}
                                         openAdditionalBuilderModal={openAdditionalBuilderModal}
-                                        region={region} update={getData}
+                                        additionalBuilders={normalEditing ? additionalBuildersArray : region.additionalBuilder}
+                                        removeBuilder={removeBuilder}
                                     />
                                 } />
 
@@ -533,25 +532,24 @@ const RegionView = ({data, open, setOpen, setUpdateMap}) => {
                                                 </td>
                                             </tr>
                                             <tr>
-                                                <td>Created at: </td>
+                                                <td>Last modified at: </td>
                                                 <td>
                                                     <Tooltip>
-                                                        <Code>{new Date(region.createdAt)}</Code>
+                                                        <Code>{new Date(region.lastModified).toLocaleString()}</Code>
                                                     </Tooltip>
                                                 </td>
                                             </tr>
                                             <tr>
-                                                <td>Last modified at: </td>
+                                                <td>Created at: </td>
                                                 <td>
                                                     <Tooltip>
-                                                        <Code>{new Date(region.lastModified)}</Code>
+                                                        <Code>{new Date(region.createdAt).toLocaleString()}</Code>
                                                     </Tooltip>
                                                 </td>
                                             </tr>
                                         </tbody>
                                     </Table>
                                 </Accordion.Panel>
-
                             </Accordion.Item>
                         </Accordion>
                         <Box style={{flex: 1}}></Box>
@@ -588,17 +586,17 @@ const RegionView = ({data, open, setOpen, setUpdateMap}) => {
     );
 };
 
-const AdditionalBuilders = ({region, showEditButtons, openAdditionalBuilderModal, update}) => {
+const AdditionalBuilders = ({showEditButtons, openAdditionalBuilderModal, additionalBuilders, removeBuilder}) => {
     const {keycloak} = useKeycloak();
     const [load, setLoad] = useState(false);
-
+    console.log("additionalBuilders: ", additionalBuilders);
     return (
         <div style={{width: "100%"}}>
             {
-                region.additionalBuilder &&
+                additionalBuilders &&
                 <Box sx={{width: "100%"}}>
                     {
-                        region.additionalBuilder.map((builder, idx) => {
+                        additionalBuilders.map((builder, idx) => {
                             return (
                                 <Box sx={{display: "flex", justifyContent: "space-between", width: "100%"}}>
                                     <Box id={idx} sx={{display: "flex", gap: "10px", alignItems: "center"}}>
@@ -609,7 +607,7 @@ const AdditionalBuilders = ({region, showEditButtons, openAdditionalBuilderModal
                                     </Box>
                                     {
                                         showEditButtons &&
-                                        <ActionIcon onClick={() => removeBuilder(builder.id)} loading={load}>
+                                        <ActionIcon onClick={() => removeBuilder(builder)} loading={load}>
                                             <AiOutlineDelete />
                                         </ActionIcon>
                                     }
