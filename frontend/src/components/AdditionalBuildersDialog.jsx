@@ -17,7 +17,7 @@ import {useDebouncedValue } from '@mantine/hooks';
 const AdditionalBuildersDialog = ({regionId, keycloak, onUsers}) => {
     const modals = useModals();
     const [loading, setLoading] = useState(false);
-    const [username, setUsername] = usestate('');
+    const [username, setUsername] = useState('');
     const [username_debounced] = useDebouncedValue(username, 700)
     const [userData, setUserData] = useState(null);
     const [sending, setSending] = useState(false);
