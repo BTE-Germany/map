@@ -348,7 +348,7 @@ const RegionView = ({data, open, setOpen, setUpdateMap}) => {
                 <ScrollArea.Autosize maxHeight={"90vh"} style={{maxHeight: "90vh"}}>
                     <Box sx={{maxHeight: "100%", display: "flex", flexDirection: "column"}}>
                         <RegionImageView regionId={region.id} regionImages={region.images}
-                            normalEditing={editing} />
+                            editable={editing} />
 
                         <Group spacing={"md"} cols={1}>
                             {plotType == "event" ?

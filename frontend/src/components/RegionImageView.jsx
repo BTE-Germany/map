@@ -119,10 +119,9 @@ const ImageAddDropzone = ({regionId, getData}) => {
 };
 
 
-const RegionImageView = ({regionId, getData, regionImages, isOwner}) => {
+const RegionImageView = ({regionId, getData, regionImages, editable}) => {
     const theme = useMantineTheme();
     const {keycloak} = useKeycloak();
-    const isAdmin = keycloak?.tokenParsed?.realm_access.roles.includes("mapadmin");
 
 
     const [deleteLoading, setDeleteLoading] = useState(false);
@@ -152,11 +151,11 @@ const RegionImageView = ({regionId, getData, regionImages, isOwner}) => {
         });
     }
 
-    if ((!isOwner && !isAdmin) && regionImages?.length === 0) {
+    if (!editable && regionImages?.length === 0) {
         return <></>
     }
 
-    if ((isOwner || isAdmin) && regionImages?.length === 0) {
+    if (editable && regionImages?.length === 0) {
         return (
             <div style={{marginBottom: 15}}>
                 <ImageAddDropzone regionId={regionId} getData={getData}/>
@@ -173,7 +172,7 @@ const RegionImageView = ({regionId, getData, regionImages, isOwner}) => {
                     return (
                         <Carousel.Slide>
                             {
-                                (isOwner || isAdmin) &&
+                                editable &&
                                 <ActionIcon sx={{position: "absolute", zIndex: 50}} m={"sm"} color={"red"}
                                             onClick={() => deleteImage(img.id)} loading={deleteLoading}>
                                     <AiFillDelete/>
@@ -186,8 +185,8 @@ const RegionImageView = ({regionId, getData, regionImages, isOwner}) => {
                 })
             }
             {
-                ((isOwner || isAdmin) && regionImages?.length < 5) && <Carousel.Slide>
-                    <ImageAddDropzone regionId={regionId} getData={getData} isOwner={isOwner}/>
+                (editable && regionImages?.length < 5) && <Carousel.Slide>
+                    <ImageAddDropzone regionId={regionId} getData={getData}/>
                 </Carousel.Slide>
             }
 
