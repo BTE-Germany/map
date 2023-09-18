@@ -13,7 +13,7 @@ import axios from "axios";
 import {showNotification} from "@mantine/notifications";
 import {useModals} from "@mantine/modals";
 
-const AdditionalBuildersDialog = ({regionId, keycloak}) => {
+const AdditionalBuildersDialog = ({regionId, keycloak, onUsers}) => {
     const modals = useModals();
     const [loading, setLoading] = useState(false);
     const [username, setUsername] = useState('');
@@ -23,7 +23,7 @@ const AdditionalBuildersDialog = ({regionId, keycloak}) => {
         if (username) {
             searchUser();
         } else {
-            setUserData(null)
+            setUserData(null);
         }
 
     }, [username]);
@@ -32,68 +32,71 @@ const AdditionalBuildersDialog = ({regionId, keycloak}) => {
         setLoading(true);
         let {data: userData} = await axios.get('https://playerdb.co/api/player/minecraft/' + username)
             .catch(() => {
-                setUserData(null)
+                setUserData(null);
                 setLoading(false);
             });
         if (!userData.success) {
             setLoading(false);
-            setUserData(null)
+            setUserData(null);
         } else {
             setUserData(userData.data.player);
             setLoading(false);
         }
-    }
+    };
 
-    const addUser = () => {
-        setSending(true);
-        axios.post(`/api/v1/region/${regionId}/additionalBuilder`, {
-            username: username
-        }, {headers: {authorization: "Bearer " + keycloak.token}})
-            .then(({data}) => {
-                showNotification({
-                    title: 'Success',
-                    message: 'Builder added',
-                    color: "green"
-                })
-                setSending(false);
-                setUsername("");
-                modals.closeAll();
-            })
-            .catch((e) => {
-                setSending(false);
-                setUsername("");
-                if (e.response.data === "Builder already exists") {
-                    showNotification({
-                        title: 'Error',
-                        message: 'Builder already exists',
-                        color: "red"
-                    })
-                    return;
-                }
-                showNotification({
-                    title: 'Failed',
-                    message: 'An unexpected error occurred.',
-                    color: "red"
-                })
+    // const addUser = () => {
+    //     setSending(true);
+    //     axios.post(`/api/v1/region/${regionId}/additionalBuilder`, {
+    //         username: username
+    //     }, {headers: {authorization: "Bearer " + keycloak.token}})
+    //         .then(({data}) => {
+    //             showNotification({
+    //                 title: 'Success',
+    //                 message: 'Builder added',
+    //                 color: "green"
+    //             })
+    //             setSending(false);
+    //             setUsername("");
+    //             modals.closeAll();
+    //         })
+    //         .catch((e) => {
+    //             setSending(false);
+    //             setUsername("");
+    //             if (e.response.data === "Builder already exists") {
+    //                 showNotification({
+    //                     title: 'Error',
+    //                     message: 'Builder already exists',
+    //                     color: "red"
+    //                 })
+    //                 return;
+    //             }
+    //             showNotification({
+    //                 title: 'Failed',
+    //                 message: 'An unexpected error occurred.',
+    //                 color: "red"
+    //             })
 
-            })
-    }
+    //         })
+    // }
     return (
         <div>
             <form onSubmit={(e) => {
                 e.preventDefault();
                 if (userData) {
-                    addUser();
+                    console.log(userData);
+                    onUsers(userData);
+                    modals.closeAll();
+                    //addUser();
                 }
             }}>
                 <Input
-                    icon={!userData ? <BsFillPersonFill/> :
-                        <img src={`https://crafatar.com/avatars/${userData.id}?size=20`} alt=""/>}
+                    icon={!userData ? <BsFillPersonFill /> :
+                        <img src={`https://crafatar.com/avatars/${userData.id}?size=20`} alt="" />}
                     placeholder="Minecraft username or UUID"
                     value={username}
                     onChange={(e) => setUsername(e.target.value)}
                     rightSection={
-                        loading && <Loader width={20}/>
+                        loading && <Loader width={20} />
                     }
                     disabled={sending}
                 />
@@ -105,6 +108,6 @@ const AdditionalBuildersDialog = ({regionId, keycloak}) => {
 
         </div>
     );
-}
+};
 
-export default AdditionalBuildersDialog
+export default AdditionalBuildersDialog;

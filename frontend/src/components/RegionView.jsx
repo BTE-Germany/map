@@ -56,11 +56,11 @@ const RegionView = ({data, open, setOpen, setUpdateMap}) => {
     const clipboard = useClipboard({timeout: 800});
     const [center, setCenter] = useState([0, 0]);
     const [region, setRegion] = useState(null);
-    const [adminEditing, setadminEditing] = useState(false);
-    const [normalEditing, setnormalEditing] = useState(false);
+    const [editing, setEditing] = useState(false);
     const [plotType, setPlotType] = useState("normal");
     const [isFinished, setisFinished] = useState(true);
     const [description, setDescription] = useState("");
+    const [additionalBuildersArray, setAdditionalBuilders] = useState([]);
 
     const {keycloak} = useKeycloak();
     const isAdmin = keycloak?.tokenParsed?.realm_access.roles.includes("mapadmin");
@@ -79,6 +79,10 @@ const RegionView = ({data, open, setOpen, setUpdateMap}) => {
     const getData = async () => {
         if (!data?.id) return;
         const region_ = await axios.get(`/api/v1/region/${data.id}`);
+        console.log("region: ", region_.data);
+
+        setAdditionalBuilders(region_.data.additionalBuilder);
+
         if (region_.data.isEventRegion) {
             setPlotType('event');
         } else if (region_.data.isPlotRegion) {
@@ -185,6 +189,68 @@ const RegionView = ({data, open, setOpen, setUpdateMap}) => {
         setUpdateMap(true);
     };
 
+    const addNewBuilder = async (newBuilder) => {
+        console.log("new", newBuilder);
+        const {data: mcApiData} = await axios.get(`https://playerdb.co/api/player/minecraft/${newBuilder.username}`);
+        newBuilder.minecraftUUID = mcApiData.data.player.id;
+        setAdditionalBuilders([...additionalBuildersArray, newBuilder]);
+    };
+
+    const addBuilderToDB = (name) => {
+        axios.post(`/api/v1/region/${region.id}/additionalBuilder`, {
+            username: name
+        }, {headers: {authorization: "Bearer " + keycloak.token}})
+            .then(({data}) => {
+                showNotification({
+                    title: 'Success',
+                    message: 'Builder added',
+                    color: "green"
+                });
+            })
+            .catch((e) => {
+                if (e.response.data === "Builder already exists") {
+                    showNotification({
+                        title: 'Error',
+                        message: 'Builder already exists',
+                        color: "red"
+                    });
+                    return;
+                }
+                showNotification({
+                    title: 'Failed',
+                    message: 'An unexpected error occurred.',
+                    color: "red"
+                });
+
+            });
+    };
+
+    const removeBuilder = (builder) => {
+        console.log("removeBuilder", builder);
+        setAdditionalBuilders(additionalBuildersArray.filter(b => b.id !== builder.id));
+    };
+
+    const removeBuilderFromDB = (builder) => {
+        setLoading(true);
+        axios.delete(`/api/v1/region/${region.id}/additionalBuilder/${builder}`, {headers: {authorization: "Bearer " + keycloak.token}})
+            .then(() => {
+                showNotification({
+                    title: 'Success',
+                    message: 'Builder removed',
+                    color: "green"
+                });
+                setLoading(false);
+            })
+            .catch((e) => {
+                showNotification({
+                    title: 'Failed',
+                    message: 'An unexpected error occurred.',
+                    color: "red"
+                });
+                setLoading(false);
+            });
+    };
+
     const openAdditionalBuilderModal = () => {
         if (!keycloak.authenticated) {
             showNotification({
@@ -194,7 +260,7 @@ const RegionView = ({data, open, setOpen, setUpdateMap}) => {
             });
             return;
         }
-        if (region.ownerID !== user?.data?.id) {
+        if (region.ownerID !== user?.data?.id && !isAdmin) {
             showNotification({
                 title: 'Ehhhhh...',
                 message: 'You are not the owner of this region.',
@@ -208,17 +274,25 @@ const RegionView = ({data, open, setOpen, setUpdateMap}) => {
             centered: true,
             onClose: () => {
                 setOpen(true);
-                getData();
             },
             children: (
-                <AdditionalBuildersDialog regionId={region.id} keycloak={keycloak} />
+                <AdditionalBuildersDialog regionId={region.id} keycloak={keycloak} onUsers={addNewBuilder} />
             ),
         });
     };
 
     const onSave = async () => {
-        const city = document.getElementById('city')?.value ?? region.city; 
+        console.log("save-region:", region);
+        const city = document.getElementById('city')?.value ?? region.city;
         const owner = document.getElementById('owner')?.value ?? region.username;
+        const addedBuilders = additionalBuildersArray.filter((item) => !region.additionalBuilder.includes(item));
+        const removedBuilders = region.additionalBuilder.filter((item) => !additionalBuildersArray.includes(item));
+        for (let builder of addedBuilders) {
+            addBuilderToDB(builder);
+        }
+        for (let builder of removedBuilders) {
+            removeBuilderFromDB(builder);
+        }
         try {
             const {data: mcApiData} = await axios.get(`https://playerdb.co/api/player/minecraft/${owner}`);
             console.log(mcApiData);
@@ -230,14 +304,14 @@ const RegionView = ({data, open, setOpen, setUpdateMap}) => {
                 isPlotRegion: plotType === 'plot',
                 isFinished: isFinished,
                 description: description,
+                lastModified: new Date(),
             };
             await axios.post(`api/v1/region/${data.id}/edit`, params, {headers: {authorization: "Bearer " + keycloak.token}});
         } catch (error) {
             alert("User does not exist! Error: " + error);
             return;
         }
-        setadminEditing(false);
-        setnormalEditing(false);
+        setEditing(false);
         setLoading(true);
         setUpdateMap(true);
         getData();
@@ -273,8 +347,8 @@ const RegionView = ({data, open, setOpen, setUpdateMap}) => {
                 :
                 <ScrollArea.Autosize maxHeight={"90vh"} style={{maxHeight: "90vh"}}>
                     <Box sx={{maxHeight: "100%", display: "flex", flexDirection: "column"}}>
-                        <RegionImageView regionId={region.id} getData={getData} regionImages={region.images}
-                            normalEditing={normalEditing} />
+                        <RegionImageView regionId={region.id} regionImages={region.images}
+                            editable={editing} />
 
                         <Group spacing={"md"} cols={1}>
                             {plotType == "event" ?
@@ -313,7 +387,7 @@ const RegionView = ({data, open, setOpen, setUpdateMap}) => {
                                 : null
                             }
 
-                            {normalEditing ?
+                            {editing ?
                                 <StatCard title={"DESCRIPTION"} Icon={MdDescription} noBigValue={true}
                                     additionalElement={
                                         <ScrollArea.Autosize maxHeight={"40vh"}>
@@ -328,26 +402,27 @@ const RegionView = ({data, open, setOpen, setUpdateMap}) => {
                                                 }}
                                             />
                                         </ScrollArea.Autosize>
-                                    } visible={normalEditing} />
+                                    } visible={editing} />
                                 : null
                             }
                             <StatCard title={"Owner"}
                                 innerImage={`https://crafatar.com/avatars/${data.userUUID}?size=64`}
-                                value={data.username} Icon={BsFillPersonFill} subtitle={""} editable={adminEditing} id={"owner"} visible={plotType == "normal"} />
+                                value={data.username} Icon={BsFillPersonFill} subtitle={""} editable={editing && isAdmin} id={"owner"} visible={plotType == "normal"} />
 
                             <StatCard title={"Additional Builders"} noBigValue={true}
-                                Icon={HiUserGroup} subtitle={""} visible={normalEditing | region.additionalBuilder.length > 0 && plotType == "normal"}
+                                Icon={HiUserGroup} subtitle={""} visible={editing | region.additionalBuilder.length > 0 && plotType == "normal"}
                                 additionalElement={
-                                    <AdditionalBuilders showEditButtons={normalEditing}
+                                    <AdditionalBuilders showEditButtons={editing}
                                         openAdditionalBuilderModal={openAdditionalBuilderModal}
-                                        region={region} update={getData}
+                                        additionalBuilders={editing ? additionalBuildersArray : region.additionalBuilder}
+                                        removeBuilder={removeBuilder}
                                     />
                                 } />
 
-                            <StatCard title={"Region Properties"} value={null} Icon={MdConstruction} subtitle={""} visible={normalEditing}
+                            <StatCard title={"Region Properties"} value={null} Icon={MdConstruction} subtitle={""} visible={editing}
                                 additionalElement={
                                     <Box>
-                                        {adminEditing ?
+                                        {editing && isAdmin ?
                                             <Radio.Group name="type" label="Region Type" value={plotType} onChange={setPlotType}>
                                                 <Radio value="normal" label="Normal" />
                                                 <Radio value="event" label="Event" />
@@ -359,7 +434,7 @@ const RegionView = ({data, open, setOpen, setUpdateMap}) => {
                                     </Box>
                                 } showAdditionalElement={true} id={"status"} />
 
-                            <StatCard title={"City"} value={region?.city} Icon={FaCity} subtitle={""} editable={adminEditing}
+                            <StatCard title={"City"} value={region?.city} Icon={FaCity} subtitle={""} editable={editing && isAdmin}
                                 id={"city"} />
                             <StatCard title={"Area"} value={numberWithCommas(region?.area) + " m²"} Icon={BiArea}
                                 subtitle={""} />
@@ -369,7 +444,7 @@ const RegionView = ({data, open, setOpen, setUpdateMap}) => {
 
                         {keycloak?.authenticated ?
                             <Group spacing={"md"} cols={2} grow mt={"md"}>
-                                {normalEditing ?
+                                {editing ?
                                     <Button color={"red"} leftIcon={<AiFillDelete />} onClick={showDeleteConfirmation}>Delete
                                         Region</Button>
                                     : null
@@ -394,14 +469,13 @@ const RegionView = ({data, open, setOpen, setUpdateMap}) => {
                                 to get more features</Button>
                         }
 
-                        {!normalEditing && (isAdmin | region.ownerID === user?.data?.id) ?
+                        {!editing && (isAdmin | region.ownerID === user?.data?.id) ?
                             <Button fullWidth mt={"md"} onClick={() => {
-                                setnormalEditing(true);
-                                if (isAdmin) setadminEditing(true);
+                                setEditing(true);
                             }}>Edit the
                                 values</Button> : null}
-                        {normalEditing ? <Button fullWidth mt={"md"} onClick={() => onSave()}>Save</Button> : null}
-                        {normalEditing ? <Button fullWidth mt={"md"} onClick={() => {setadminEditing(false); setnormalEditing(false);}}>Cancel</Button> : null}
+                        {editing ? <Button fullWidth mt={"md"} onClick={() => onSave()}>Save</Button> : null}
+                        {editing ? <Button fullWidth mt={"md"} onClick={() => {setEditing(false);}}>Cancel</Button> : null}
 
                         <Accordion my={"md"}>
                             <Accordion.Item value="info">
@@ -454,10 +528,25 @@ const RegionView = ({data, open, setOpen, setUpdateMap}) => {
                                                     </Tooltip>
                                                 </td>
                                             </tr>
+                                            <tr>
+                                                <td>Last modified at: </td>
+                                                <td>
+                                                    <Tooltip>
+                                                        <Code>{new Date(region.lastModified).toLocaleString()}</Code>
+                                                    </Tooltip>
+                                                </td>
+                                            </tr>
+                                            <tr>
+                                                <td>Created at: </td>
+                                                <td>
+                                                    <Tooltip>
+                                                        <Code>{new Date(region.createdAt).toLocaleString()}</Code>
+                                                    </Tooltip>
+                                                </td>
+                                            </tr>
                                         </tbody>
                                     </Table>
                                 </Accordion.Panel>
-
                             </Accordion.Item>
                         </Accordion>
                         <Box style={{flex: 1}}></Box>
@@ -494,38 +583,17 @@ const RegionView = ({data, open, setOpen, setUpdateMap}) => {
     );
 };
 
-const AdditionalBuilders = ({region, showEditButtons, openAdditionalBuilderModal, update}) => {
+const AdditionalBuilders = ({showEditButtons, openAdditionalBuilderModal, additionalBuilders, removeBuilder}) => {
     const {keycloak} = useKeycloak();
     const [load, setLoad] = useState(false);
-    const removeBuilder = (builder) => {
-        setLoad(true);
-        axios.delete(`/api/v1/region/${region.id}/additionalBuilder/${builder}`, {headers: {authorization: "Bearer " + keycloak.token}})
-            .then(() => {
-                showNotification({
-                    title: 'Success',
-                    message: 'Builder removed',
-                    color: "green"
-                });
-                update();
-                setLoad(false);
-            })
-            .catch((e) => {
-                showNotification({
-                    title: 'Failed',
-                    message: 'An unexpected error occurred.',
-                    color: "red"
-                });
-                setLoad(false);
-            });
-    };
-
+    console.log("additionalBuilders: ", additionalBuilders);
     return (
         <div style={{width: "100%"}}>
             {
-                region.additionalBuilder &&
+                additionalBuilders &&
                 <Box sx={{width: "100%"}}>
                     {
-                        region.additionalBuilder.map((builder, idx) => {
+                        additionalBuilders.map((builder, idx) => {
                             return (
                                 <Box sx={{display: "flex", justifyContent: "space-between", width: "100%"}}>
                                     <Box id={idx} sx={{display: "flex", gap: "10px", alignItems: "center"}}>
@@ -536,7 +604,7 @@ const AdditionalBuilders = ({region, showEditButtons, openAdditionalBuilderModal
                                     </Box>
                                     {
                                         showEditButtons &&
-                                        <ActionIcon onClick={() => removeBuilder(builder.id)} loading={load}>
+                                        <ActionIcon onClick={() => removeBuilder(builder)} loading={load}>
                                             <AiOutlineDelete />
                                         </ActionIcon>
                                     }

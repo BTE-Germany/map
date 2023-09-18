@@ -137,6 +137,7 @@ class RegionsController {
                 isPlotRegion: request.body.isPlotRegion,
                 isFinished: request.body.isFinished,
                 description: request.body.description,
+                lastModified: request.body.lastModified,
             }
         });
         if (region) {
@@ -185,7 +186,7 @@ class RegionsController {
         });
         if (region) {
 
-            if (region.owner.ssoId !== request.kauth.grant.access_token.content.sub) {
+            if (region.owner.ssoId !== request.kauth.grant.access_token.content.sub && !(request.kauth.grant.access_token.content.realm_access.roles.includes("mapadmin"))) {
                 response.status(403).send("You are not the owner of this region");
                 return;
             }
@@ -238,7 +239,7 @@ class RegionsController {
         });
         if (region) {
 
-            if (region.owner.ssoId !== request.kauth.grant.access_token.content.sub) {
+            if (region.owner.ssoId !== request.kauth.grant.access_token.content.sub && !(request.kauth.grant.access_token.content.realm_access.roles.includes("mapadmin"))) {
                 response.status(403).send("You are not the owner of this region");
                 return;
             }

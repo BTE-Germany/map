@@ -21,6 +21,7 @@ model Region {
   city              String
   area              Int
   createdAt         DateTime            @default(now())
+  lastModified      DateTime            @default(now())
   images            Image[]
   additionalBuilder AdditionalBuilder[]
   isEventRegion     Boolean             @default(false)
