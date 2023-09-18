@@ -6,7 +6,7 @@
  + This project is released under the MIT license.                            +
  +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++*/
 
-import React, {useEffect, useState} from 'react';
+import React, {useEffect, useState, useDebouncedState} from 'react';
 import {Button, Checkbox, Group, Input, Loader, NativeSelect, Textarea} from "@mantine/core";
 import {BsFillPersonFill} from "react-icons/bs";
 import axios from "axios";
@@ -16,7 +16,7 @@ import {useModals} from "@mantine/modals";
 const AdditionalBuildersDialog = ({regionId, keycloak, onUsers}) => {
     const modals = useModals();
     const [loading, setLoading] = useState(false);
-    const [username, setUsername] = useState('');
+    const [username, setUsername] = useDebouncedState('', 700);
     const [userData, setUserData] = useState(null);
     const [sending, setSending] = useState(false);
     useEffect(() => {
@@ -44,40 +44,6 @@ const AdditionalBuildersDialog = ({regionId, keycloak, onUsers}) => {
         }
     };
 
-    // const addUser = () => {
-    //     setSending(true);
-    //     axios.post(`/api/v1/region/${regionId}/additionalBuilder`, {
-    //         username: username
-    //     }, {headers: {authorization: "Bearer " + keycloak.token}})
-    //         .then(({data}) => {
-    //             showNotification({
-    //                 title: 'Success',
-    //                 message: 'Builder added',
-    //                 color: "green"
-    //             })
-    //             setSending(false);
-    //             setUsername("");
-    //             modals.closeAll();
-    //         })
-    //         .catch((e) => {
-    //             setSending(false);
-    //             setUsername("");
-    //             if (e.response.data === "Builder already exists") {
-    //                 showNotification({
-    //                     title: 'Error',
-    //                     message: 'Builder already exists',
-    //                     color: "red"
-    //                 })
-    //                 return;
-    //             }
-    //             showNotification({
-    //                 title: 'Failed',
-    //                 message: 'An unexpected error occurred.',
-    //                 color: "red"
-    //             })
-
-    //         })
-    // }
     return (
         <div>
             <form onSubmit={(e) => {
