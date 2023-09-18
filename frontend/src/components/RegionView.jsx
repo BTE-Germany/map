@@ -195,7 +195,6 @@ const RegionView = ({data, open, setOpen, setUpdateMap}) => {
     };
 
     const addBuilderToDB = (builder) => {
-        console.log(builder)
         axios.post(`/api/v1/region/${region.id}/additionalBuilder`, {
             username: builder.username
         }, {headers: {authorization: "Bearer " + keycloak.token}})
@@ -229,8 +228,6 @@ const RegionView = ({data, open, setOpen, setUpdateMap}) => {
     };
 
     const removeBuilderFromDB = (builder) => {
-        setLoading(true);
-
         axios.delete(`/api/v1/region/${region.id}/additionalBuilder/${builder.id}`, {headers: {authorization: "Bearer " + keycloak.token}})
             .then(() => {
                 showNotification({
@@ -238,7 +235,6 @@ const RegionView = ({data, open, setOpen, setUpdateMap}) => {
                     message: 'Builder removed',
                     color: "green"
                 });
-                setLoading(false);
             })
             .catch((e) => {
                 showNotification({
@@ -246,7 +242,6 @@ const RegionView = ({data, open, setOpen, setUpdateMap}) => {
                     message: 'An unexpected error occurred.',
                     color: "red"
                 });
-                setLoading(false);
             });
     };
 
@@ -285,6 +280,8 @@ const RegionView = ({data, open, setOpen, setUpdateMap}) => {
         const owner = document.getElementById('owner')?.value ?? region.username;
         const addedBuilders = additionalBuildersArray.filter((item) => !region.additionalBuilder.includes(item));
         const removedBuilders = region.additionalBuilder.filter((item) => !additionalBuildersArray.includes(item));
+        setEditing(false);
+        setLoading(true);
         for (let builder of addedBuilders) {
             addBuilderToDB(builder);
         }
@@ -308,8 +305,6 @@ const RegionView = ({data, open, setOpen, setUpdateMap}) => {
             alert("User does not exist! Error: " + error);
             return;
         }
-        setEditing(false);
-        setLoading(true);
         setUpdateMap(true);
         getData();
     };
