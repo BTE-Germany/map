@@ -12,26 +12,27 @@ import {BsFillPersonFill} from "react-icons/bs";
 import axios from "axios";
 import {showNotification} from "@mantine/notifications";
 import {useModals} from "@mantine/modals";
-import {useDebouncedState} from '@mantine/hooks';
+import {useDebouncedValue } from '@mantine/hooks';
 
 const AdditionalBuildersDialog = ({regionId, keycloak, onUsers}) => {
     const modals = useModals();
     const [loading, setLoading] = useState(false);
-    const [username, setUsername] = useDebouncedState('', 700);
+    const [username, setUsername] = usestate('');
+    const [username_debounced] = useDebouncedValue(username, 700)
     const [userData, setUserData] = useState(null);
     const [sending, setSending] = useState(false);
     useEffect(() => {
-        if (username) {
+        if (username_debounced) {
             searchUser();
         } else {
             setUserData(null);
         }
 
-    }, [username]);
+    }, [username_debounced]);
 
     const searchUser = async () => {
         setLoading(true);
-        let {data: userData} = await axios.get('https://playerdb.co/api/player/minecraft/' + username)
+        let {data: userData} = await axios.get('https://playerdb.co/api/player/minecraft/' + username_debounced)
             .catch(() => {
                 setUserData(null);
                 setLoading(false);
