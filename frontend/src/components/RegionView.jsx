@@ -56,8 +56,7 @@ const RegionView = ({data, open, setOpen, setUpdateMap}) => {
     const clipboard = useClipboard({timeout: 800});
     const [center, setCenter] = useState([0, 0]);
     const [region, setRegion] = useState(null);
-    const [adminEditing, setadminEditing] = useState(false);
-    const [normalEditing, setnormalEditing] = useState(false);
+    const [editing, setEditing] = useState(false);
     const [plotType, setPlotType] = useState("normal");
     const [isFinished, setisFinished] = useState(true);
     const [description, setDescription] = useState("");
@@ -261,7 +260,7 @@ const RegionView = ({data, open, setOpen, setUpdateMap}) => {
             });
             return;
         }
-        if (region.ownerID !== user?.data?.id && !adminEditing) {
+        if (region.ownerID !== user?.data?.id && !isAdmin) {
             showNotification({
                 title: 'Ehhhhh...',
                 message: 'You are not the owner of this region.',
@@ -312,8 +311,7 @@ const RegionView = ({data, open, setOpen, setUpdateMap}) => {
             alert("User does not exist! Error: " + error);
             return;
         }
-        setadminEditing(false);
-        setnormalEditing(false);
+        setEditing(false);
         setLoading(true);
         setUpdateMap(true);
         getData();
@@ -350,7 +348,7 @@ const RegionView = ({data, open, setOpen, setUpdateMap}) => {
                 <ScrollArea.Autosize maxHeight={"90vh"} style={{maxHeight: "90vh"}}>
                     <Box sx={{maxHeight: "100%", display: "flex", flexDirection: "column"}}>
                         <RegionImageView regionId={region.id} regionImages={region.images}
-                            normalEditing={normalEditing} />
+                            normalEditing={editing} />
 
                         <Group spacing={"md"} cols={1}>
                             {plotType == "event" ?
@@ -389,7 +387,7 @@ const RegionView = ({data, open, setOpen, setUpdateMap}) => {
                                 : null
                             }
 
-                            {normalEditing ?
+                            {editing ?
                                 <StatCard title={"DESCRIPTION"} Icon={MdDescription} noBigValue={true}
                                     additionalElement={
                                         <ScrollArea.Autosize maxHeight={"40vh"}>
@@ -404,27 +402,27 @@ const RegionView = ({data, open, setOpen, setUpdateMap}) => {
                                                 }}
                                             />
                                         </ScrollArea.Autosize>
-                                    } visible={normalEditing} />
+                                    } visible={editing} />
                                 : null
                             }
                             <StatCard title={"Owner"}
                                 innerImage={`https://crafatar.com/avatars/${data.userUUID}?size=64`}
-                                value={data.username} Icon={BsFillPersonFill} subtitle={""} editable={adminEditing} id={"owner"} visible={plotType == "normal"} />
+                                value={data.username} Icon={BsFillPersonFill} subtitle={""} editable={editing && isAdmin} id={"owner"} visible={plotType == "normal"} />
 
                             <StatCard title={"Additional Builders"} noBigValue={true}
-                                Icon={HiUserGroup} subtitle={""} visible={normalEditing | region.additionalBuilder.length > 0 && plotType == "normal"}
+                                Icon={HiUserGroup} subtitle={""} visible={editing | region.additionalBuilder.length > 0 && plotType == "normal"}
                                 additionalElement={
-                                    <AdditionalBuilders showEditButtons={normalEditing}
+                                    <AdditionalBuilders showEditButtons={editing}
                                         openAdditionalBuilderModal={openAdditionalBuilderModal}
-                                        additionalBuilders={normalEditing ? additionalBuildersArray : region.additionalBuilder}
+                                        additionalBuilders={editing ? additionalBuildersArray : region.additionalBuilder}
                                         removeBuilder={removeBuilder}
                                     />
                                 } />
 
-                            <StatCard title={"Region Properties"} value={null} Icon={MdConstruction} subtitle={""} visible={normalEditing}
+                            <StatCard title={"Region Properties"} value={null} Icon={MdConstruction} subtitle={""} visible={editing}
                                 additionalElement={
                                     <Box>
-                                        {adminEditing ?
+                                        {editing && isAdmin ?
                                             <Radio.Group name="type" label="Region Type" value={plotType} onChange={setPlotType}>
                                                 <Radio value="normal" label="Normal" />
                                                 <Radio value="event" label="Event" />
@@ -436,7 +434,7 @@ const RegionView = ({data, open, setOpen, setUpdateMap}) => {
                                     </Box>
                                 } showAdditionalElement={true} id={"status"} />
 
-                            <StatCard title={"City"} value={region?.city} Icon={FaCity} subtitle={""} editable={adminEditing}
+                            <StatCard title={"City"} value={region?.city} Icon={FaCity} subtitle={""} editable={editing && isAdmin}
                                 id={"city"} />
                             <StatCard title={"Area"} value={numberWithCommas(region?.area) + " m²"} Icon={BiArea}
                                 subtitle={""} />
@@ -446,7 +444,7 @@ const RegionView = ({data, open, setOpen, setUpdateMap}) => {
 
                         {keycloak?.authenticated ?
                             <Group spacing={"md"} cols={2} grow mt={"md"}>
-                                {normalEditing ?
+                                {editing ?
                                     <Button color={"red"} leftIcon={<AiFillDelete />} onClick={showDeleteConfirmation}>Delete
                                         Region</Button>
                                     : null
@@ -471,14 +469,13 @@ const RegionView = ({data, open, setOpen, setUpdateMap}) => {
                                 to get more features</Button>
                         }
 
-                        {!normalEditing && (isAdmin | region.ownerID === user?.data?.id) ?
+                        {!editing && (isAdmin | region.ownerID === user?.data?.id) ?
                             <Button fullWidth mt={"md"} onClick={() => {
-                                setnormalEditing(true);
-                                if (isAdmin) setadminEditing(true);
+                                setEditing(true);
                             }}>Edit the
                                 values</Button> : null}
-                        {normalEditing ? <Button fullWidth mt={"md"} onClick={() => onSave()}>Save</Button> : null}
-                        {normalEditing ? <Button fullWidth mt={"md"} onClick={() => {setadminEditing(false); setnormalEditing(false);}}>Cancel</Button> : null}
+                        {editing ? <Button fullWidth mt={"md"} onClick={() => onSave()}>Save</Button> : null}
+                        {editing ? <Button fullWidth mt={"md"} onClick={() => {setEditing(false);}}>Cancel</Button> : null}
 
                         <Accordion my={"md"}>
                             <Accordion.Item value="info">
