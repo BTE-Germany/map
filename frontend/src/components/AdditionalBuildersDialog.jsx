@@ -6,12 +6,13 @@
  + This project is released under the MIT license.                            +
  +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++*/
 
-import React, {useEffect, useState, useDebouncedState} from 'react';
+import React, {useEffect, useState} from 'react';
 import {Button, Checkbox, Group, Input, Loader, NativeSelect, Textarea} from "@mantine/core";
 import {BsFillPersonFill} from "react-icons/bs";
 import axios from "axios";
 import {showNotification} from "@mantine/notifications";
 import {useModals} from "@mantine/modals";
+import {useDebouncedState} from '@mantine/hooks';
 
 const AdditionalBuildersDialog = ({regionId, keycloak, onUsers}) => {
     const modals = useModals();
