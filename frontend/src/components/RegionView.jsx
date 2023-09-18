@@ -79,7 +79,6 @@ const RegionView = ({data, open, setOpen, setUpdateMap}) => {
     const getData = async () => {
         if (!data?.id) return;
         const region_ = await axios.get(`/api/v1/region/${data.id}`);
-        console.log("region: ", region_.data);
 
         setAdditionalBuilders(region_.data.additionalBuilder);
 
@@ -190,15 +189,15 @@ const RegionView = ({data, open, setOpen, setUpdateMap}) => {
     };
 
     const addNewBuilder = async (newBuilder) => {
-        console.log("new", newBuilder);
         const {data: mcApiData} = await axios.get(`https://playerdb.co/api/player/minecraft/${newBuilder.username}`);
         newBuilder.minecraftUUID = mcApiData.data.player.id;
         setAdditionalBuilders([...additionalBuildersArray, newBuilder]);
     };
 
-    const addBuilderToDB = (name) => {
+    const addBuilderToDB = (builder) => {
+        console.log(builder)
         axios.post(`/api/v1/region/${region.id}/additionalBuilder`, {
-            username: name
+            username: builder.username
         }, {headers: {authorization: "Bearer " + keycloak.token}})
             .then(({data}) => {
                 showNotification({
@@ -226,13 +225,13 @@ const RegionView = ({data, open, setOpen, setUpdateMap}) => {
     };
 
     const removeBuilder = (builder) => {
-        console.log("removeBuilder", builder);
         setAdditionalBuilders(additionalBuildersArray.filter(b => b.id !== builder.id));
     };
 
     const removeBuilderFromDB = (builder) => {
         setLoading(true);
-        axios.delete(`/api/v1/region/${region.id}/additionalBuilder/${builder}`, {headers: {authorization: "Bearer " + keycloak.token}})
+
+        axios.delete(`/api/v1/region/${region.id}/additionalBuilder/${builder.id}`, {headers: {authorization: "Bearer " + keycloak.token}})
             .then(() => {
                 showNotification({
                     title: 'Success',
@@ -282,7 +281,6 @@ const RegionView = ({data, open, setOpen, setUpdateMap}) => {
     };
 
     const onSave = async () => {
-        console.log("save-region:", region);
         const city = document.getElementById('city')?.value ?? region.city;
         const owner = document.getElementById('owner')?.value ?? region.username;
         const addedBuilders = additionalBuildersArray.filter((item) => !region.additionalBuilder.includes(item));
@@ -295,7 +293,6 @@ const RegionView = ({data, open, setOpen, setUpdateMap}) => {
         }
         try {
             const {data: mcApiData} = await axios.get(`https://playerdb.co/api/player/minecraft/${owner}`);
-            console.log(mcApiData);
             const params = {
                 city: city,
                 player_id: mcApiData.data.player.id,
@@ -586,7 +583,6 @@ const RegionView = ({data, open, setOpen, setUpdateMap}) => {
 const AdditionalBuilders = ({showEditButtons, openAdditionalBuilderModal, additionalBuilders, removeBuilder}) => {
     const {keycloak} = useKeycloak();
     const [load, setLoad] = useState(false);
-    console.log("additionalBuilders: ", additionalBuilders);
     return (
         <div style={{width: "100%"}}>
             {
