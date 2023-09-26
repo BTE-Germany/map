@@ -371,7 +371,7 @@ const RegionView = ({data, open, setOpen, setUpdateMap}) => {
                                                     border: 'none',
                                                     padding: 0,
                                                     width: '100%',
-                                                    lineBreak: 'anywhere',
+                                                    lineBreak: 'auto',
                                                 }}
                                             />
                                         </ScrollArea.Autosize>
