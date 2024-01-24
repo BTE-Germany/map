@@ -123,7 +123,6 @@ class RegionsController {
         }
     }
 
-
     public async editRegion(request: Request, response: Response) {
         let region = await this.core.getPrisma().region.update({
             where: {
@@ -146,7 +145,6 @@ class RegionsController {
             response.status(404).send("Region not found");
         }
     }
-
 
     public async reportRegion(request: Request, response: Response) {
         const errors = validationResult(request);

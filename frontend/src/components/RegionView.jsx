@@ -302,7 +302,7 @@ const RegionView = ({data, open, setOpen, setUpdateMap}) => {
             };
             await axios.post(`api/v1/region/${data.id}/edit`, params, {headers: {authorization: "Bearer " + keycloak.token}});
         } catch (error) {
-            alert("User does not exist! Error: " + error);
+            alert("Error on Region-Save: " + error);
             return;
         }
         setUpdateMap(true);

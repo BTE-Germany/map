@@ -196,18 +196,13 @@ const Map = forwardRef(({openDialog, setRegionViewData, updateMap, setUpdateMap}
                     let b = generate3DLayer(building.id, JSON.parse(building.origin), building.altitude, JSON.parse(building.rotate), building.fileURL, mapInstance);
                     mapInstance.addLayer(b);
                 });
-
-
             });
         });
-
 
         const popup = new mapboxgl.Popup({
             closeButton: false,
             closeOnClick: false
         });
-
-
     });
 
     useEffect(() => {
@@ -224,15 +219,9 @@ const Map = forwardRef(({openDialog, setRegionViewData, updateMap, setUpdateMap}
 
     useEffect(() => {
         if (map) {
-            map.on('load', () => {
-                addLayer(map).then(() => testQuery());
-            });
+            map.on('load', () => testQuery());
         }
     }, [map]);
-
-    useEffect(() => {
-        testQuery();
-    }, [query]);
 
     const testQuery = async () => {
         if (query.get("region")) {
