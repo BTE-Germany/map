@@ -302,8 +302,8 @@ const RegionView = ({data, open, setOpen, setUpdateMap}) => {
             };
             await axios.post(`api/v1/region/${data.id}/edit`, params, {headers: {authorization: "Bearer " + keycloak.token}});
         } catch (error) {
-            alert("Error on Region-Save: " + error);
-            return;
+            alert("Minecraft user could not be validated. Please check the username and try again. Otherwise contact a developer.");
+            console.error(error);
         }
         setUpdateMap(true);
         getData();
@@ -409,7 +409,7 @@ const RegionView = ({data, open, setOpen, setUpdateMap}) => {
                                         additionalBuilders={editing ? additionalBuildersArray : region.additionalBuilder}
                                         removeBuilder={removeBuilder}
                                     />
-                                } />
+                                } key={"additional-builders"} />
 
                             <StatCard title={"Region Properties"} value={null} Icon={MdConstruction} subtitle={""} visible={editing}
                                 additionalElement={
