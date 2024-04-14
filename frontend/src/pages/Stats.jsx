@@ -84,8 +84,8 @@ const Stats = props => {
                             <Grid>
                                 <Grid.Col sm={12} lg={6}><StatsCard icon={<FiList/>} title={"Total number of regions"}
                                                                     value={parseInt(generalStats.regionCount).toLocaleString()}/></Grid.Col>
-                                <Grid.Col sm={12} lg={6}><StatsCard icon={<BiBuilding/>} title={"Finished Buildings"}
-                                                                    value={parseInt(generalStats.totalBuildings).toLocaleString()}/></Grid.Col>
+                                <Grid.Col sm={12} lg={6}><StatsCard icon={<BiBuilding/>} title={"Total Buildings (finished / started)"}
+                                                                    value={parseInt(generalStats.totalFinishedBuildings).toLocaleString() + " / " + parseInt(generalStats.totalBuildings).toLocaleString()}/></Grid.Col>
                                 <Grid.Col sm={12} lg={6}><StatsCard icon={<BiArea/>} title={"Total area of all regions"}
                                                                     value={numberWithCommas(generalStats.totalArea) + " m²"}
                                                                     valueSmall={"this is about " + ((generalStats.totalArea / 357386000000) * 100).toFixed(10).toLocaleString() + "% of Germany's area"}/></Grid.Col>
@@ -93,9 +93,11 @@ const Stats = props => {
                                                                     value={numberWithCommas(generalStats.totalFinishedArea) + " m²"}
                                                                     valueSmall={"this is about " + ((generalStats.totalFinishedArea / 357386000000) * 100).toFixed(10).toLocaleString() + "% of Germany's area"}/></Grid.Col>
                                 <Grid.Col sm={12} lg={6}><StatsCard icon={<BiBuilding/>} title={"Event Area of Germany"}
-                                                                    value={generalStats.totalEventArea ? numberWithCommas(generalStats.totalEventArea) + " m²" : "Data not available"}/></Grid.Col>
+                                                                    value={generalStats.totalEventArea ? numberWithCommas(generalStats.totalEventArea) + " m²" : "Data not available"}
+                                                                    valueSmall={"total number of event buildings: " + parseInt(generalStats.totalEventBuildings).toLocaleString()}/></Grid.Col>
                                 <Grid.Col sm={12} lg={6}><StatsCard icon={<BiBuilding/>} title={"Plot Area of Germany"}
-                                                                    value={generalStats.totalPlotArea ? numberWithCommas(generalStats.totalPlotArea) + " m²" : "Data not available"}/></Grid.Col>
+                                                                    value={generalStats.totalPlotArea ? numberWithCommas(generalStats.totalPlotArea) + " m²" : "Data not available"}
+                                                                    valueSmall={"total number of plot buildings: " + parseInt(generalStats.totalPlotBuildings).toLocaleString()}/></Grid.Col>
                             </Grid>
 
                             <Title my={"md"}>Leaderboard</Title>

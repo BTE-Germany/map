@@ -26,46 +26,47 @@ export default class StatsController {
                 buildings: true
             }
         });
-
         const totalArea = sums.area;
         const totalBuildings = sums.buildings;
 
         const { _sum: plotSums } = await this.core.getPrisma().region.aggregate({
             _sum: {
-                area: true
+                area: true,
+                buildings: true
             },
             where: {
                 isPlotRegion: true
             }
         });
-
         const totalPlotArea = plotSums.area;
+        const totalPlotBuildings = plotSums.buildings;
 
         const { _sum: eventSums } = await this.core.getPrisma().region.aggregate({
             _sum: {
-                area: true
+                area: true,
+                buildings: true
             },
             where: {
                 isEventRegion: true
             }
         });
-
         const totalEventArea = eventSums.area;
+        const totalEventBuildings = eventSums.buildings;
 
         const { _sum: finishedSums } = await this.core.getPrisma().region.aggregate({
             _sum: {
-                area: true
+                area: true,
+                buildings: true
             },
             where: {
                 isFinished: true
             }
         });
-
         const totalFinishedArea = finishedSums.area;
+        const totalFinishedBuildings = finishedSums.buildings;
 
-        response.send({ regionCount, totalArea, totalBuildings, totalPlotArea, totalEventArea, totalFinishedArea });
+        response.send({ regionCount, totalArea, totalBuildings, totalPlotArea, totalPlotBuildings, totalEventArea, totalEventBuildings, totalFinishedArea, totalFinishedBuildings });
     }
-
     public async getLeaderboard(request: Request, response: Response) {
         const errors = validationResult(request);
         if (!errors.isEmpty()) {
