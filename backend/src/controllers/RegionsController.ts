@@ -54,7 +54,11 @@ class RegionsController {
     }
 
     public async getAllRegionsAsGeoJSON(request: Request, response: Response) {
-        const regions = await this.core.getPrisma().region.findMany();
+        const regions = await this.core.getPrisma().region.findMany({
+            orderBy: {
+                area: 'desc', // 'asc' for ascending order, 'desc' for descending order
+            },
+        });
         let geoJsonFeatures = [];
         regions.forEach((r) => {
             let coords = [];
