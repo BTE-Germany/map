@@ -90,8 +90,8 @@ const Stats = props => {
                                                                     value={numberWithCommas(generalStats.totalArea) + " m²"}
                                                                     valueSmall={"this is about " + ((generalStats.totalArea / 357386000000) * 100).toFixed(10).toLocaleString() + "% of Germany's area"}/></Grid.Col>
                                 <Grid.Col sm={12} lg={6}><StatsCard icon={<BiArea/>} title={"finished Area of Germany"}
-                                                                    value={"69420 m²"}
-                                                                    valueSmall={"this is about " + ((69420 / 357386000000) * 100).toFixed(10).toLocaleString() + "% of Germany's area"}/></Grid.Col>
+                                                                    value={numberWithCommas(generalStats.totalFinishedArea) + " m²"}
+                                                                    valueSmall={"this is about " + ((generalStats.totalFinishedArea / 357386000000) * 100).toFixed(10).toLocaleString() + "% of Germany's area"}/></Grid.Col>
                                 <Grid.Col sm={12} lg={6}><StatsCard icon={<BiBuilding/>} title={"Event Area of Germany"}
                                                                     value={generalStats.totalEventArea ? numberWithCommas(generalStats.totalEventArea) + " m²" : "Data not available"}/></Grid.Col>
                                 <Grid.Col sm={12} lg={6}><StatsCard icon={<BiBuilding/>} title={"Plot Area of Germany"}

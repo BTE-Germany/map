@@ -26,6 +26,7 @@ export default class StatsController {
                 buildings: true
             }
         });
+
         const totalArea = sums.area;
         const totalBuildings = sums.buildings;
 
@@ -51,7 +52,18 @@ export default class StatsController {
 
         const totalEventArea = eventSums.area;
 
-        response.send({ regionCount, totalArea, totalBuildings, totalPlotArea, totalEventArea });
+        const { _sum: finishedSums } = await this.core.getPrisma().region.aggregate({
+            _sum: {
+                area: true
+            },
+            where: {
+                isFinished: true
+            }
+        });
+
+        const totalFinishedArea = finishedSums.area;
+
+        response.send({ regionCount, totalArea, totalBuildings, totalPlotArea, totalEventArea, totalFinishedArea });
     }
 
     public async getLeaderboard(request: Request, response: Response) {
