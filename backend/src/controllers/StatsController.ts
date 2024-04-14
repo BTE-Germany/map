@@ -7,8 +7,8 @@
  ******************************************************************************/
 
 import Core from "../Core.js";
-import {Request, Response} from "express";
-import {validationResult} from "express-validator";
+import { Request, Response } from "express";
+import { validationResult } from "express-validator";
 
 
 export default class StatsController {
@@ -20,29 +20,56 @@ export default class StatsController {
 
     public async getGeneralStats(request: Request, response: Response) {
         const regionCount = await this.core.getPrisma().region.count();
-        const {_sum: sums} = await this.core.getPrisma().region.aggregate({
+        const { _sum: sums } = await this.core.getPrisma().region.aggregate({
             _sum: {
                 area: true,
                 buildings: true
             }
-        })
+        });
         const totalArea = sums.area;
         const totalBuildings = sums.buildings;
-        response.send({regionCount, totalArea, totalBuildings});
+
+        const { _sum: plotSums } = await this.core.getPrisma().region.aggregate({
+            _sum: {
+                area: true
+            },
+            where: {
+                isPlotRegion: true
+            }
+        });
+
+        const totalPlotArea = plotSums.area;
+
+        const { _sum: eventSums } = await this.core.getPrisma().region.aggregate({
+            _sum: {
+                area: true
+            },
+            where: {
+                isEventRegion: true
+            }
+        });
+
+        const totalEventArea = eventSums.area;
+
+        response.send({ regionCount, totalArea, totalBuildings, totalPlotArea, totalEventArea });
     }
 
     public async getLeaderboard(request: Request, response: Response) {
         const errors = validationResult(request);
         if (!errors.isEmpty()) {
-            return response.status(400).json({errors: errors.array()});
+            return response.status(400).json({ errors: errors.array() });
         }
 
         const groupUsers = await this.core.getPrisma().region.groupBy({
             by: ['username'],
             _sum: {
                 area: true,
-                buildings: true
+                buildings: true,
             },
+            where: {
+                isEventRegion: false,
+                isPlotRegion: false,
+            }
         })
         let count = groupUsers.length;
 
@@ -59,7 +86,10 @@ export default class StatsController {
             },
             skip: parseInt(<string>request.query.page) * 10,
             take: 10,
-
+            where: {
+                isEventRegion: false,
+                isPlotRegion: false
+            }
         })
 
 

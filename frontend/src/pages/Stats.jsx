@@ -49,27 +49,28 @@ const Stats = props => {
 
     useEffect(() => {
         getLeaderboard();
-    }, [activePage])
+    }, [activePage]);
 
     const getData = async () => {
-        const {data: generalData} = await axios.get("/api/v1/stats/general")
-        const {data: leaderboardData} = await axios.get("/api/v1/stats/leaderboard?page=" + (activePage - 1))
+        const {data: generalData} = await axios.get("/api/v1/stats/general");
+        const {data: leaderboardData} = await axios.get("/api/v1/stats/leaderboard?page=" + (activePage - 1));
+        console.log(generalData);
         setGeneralStats(generalData);
         setLeaderboard(leaderboardData.leaderboard);
         setTotalPages(Math.ceil(leaderboardData.count / 10));
 
         setLoading(false);
-    }
+    };
 
     const getLeaderboard = async () => {
-        const {data: leaderboardData} = await axios.get("/api/v1/stats/leaderboard?page=" + (activePage - 1))
+        const {data: leaderboardData} = await axios.get("/api/v1/stats/leaderboard?page=" + (activePage - 1));
         setLeaderboard(leaderboardData.leaderboard);
         setTotalPages(Math.ceil(leaderboardData.count / 10));
-    }
+    };
 
     const numberWithCommas = (x) => {
         return x.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ".");
-    }
+    };
 
 
     return (
@@ -82,14 +83,19 @@ const Stats = props => {
                             <Title mb={"md"}>Stats</Title>
                             <Grid>
                                 <Grid.Col sm={12} lg={6}><StatsCard icon={<FiList/>} title={"Total number of regions"}
-                                                                    value={parseInt(generalStats.regionCount).toLocaleString()}
-                                /></Grid.Col>
+                                                                    value={parseInt(generalStats.regionCount).toLocaleString()}/></Grid.Col>
                                 <Grid.Col sm={12} lg={6}><StatsCard icon={<BiBuilding/>} title={"Finished Buildings"}
-                                                                    value={parseInt(generalStats.totalBuildings).toLocaleString()}
-                                /></Grid.Col>
+                                                                    value={parseInt(generalStats.totalBuildings).toLocaleString()}/></Grid.Col>
                                 <Grid.Col sm={12} lg={6}><StatsCard icon={<BiArea/>} title={"Total area of all regions"}
                                                                     value={numberWithCommas(generalStats.totalArea) + " m²"}
                                                                     valueSmall={"this is about " + ((generalStats.totalArea / 357386000000) * 100).toFixed(10).toLocaleString() + "% of Germany's area"}/></Grid.Col>
+                                <Grid.Col sm={12} lg={6}><StatsCard icon={<BiArea/>} title={"finished Area of Germany"}
+                                                                    value={"69420 m²"}
+                                                                    valueSmall={"this is about " + ((69420 / 357386000000) * 100).toFixed(10).toLocaleString() + "% of Germany's area"}/></Grid.Col>
+                                <Grid.Col sm={12} lg={6}><StatsCard icon={<BiBuilding/>} title={"Event Area of Germany"}
+                                                                    value={generalStats.totalEventArea ? numberWithCommas(generalStats.totalEventArea) + " m²" : "Data not available"}/></Grid.Col>
+                                <Grid.Col sm={12} lg={6}><StatsCard icon={<BiBuilding/>} title={"Plot Area of Germany"}
+                                                                    value={generalStats.totalPlotArea ? numberWithCommas(generalStats.totalPlotArea) + " m²" : "Data not available"}/></Grid.Col>
                             </Grid>
 
                             <Title my={"md"}>Leaderboard</Title>
@@ -121,7 +127,7 @@ const Stats = props => {
                                                 <td>{player.area} m²</td>
                                                 <td>{player.buildings}</td>
                                             </tr>
-                                        )
+                                        );
                                     })
                                 }
                                 </tbody>
@@ -133,7 +139,7 @@ const Stats = props => {
 
         </div>
     );
-}
+};
 
 const StatsCard = ({title, value, icon, valueSmall}) => {
     const {classes} = useStyles();
@@ -169,7 +175,7 @@ const StatsCard = ({title, value, icon, valueSmall}) => {
             </Text>}
 
         </Paper>
-    )
-}
+    );
+};
 
-export default Stats
+export default Stats;

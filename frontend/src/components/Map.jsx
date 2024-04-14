@@ -115,22 +115,10 @@ const Map = forwardRef(({openDialog, setRegionViewData, updateMap, setUpdateMap}
     const query = useQuery();
 
     const styles = [
-        {
-            title: "Basemap",
-            uri: "https://sgx.geodatenzentrum.de/gdz_basemapde_vektor/styles/bm_web_col.json"
-        }, {
-            title: "Basemap Dark",
-            uri: "https://basemap.de/data/produkte/web_vektor/styles/bm_web_drk.json"
-        },
-        {
-            title: "Dark",
-            uri: "mapbox://styles/nachwahl/cl2nl1qes00bn14ksw5y85arm"
-        },
-
-        {
-            title: "Light",
-            uri: "mapbox://styles/mapbox/light-v9"
-        },
+        {title: "Basemap", uri: "https://sgx.geodatenzentrum.de/gdz_basemapde_vektor/styles/bm_web_col.json"},
+        {title: "Basemap Dark", uri: "https://basemap.de/data/produkte/web_vektor/styles/bm_web_drk.json"},
+        {title: "Dark", uri: "mapbox://styles/nachwahl/cl2nl1qes00bn14ksw5y85arm"},
+        {title: "Light", uri: "mapbox://styles/mapbox/light-v9"},
         {title: "Outdoors", uri: "mapbox://styles/mapbox/outdoors-v11"},
         {title: "Satellite", uri: "mapbox://styles/mapbox/satellite-streets-v11"},
         {title: "Streets", uri: "mapbox://styles/mapbox/streets-v11"}
@@ -255,7 +243,7 @@ const Map = forwardRef(({openDialog, setRegionViewData, updateMap, setUpdateMap}
                 break;
             }
         }
-        let regions = await axios.get("/api/v1/region/all/geojson");
+        var regions = await axios.get("/api/v1/region/all/geojson");
         setShowLoadingOverlay(false);
         _map.addSource('regions', {
             'type': 'geojson',

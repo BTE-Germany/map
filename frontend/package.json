@@ -35,7 +35,9 @@
     "react-icons": "^4.7.1",
     "react-router-dom": "6.6.2",
     "socket.io-client": "^4.5.4",
-    "three": "^0.148.0"
+    "three": "^0.148.0",
+    "unplugin": "^1.4.0",
+    "yarn": "^1.22.19"
   },
   "devDependencies": {
     "@import-meta-env/cli": "^0.6.5",

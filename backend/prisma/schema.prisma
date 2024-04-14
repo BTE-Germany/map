@@ -33,7 +33,7 @@ model Region {
 
 model User {
   id                 String   @id @default(uuid())
-  ssoId              String   @unique
+  ssoId              String?   @unique
   discordId          String?
   regions            Region[]
   blockedFromReports Boolean  @default(false)
