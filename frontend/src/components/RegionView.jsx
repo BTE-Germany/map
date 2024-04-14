@@ -89,6 +89,11 @@ const RegionView = ({data, open, setOpen, setUpdateMap}) => {
         } else {
             setPlotType('normal');
         }
+        console.log(region_.data);
+        // from the data get the userUUID and get the username from the playerdb api
+        const {data: mcApiData} = await axios.get(`https://playerdb.co/api/player/minecraft/${region_.data.userUUID}`);
+        region_.data.username = mcApiData.data.player.username;
+        console.log(region_.data);
         setRegion(region_.data);
 
         // use the description only if it contains any words and not only html tags
@@ -300,7 +305,7 @@ const RegionView = ({data, open, setOpen, setUpdateMap}) => {
                 description: description,
                 lastModified: new Date(),
             };
-            await axios.post(`api/v1/region/${data.id}/edit`, params, {headers: {authorization: "Bearer " + keycloak.token}});
+            await axios.post(`api/v1/region/${region.id}/edit`, params, {headers: {authorization: "Bearer " + keycloak.token}});
         } catch (error) {
             alert("Minecraft user could not be validated. Please check the username and try again. Otherwise contact a developer.");
             console.error(error);
@@ -398,8 +403,8 @@ const RegionView = ({data, open, setOpen, setUpdateMap}) => {
                                 : null
                             }
                             <StatCard title={"Owner"}
-                                innerImage={`https://crafatar.com/avatars/${data.userUUID}?size=64`}
-                                value={data.username} Icon={BsFillPersonFill} subtitle={""} editable={editing && isAdmin} id={"owner"} visible={plotType == "normal"} />
+                                innerImage={`https://crafatar.com/avatars/${region.userUUID}?size=64`}
+                                value={region.username} Icon={BsFillPersonFill} subtitle={""} editable={editing && isAdmin} id={"owner"} visible={plotType == "normal"} />
 
                             <StatCard title={"Additional Builders"} noBigValue={true}
                                 Icon={HiUserGroup} subtitle={""} visible={editing | region.additionalBuilder.length > 0 && plotType == "normal"}
