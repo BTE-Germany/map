@@ -11,13 +11,14 @@ import Home from "./pages/Home";
 import {useState} from "react";
 import {ColorSchemeProvider, LoadingOverlay, MantineProvider} from "@mantine/core";
 import Keycloak from "keycloak-js";
-import {ReactKeycloakProvider} from '@react-keycloak-fork/web'
+import {ReactKeycloakProvider} from '@react-keycloak-fork/web';
 import LinkPage from "./pages/Link";
 import {NotificationsProvider} from "@mantine/notifications";
 import {ModalsProvider} from "@mantine/modals";
 import {ProvideAuth} from "./hooks/useUser";
 import Stats from "./pages/Stats";
 import Admin from "./pages/Admin";
+import User from "./pages/User";
 import {ErrorBoundary} from "./components/ErrorBoundary";
 
 function App() {
@@ -29,7 +30,7 @@ function App() {
 
         window.localStorage.setItem("color-scheme", value || (colorScheme === 'dark' ? 'light' : 'dark'));
         return setColorScheme(value || (colorScheme === 'dark' ? 'light' : 'dark'));
-    }
+    };
 
     return (<div>
 
@@ -48,15 +49,16 @@ function App() {
                                     maxHeight: "100vh",
                                     maxWidth: "100vw"
                                 }}>
-                                    <LoadingOverlay visible={true}/>
+                                    <LoadingOverlay visible={true} />
                                 </div>}
                             >
                                 <ProvideAuth>
                                     <Routes>
-                                        <Route path="/" element={<Home/>} exact/>
-                                        <Route path="/link" element={<LinkPage/>} exact/>
-                                        <Route path="/stats" element={<Stats/>} exact/>
-                                        <Route path="/admin" element={<Admin/>} exact/>
+                                        <Route path="/" element={<Home />} exact />
+                                        <Route path="/link" element={<LinkPage />} exact />
+                                        <Route path="/stats" element={<Stats />} exact />
+                                        <Route path="/admin" element={<Admin />} exact />
+                                        <Route path="/stats/:username" element={<User />} exact />
                                     </Routes>
                                 </ProvideAuth>
                             </ReactKeycloakProvider>
@@ -67,7 +69,7 @@ function App() {
             </MantineProvider>
         </ColorSchemeProvider>
 
-    </div>)
+    </div>);
 }
 
-export default App
+export default App;

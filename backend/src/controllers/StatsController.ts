@@ -67,6 +67,77 @@ export default class StatsController {
 
         response.send({ regionCount, totalArea, totalBuildings, totalPlotArea, totalPlotBuildings, totalEventArea, totalEventBuildings, totalFinishedArea, totalFinishedBuildings });
     }
+
+    public async getUserStats(request: Request, response: Response) {
+        const errors = validationResult(request);
+        if (!errors.isEmpty()) {
+            return response.status(400).json({ errors: errors.array() });
+        }
+
+        const { _sum: sums } = await this.core.getPrisma().region.aggregate({
+            _sum: {
+                area: true,
+                buildings: true
+            },
+            where: {
+                userUUID: request.params.id,
+                isEventRegion: false,
+                isPlotRegion: false,
+            }
+        });
+
+        const totalArea = sums.area || 0;
+        const totalBuildings = sums.buildings || 0;
+
+        const { _sum: finishedSums } = await this.core.getPrisma().region.aggregate({
+            _sum: {
+                area: true,
+                buildings: true
+            },
+            where: {
+                userUUID: request.params.id,
+                isFinished: true,
+                isEventRegion: false,
+                isPlotRegion: false,
+            }
+        });
+        const totalFinishedArea = finishedSums.area || 0;
+        const totalFinishedBuildings = finishedSums.buildings || 0;
+
+        const latestActivity = await this.core.getPrisma().region.findFirst({
+            where: {
+                userUUID: request.params.id,
+                isEventRegion: false,
+                isPlotRegion: false,
+            },
+            orderBy: {
+                lastModified: "desc"
+            }
+        });
+
+        const cities = await this.core.getPrisma().region.groupBy({
+            by: ['city'],
+            _count: {
+                city: true
+            },
+            where: {
+                userUUID: request.params.id,
+                isEventRegion: false,
+                isPlotRegion: false,
+            },
+        });
+
+        const regionCount = await this.core.getPrisma().region.count({
+            where: {
+                userUUID: request.params.id,
+                isEventRegion: false,
+                isPlotRegion: false,
+            }
+        });
+
+        response.send({ regionCount, totalArea, totalBuildings, totalFinishedArea, totalFinishedBuildings, latestDate: latestActivity, cities });
+    }
+
     public async getLeaderboard(request: Request, response: Response) {
         const errors = validationResult(request);
         if (!errors.isEmpty()) {

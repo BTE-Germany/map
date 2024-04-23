@@ -8,10 +8,10 @@
 
 import Web from '../Web.js';
 import Router from './utils/Router.js';
-import {RequestMethods} from './utils/RequestMethods.js';
-import {Keycloak} from "keycloak-connect";
+import { RequestMethods } from './utils/RequestMethods.js';
+import { Keycloak } from "keycloak-connect";
 import RegionsController from "../../controllers/RegionsController.js";
-import {body, query} from "express-validator";
+import { body, query } from "express-validator";
 import checkNewUser from "./utils/CheckNewUserMiddleware.js";
 import UserController from "../../controllers/UserController.js";
 import AdminController from "../../controllers/AdminController.js";
@@ -58,31 +58,33 @@ class Routes {
 
         router.addRoute(RequestMethods.DELETE, "/region/:id", async (request, response) => {
             await regionsController.deleteRegion(request, response);
-        }, this.keycloak.protect())
+        }, this.keycloak.protect()),
+            checkNewUser(this.web.getCore().getPrisma(), this.web.getCore())
 
         router.addRoute(RequestMethods.POST, "/region/:id/edit", async (request, response) => {
             await regionsController.editRegion(request, response);
-        })
+        }, this.keycloak.protect(),
+            checkNewUser(this.web.getCore().getPrisma(), this.web.getCore()))
 
         router.addRoute(RequestMethods.POST, "/region/:id/report", async (request, response) => {
-                await regionsController.reportRegion(request, response);
-            },
+            await regionsController.reportRegion(request, response);
+        },
             this.keycloak.protect(),
             checkNewUser(this.web.getCore().getPrisma(), this.web.getCore()),
             body('reason').isString(),
-            body('comment').isString().isLength({min: 50}))
+            body('comment').isString().isLength({ min: 50 }))
 
         router.addRoute(RequestMethods.POST, "/region/:id/additionalBuilder", async (request, response) => {
-                await regionsController.addAdditionalBuilder(request, response);
-            },
+            await regionsController.addAdditionalBuilder(request, response);
+        },
             this.keycloak.protect(),
             checkNewUser(this.web.getCore().getPrisma(), this.web.getCore()),
             body('username').isString())
 
 
         router.addRoute(RequestMethods.DELETE, "/region/:id/additionalBuilder/:builderId", async (request, response) => {
-                await regionsController.removeAdditionalBuilder(request, response);
-            },
+            await regionsController.removeAdditionalBuilder(request, response);
+        },
             this.keycloak.protect(),
             checkNewUser(this.web.getCore().getPrisma(), this.web.getCore()));
 
@@ -92,13 +94,13 @@ class Routes {
         })
 
         router.addRoute(RequestMethods.PUT, "/region/:id/image/upload", async (request, response) => {
-                await regionsController.handleImageUpload(request, response);
-            }, this.keycloak.protect(),
+            await regionsController.handleImageUpload(request, response);
+        }, this.keycloak.protect(),
             checkNewUser(this.web.getCore().getPrisma(), this.web.getCore()))
 
         router.addRoute(RequestMethods.DELETE, "/region/:id/image/:imageId", async (request, response) => {
-                await regionsController.handleImageDelete(request, response);
-            }, this.keycloak.protect(),
+            await regionsController.handleImageDelete(request, response);
+        }, this.keycloak.protect(),
             checkNewUser(this.web.getCore().getPrisma(), this.web.getCore()))
 
 
@@ -120,6 +122,12 @@ class Routes {
             max: 2,
             min: 2
         }))
+        router.addRoute(RequestMethods.GET, "/user/:id/regions", async (request, response) => {
+            await regionsController.getAllRegionsfromUser(request, response);
+        }), query('id').isInt({ min: 0 })
+        router.addRoute(RequestMethods.GET, "/user/:id/stats", async (request, response) => {
+            await statsController.getUserStats(request, response);
+        }), query('id').isInt({ min: 0 }), query('page').isInt({ min: 0 })
 
         router.addRoute(RequestMethods.GET, "/admin/user/@list", async (request, response) => {
             await adminController.getAllUsers(request, response);
@@ -158,10 +166,9 @@ class Routes {
         router.addRoute(RequestMethods.GET, "/stats/general", async (request, response) => {
             await statsController.getGeneralStats(request, response);
         })
-
         router.addRoute(RequestMethods.GET, "/stats/leaderboard", async (request, response) => {
             await statsController.getLeaderboard(request, response);
-        }, query('page').isInt({min: 0}))
+        }, query('page').isInt({ min: 0 }))
 
 
         router.addRoute(RequestMethods.GET, "/interactiveBuildings/all", async (request, response) => {

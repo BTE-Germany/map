@@ -1,5 +1,5 @@
 /*+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
- + Stats.jsx                                                                  +
+ + UserStats.jsx                                                                  +
  +                                                                            +
  + Copyright (c) 2022-2023 Robin Ferch                                        +
  + https://robinferch.me                                                      +
@@ -26,6 +26,7 @@ import axios from "axios";
 import {FiList} from "react-icons/fi";
 import {BiArea, BiBuilding} from "react-icons/bi";
 import {useNavigate} from "react-router-dom";
+import {PieChart} from '@mantine/charts';
 
 const useStyles = createStyles((theme) => ({
     root: {
@@ -44,31 +45,50 @@ const Stats = props => {
     const [loading, setLoading] = useState(true);
     const [activePage, setPage] = useState(1);
     const [totalPages, setTotalPages] = useState(0);
+    const [username, setUsername] = useState("");
+    const [userRegions, setUserRegions] = useState([]);
     const navigate = useNavigate();
 
     useEffect(() => {
         getData();
     }, []);
 
-    useEffect(() => {
-        getLeaderboard();
-    }, [activePage]);
-
     const getData = async () => {
-        const {data: generalData} = await axios.get("/api/v1/stats/general");
-        const {data: leaderboardData} = await axios.get("/api/v1/stats/leaderboard?page=" + (activePage - 1));
-        console.log(generalData);
-        setGeneralStats(generalData);
-        setLeaderboard(leaderboardData.leaderboard);
-        setTotalPages(Math.ceil(leaderboardData.count / 10));
+        const url = new URL(window.location.href);
+        const uname = url.pathname.split("/").pop();
+        setUsername(uname);
 
-        setLoading(false);
+        try {
+            const {data: udata} = await axios.get(`https://playerdb.co/api/player/minecraft/${uname}`);
+            const {data: userRegions} = await axios.get("/api/v1/user/" + udata.data.player.id + "/regions");
+            console.log(userRegions);
+            setUserRegions(userRegions);
+            const {data: userStats} = await axios.get("/api/v1/user/" + udata.data.player.id + "/stats");
+            setGeneralStats(userStats);
+            console.log(userStats);
+            setLoading(false);
+        } catch (error) {
+            if (error.response && error.response.status === 400) {
+                alert("Bad Request: Invalid username");
+                navigate("/");
+            } else {
+                alert("An error occurred. Please try again later.");
+            }
+            setLoading(false);
+        }
     };
 
-    const getLeaderboard = async () => {
-        const {data: leaderboardData} = await axios.get("/api/v1/stats/leaderboard?page=" + (activePage - 1));
-        setLeaderboard(leaderboardData.leaderboard);
-        setTotalPages(Math.ceil(leaderboardData.count / 10));
+    const getChartData = () => {
+        const colors = ["#FF6633", "#FFB399", "#FF33FF", "#FFFF99", "#00B3E6"];
+        const data = generalStats.cities.map(city => {
+            return {
+                name: city.city,
+                value: city._count.city,
+                color: colors[Math.floor(Math.random() * colors.length)]
+            };
+        });
+        console.log(data);
+        return data;
     };
 
     const numberWithCommas = (x) => {
@@ -83,7 +103,7 @@ const Stats = props => {
                 {
                     loading ? <Loader /> :
                         <Box>
-                            <Title mb={"md"}>Stats</Title>
+                            <Title mb={"md"}>Stats of {username}</Title>
                             <Grid>
                                 <Grid.Col sm={12} lg={6}><StatsCard icon={<FiList />} title={"Total number of regions"}
                                     value={parseInt(generalStats.regionCount).toLocaleString()} /></Grid.Col>
@@ -92,47 +112,42 @@ const Stats = props => {
                                 <Grid.Col sm={12} lg={6}><StatsCard icon={<BiArea />} title={"Total area of all regions"}
                                     value={numberWithCommas(generalStats.totalArea) + " m²"}
                                     valueSmall={"this is about " + ((generalStats.totalArea / 357386000000) * 100).toFixed(10).toLocaleString() + "% of Germany's area"} /></Grid.Col>
-                                <Grid.Col sm={12} lg={6}><StatsCard icon={<BiArea />} title={"finished Area of Germany"}
+                                <Grid.Col sm={12} lg={6}><StatsCard icon={<BiArea />} title={"finished Area "}
                                     value={numberWithCommas(generalStats.totalFinishedArea) + " m²"}
                                     valueSmall={"this is about " + ((generalStats.totalFinishedArea / 357386000000) * 100).toFixed(10).toLocaleString() + "% of Germany's area"} /></Grid.Col>
-                                <Grid.Col sm={12} lg={6}><StatsCard icon={<BiArea />} title={"Event Area of Germany"}
-                                    value={generalStats.totalEventArea ? numberWithCommas(generalStats.totalEventArea) + " m²" : "Data not available"}
-                                    valueSmall={"total number of event buildings: " + parseInt(generalStats.totalEventBuildings).toLocaleString()} /></Grid.Col>
-                                <Grid.Col sm={12} lg={6}><StatsCard icon={<BiArea />} title={"Plot Area of Germany"}
-                                    value={generalStats.totalPlotArea ? numberWithCommas(generalStats.totalPlotArea) + " m²" : "Data not available"}
-                                    valueSmall={"total number of plot buildings: " + parseInt(generalStats.totalPlotBuildings).toLocaleString()} /></Grid.Col>
                             </Grid>
+                            <Title mt={"xl"} mb={"md"}>Regions</Title>
 
-                            <Title my={"md"}>Leaderboard</Title>
+                            {
+                                generalStats.regionCount == 0 ?
+                                    <Text>No regions found</Text> :
+                                    <Grid>
 
-                            <Table>
-                                <thead>
-                                    <tr>
-                                        <th>Builder</th>
-                                        <th>Area</th>
-                                        <th>Buildings</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    {leaderboard.map((player, idx) => {
-                                        return (
-                                            <tr key={idx} onClick={() => navigate(`/stats/${player.username}`)}>
-                                                {player.username === "BTE Germany Event" || player.username === "Plot Region" ? (
-                                                    <td style={{display: "flex", alignItems: "center", gap: "5px"}}>
-                                                        <img src={`https://bte-germany.de/logo.gif`} alt="" width={20} /> {player.username}
-                                                    </td>
-                                                ) : (
-                                                    <td style={{display: "flex", alignItems: "center", gap: "5px"}}>
-                                                        <img src={`https://minotar.net/avatar/${encodeURIComponent(player.username)}/20`} alt="" /> {player.username}
-                                                    </td>
-                                                )}
-                                                <td>{player.area} m²</td>
-                                                <td>{player.buildings}</td>
-                                            </tr>
-                                        );
-                                    })}
-                                </tbody>
-                            </Table>
+                                        <Table>
+                                            <thead>
+                                                <tr>
+                                                    <th>City</th>
+                                                    <th>Area</th>
+                                                    <th>Buildings</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                                {
+                                                    userRegions.map((region, index) => {
+                                                        return (
+                                                            <tr key={index}>
+                                                                <td>{region.city}</td>
+                                                                <td>{numberWithCommas(region.area)} m²</td>
+                                                                <td>{region.buildings}</td>
+                                                            </tr>
+                                                        );
+                                                    })
+                                                }
+                                            </tbody>
+                                        </Table>
+                                        <PieChart withLabelsLine labelsPosition="outside" labelsType="value" withLabels data={getChartData()} />
+                                    </Grid>
+                            }
                             <Pagination page={activePage} onChange={setPage} total={totalPages} mt={"md"} />
                         </Box>
                 }

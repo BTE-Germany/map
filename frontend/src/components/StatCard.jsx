@@ -32,12 +32,12 @@ const useStyles = createStyles((theme) => ({
     },
 }));
 
-const StatCard = ({title, Icon, innerImage, value, subtitle, noBigValue, editable, id, additionalElement = null, showAdditionalElement = true, visible = true, skinny = false}) => {
+const StatCard = ({title, Icon, innerImage, value, subtitle, noBigValue, editable, id, additionalElement = null, showAdditionalElement = true, visible = true, skinny = false, onClickFunction = null}) => {
     const {classes} = useStyles();
     if (!visible)
         return null;
     return (
-        <Paper withBorder p={skinny ? 0 : "md"} radius="md" shadow="md" sx={{width: "100%"}}>
+        <Paper withBorder p={skinny ? 0 : "md"} radius="md" shadow="md" sx={{width: "100%"}} onClick={onClickFunction}>
             <Group position="apart" m={skinny ? "md" : 0} mb={0}>
                 <Text size="xs" color="dimmed" className={classes.title}>
                     {title}

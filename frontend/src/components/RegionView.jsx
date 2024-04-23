@@ -39,7 +39,7 @@ import {FiLock} from "react-icons/fi";
 import {useUser} from "../hooks/useUser";
 import {IoMdFlag} from "react-icons/io";
 import ReportDialog from "./ReportDialog";
-import {Link} from "react-router-dom";
+import {Link, useNavigate} from "react-router-dom";
 import {BsFillPersonFill} from "react-icons/bs";
 import {HiUserGroup} from "react-icons/hi";
 import AdditionalBuildersDialog from "./AdditionalBuildersDialog";
@@ -66,6 +66,7 @@ const RegionView = ({data, open, setOpen, setUpdateMap}) => {
     const isAdmin = keycloak?.tokenParsed?.realm_access.roles.includes("mapadmin");
 
     const user = useUser();
+    const navigate = useNavigate();
 
     const numberWithCommas = (x) => {
         return x.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ".");
@@ -305,7 +306,12 @@ const RegionView = ({data, open, setOpen, setUpdateMap}) => {
                 description: description,
                 lastModified: new Date(),
             };
-            await axios.post(`api/v1/region/${region.id}/edit`, params, {headers: {authorization: "Bearer " + keycloak.token}});
+            try {
+                await axios.post(`api/v1/region/${region.id}/edit`, params, {headers: {authorization: "Bearer " + keycloak.token}});
+            } catch (error) {
+                alert("Region could not be saved.");
+                console.error(error);
+            }
         } catch (error) {
             alert("Minecraft user could not be validated. Please check the username and try again. Otherwise contact a developer.");
             console.error(error);
@@ -404,8 +410,13 @@ const RegionView = ({data, open, setOpen, setUpdateMap}) => {
                             }
                             <StatCard title={"Owner"}
                                 innerImage={`https://crafatar.com/avatars/${region.userUUID}?size=64`}
-                                value={region.username} Icon={BsFillPersonFill} subtitle={""} editable={editing && isAdmin} id={"owner"} visible={plotType == "normal"} />
-
+                                value={region.username}
+                                Icon={BsFillPersonFill}
+                                subtitle={""}
+                                editable={editing && isAdmin}
+                                id={"owner"}
+                                visible={plotType == "normal"}
+                                onClickFunction={() => navigate(`/stats/${region.username}`)} />
                             <StatCard title={"Additional Builders"} noBigValue={true}
                                 Icon={HiUserGroup} subtitle={""} visible={editing | region.additionalBuilder.length > 0 && plotType == "normal"}
                                 additionalElement={

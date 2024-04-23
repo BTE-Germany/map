@@ -127,6 +127,17 @@ class RegionsController {
         }
     }
 
+    public async getAllRegionsfromUser(request: Request, response: Response) {
+        let regions = await this.core.getPrisma().region.findMany({
+            where: {
+                userUUID: request.params.id,
+                isEventRegion: false,
+                isPlotRegion: false,
+            }
+        });
+        response.send(regions);
+    }
+
     public async editRegion(request: Request, response: Response) {
         let region = await this.core.getPrisma().region.update({
             where: {
