@@ -139,23 +139,36 @@ class RegionsController {
     }
 
     public async editRegion(request: Request, response: Response) {
-        let region = await this.core.getPrisma().region.update({
+        let region = await this.core.getPrisma().region.findUnique({
             where: {
                 id: request.params.id
             },
-            data: {
-                username: request.body.username,
-                userUUID: request.body.player_id,
-                city: request.body.city,
-                isEventRegion: request.body.isEventRegion,
-                isPlotRegion: request.body.isPlotRegion,
-                isFinished: request.body.isFinished,
-                description: request.body.description,
-                lastModified: request.body.lastModified,
+            include: {
+                owner: true
             }
         });
         if (region) {
-            response.send({ "success": true });
+            if (region.owner?.ssoId === request.kauth.grant.access_token?.content?.sub
+                || request.kauth.grant.access_token.content.realm_access.roles.includes("mapadmin")) {
+                await this.core.getPrisma().region.update({
+                    where: {
+                        id: request.params.id
+                    },
+                    data: {
+                        username: request.body.username,
+                        userUUID: request.body.player_id,
+                        city: request.body.city,
+                        isEventRegion: request.body.isEventRegion,
+                        isPlotRegion: request.body.isPlotRegion,
+                        isFinished: request.body.isFinished,
+                        description: request.body.description,
+                        lastModified: request.body.lastModified,
+                    }
+                });
+                response.send({ "success": true });
+            } else {
+                response.status(403).send("You are not the owner of this region");
+            }
         } else {
             response.status(404).send("Region not found");
         }
