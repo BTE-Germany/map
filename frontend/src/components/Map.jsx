@@ -19,7 +19,7 @@ import {MapboxStyleSwitcherControl} from "mapbox-gl-style-switcher";
 import useQuery from "../hooks/useQuery";
 import {centerOfMass, polygon} from "@turf/turf";
 import {AiOutlineSearch} from "react-icons/ai";
-import {SpotlightProvider} from "@mantine/spotlight";
+import {Spotlight} from "@mantine/spotlight";
 import {BiMapPin} from "react-icons/bi";
 import {searchInOSM, searchInRegions} from "../utils/SearchEngine";
 import socketIOClient from "socket.io-client";
@@ -127,7 +127,7 @@ const Map = forwardRef(({openDialog, setRegionViewData, updateMap, setUpdateMap}
 
     useEffect(() => {
         if (map) return; // initialize map only once
-
+        if (!mapContainer.current) return;
         class HidePlayerControl {
             onAdd(map) {
                 this.map = map;
@@ -158,13 +158,14 @@ const Map = forwardRef(({openDialog, setRegionViewData, updateMap, setUpdateMap}
                 this.map = undefined;
             }
         }
-
+        console.log(map);
         const mapInstance = new mapboxgl.Map({
-            container: mapContainer.current,
+            container: mapContainer,
             style: 'mapbox://styles/nachwahl/cl2nl1qes00bn14ksw5y85arm',
             center: [lng, lat],
             zoom: zoom
         });
+        console.log(mapInstance);
         mapInstance.addControl(new mapboxgl.NavigationControl());
         mapInstance.addControl(new MapboxStyleSwitcherControl(styles, {defaultStyle: "Dark"}));
         mapInstance.addControl(new HidePlayerControl());
@@ -191,7 +192,7 @@ const Map = forwardRef(({openDialog, setRegionViewData, updateMap, setUpdateMap}
             closeButton: false,
             closeOnClick: false
         });
-    });
+    }, [ref, map]);
 
     useEffect(() => {
         if (!map) return;
@@ -375,7 +376,7 @@ const Map = forwardRef(({openDialog, setRegionViewData, updateMap, setUpdateMap}
 
 
     return (
-        <SpotlightProvider shortcut={['mod + S']} actions={actions} onQueryChange={(query) => {
+        <Spotlight shortcut={['mod + S']} actions={actions} onQueryChange={(query) => {
             if (query) {
                 setShowSearchLoading(true);
                 setSearchQuery(query);
@@ -407,7 +408,7 @@ const Map = forwardRef(({openDialog, setRegionViewData, updateMap, setUpdateMap}
                 <LoadingOverlay visible={showLoadingOverlay} />
                 <div ref={mapContainer} style={{width: "100%", height: "100%"}} />
             </div>
-        </SpotlightProvider>
+        </Spotlight>
 
     );
 });

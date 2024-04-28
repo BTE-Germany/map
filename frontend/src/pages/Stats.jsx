@@ -17,7 +17,6 @@ import {
     Text,
     ThemeIcon,
     Title,
-    createStyles,
     Grid,
     Table,
     Pagination
@@ -26,16 +25,8 @@ import axios from "axios";
 import {FiList} from "react-icons/fi";
 import {BiArea, BiBuilding} from "react-icons/bi";
 import {useNavigate} from "react-router-dom";
+import classes from "./Stats.module.css";
 
-const useStyles = createStyles((theme) => ({
-    root: {
-        padding: theme.spacing.xl * 1.5,
-    },
-
-    label: {
-        fontFamily: `Greycliff CF, ${theme.fontFamily}`,
-    },
-}));
 
 const Stats = props => {
 
@@ -143,7 +134,6 @@ const Stats = props => {
 };
 
 const StatsCard = ({title, value, icon, valueSmall}) => {
-    const {classes} = useStyles();
     return (
         <Paper withBorder p="md" radius="md">
             <Group position="apart">

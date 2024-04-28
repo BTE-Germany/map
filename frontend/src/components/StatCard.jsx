@@ -7,33 +7,11 @@
  +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++*/
 
 import React from 'react';
-import {createStyles, Group, Image, Paper, Text, TextInput, Title, Box} from "@mantine/core";
+import {Group, Image, Paper, Text, TextInput, Title, Box} from "@mantine/core";
+import classes from "./StatCard.module.css";
 
-
-const useStyles = createStyles((theme) => ({
-    root: {
-        padding: theme.spacing.xl * 1.5,
-    },
-
-    value: {
-        fontSize: 24,
-        fontWeight: 700,
-        lineHeight: 1,
-    },
-
-
-    icon: {
-        color: theme.colorScheme === 'dark' ? theme.colors.dark[3] : theme.colors.gray[4],
-    },
-
-    title: {
-        fontWeight: 700,
-        textTransform: 'uppercase',
-    },
-}));
 
 const StatCard = ({title, Icon, innerImage, value, subtitle, noBigValue, editable, id, additionalElement = null, showAdditionalElement = true, visible = true, skinny = false, onClickFunction = null}) => {
-    const {classes} = useStyles();
     if (!visible)
         return null;
     return (

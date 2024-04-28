@@ -26,7 +26,14 @@ import {
 import axios from "axios";
 import {useClipboard} from "@mantine/hooks";
 import {centerOfMass, polygon} from "@turf/turf";
-import {RichTextEditor} from '@mantine/rte';
+import {RichTextEditor} from '@mantine/tiptap';
+import {useEditor} from '@tiptap/react';
+import Highlight from '@tiptap/extension-highlight';
+import StarterKit from '@tiptap/starter-kit';
+import Underline from '@tiptap/extension-underline';
+import TextAlign from '@tiptap/extension-text-align';
+import Superscript from '@tiptap/extension-superscript';
+import SubScript from '@tiptap/extension-subscript';
 import StatCard from "./StatCard";
 import {FaCity} from "react-icons/fa";
 import {BiArea, BiBuilding} from "react-icons/bi";
@@ -68,6 +75,19 @@ const RegionView = ({data, open, setOpen, setUpdateMap}) => {
     const user = useUser();
     const navigate = useNavigate();
 
+    const editor = useEditor({
+        extensions: [
+            StarterKit,
+            Underline,
+            Link,
+            Superscript,
+            SubScript,
+            Highlight,
+            TextAlign.configure({types: ['heading', 'paragraph']}),
+        ],
+        content: description,
+    });
+
     const numberWithCommas = (x) => {
         return x.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ".");
     };
@@ -90,11 +110,9 @@ const RegionView = ({data, open, setOpen, setUpdateMap}) => {
         } else {
             setPlotType('normal');
         }
-        console.log(region_.data);
         // from the data get the userUUID and get the username from the playerdb api
         const {data: mcApiData} = await axios.get(`https://playerdb.co/api/player/minecraft/${region_.data.userUUID}`);
         region_.data.username = mcApiData.data.player.username;
-        console.log(region_.data);
         setRegion(region_.data);
 
         // use the description only if it contains any words and not only html tags
@@ -374,17 +392,9 @@ const RegionView = ({data, open, setOpen, setUpdateMap}) => {
                                 < StatCard title={"DESCRIPTION"} Icon={MdDescription} noBigValue={true} skinny={true}
                                     additionalElement={
                                         <ScrollArea.Autosize maxHeight={"20vh"}>
-                                            <RichTextEditor
-                                                readOnly={true}
-                                                value={description}
-                                                sx={{
-                                                    backgroundColor: 'transparent',
-                                                    border: 'none',
-                                                    padding: 0,
-                                                    width: '100%',
-                                                    lineBreak: 'auto',
-                                                }}
-                                            />
+                                            <RichTextEditor editor={editor}>
+                                                <RichTextEditor.Content />
+                                            </RichTextEditor>
                                         </ScrollArea.Autosize>
                                     } />
                                 : null
@@ -394,16 +404,9 @@ const RegionView = ({data, open, setOpen, setUpdateMap}) => {
                                 <StatCard title={"DESCRIPTION"} Icon={MdDescription} noBigValue={true}
                                     additionalElement={
                                         <ScrollArea.Autosize maxHeight={"40vh"}>
-                                            <RichTextEditor value={description} onChange={setDescription} controls={[
-                                                ['bold', 'italic', 'underline', 'link'],
-                                                ['unorderedList', 'h1', 'h2', 'h3'],
-                                                ['sup', 'sub'],
-                                                ['alignLeft', 'alignCenter', 'alignRight']]}
-                                                sx={{
-                                                    maxWidth: '400px',
-                                                    lineBreak: 'anywhere',
-                                                }}
-                                            />
+                                            <RichTextEditor editor={editor}>
+                                                <RichTextEditor.Content />
+                                            </RichTextEditor>
                                         </ScrollArea.Autosize>
                                     } visible={editing} />
                                 : null

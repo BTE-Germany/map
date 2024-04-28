@@ -7,7 +7,7 @@
  +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++*/
 
 import React from 'react';
-import {createStyles, Group, Switch, useMantineColorScheme, useMantineTheme} from "@mantine/core";
+import {Group, Switch, useMantineColorScheme, useMantineTheme} from "@mantine/core";
 import {BiSun, BiMoon} from "react-icons/bi";
 
 const ThemeToggle = props => {
@@ -19,12 +19,12 @@ const ThemeToggle = props => {
                 checked={colorScheme === 'dark'}
                 onChange={() => toggleColorScheme()}
                 size="md"
-                onLabel={<BiSun color={theme.white} size={20} stroke={1.5}/>}
-                offLabel={<BiMoon color={theme.colors.gray[6]} size={20} stroke={1.5}/>}
+                onLabel={<BiSun color={theme.white} size={20} stroke={1.5} />}
+                offLabel={<BiMoon color={theme.colors.gray[6]} size={20} stroke={1.5} />}
             />
         </Group>
 
     );
-}
+};
 
-export default ThemeToggle
+export default ThemeToggle;
