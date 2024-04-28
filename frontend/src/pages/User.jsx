@@ -26,7 +26,6 @@ import axios from "axios";
 import {FiList} from "react-icons/fi";
 import {BiArea, BiBuilding} from "react-icons/bi";
 import {useNavigate} from "react-router-dom";
-import {PieChart} from '@mantine/charts';
 
 const useStyles = createStyles((theme) => ({
     root: {
@@ -145,7 +144,6 @@ const Stats = props => {
                                                 }
                                             </tbody>
                                         </Table>
-                                        <PieChart withLabelsLine labelsPosition="outside" labelsType="value" withLabels data={getChartData()} />
                                     </Grid>
                             }
                             <Pagination page={activePage} onChange={setPage} total={totalPages} mt={"md"} />
