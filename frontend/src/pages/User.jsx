@@ -134,7 +134,7 @@ const Stats = props => {
                                                 {
                                                     userRegions.map((region, index) => {
                                                         return (
-                                                            <tr key={index}>
+                                                            <tr key={index} onClick={() => navigate(`/?region=${region.id}&details=true`)}>
                                                                 <td>{region.city}</td>
                                                                 <td>{numberWithCommas(region.area)} m²</td>
                                                                 <td>{region.buildings}</td>
