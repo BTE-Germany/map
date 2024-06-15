@@ -603,7 +603,7 @@ const AdditionalBuilders = ({showEditButtons, openAdditionalBuilderModal, additi
                         additionalBuilders.map((builder, idx) => {
                             return (
                                 <Box sx={{display: "flex", justifyContent: "space-between", width: "100%"}}>
-                                    <Box id={idx} sx={{display: "flex", gap: "10px", alignItems: "center"}}>
+                                    <Box key={idx} sx={{display: "flex", gap: "10px", alignItems: "center"}}>
                                         <img src={`https://crafatar.com/avatars/${builder.minecraftUUID}?size=20`}
                                             alt=""
                                             width={20} height={20} />
