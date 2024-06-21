@@ -1,7 +1,7 @@
 /******************************************************************************
  * RegionsController.ts                                                       *
  *                                                                            *
- * Copyright (c) 2022-2023 Robin Ferch                                        *
+ * Copyright (c) 2022-2024 Robin Ferch                                        *
  * https://robinferch.me                                                      *
  * This project is released under the MIT license.                            *
  ******************************************************************************/
@@ -10,7 +10,7 @@ import { Request, Response } from "express";
 import Core from "../Core.js";
 import axios from "axios";
 import { validationResult } from "express-validator";
-import imageminWebp from "imagemin-webp";
+import imageminWebp from 'imagemin-webp';
 import imagemin from "imagemin";
 
 class RegionsController {
@@ -328,7 +328,8 @@ class RegionsController {
                 // @ts-ignore
                 const webp = await imagemin.buffer(request.files.image.data, {
                     plugins: [
-                        imageminWebp({ quality: 50 })
+                        // @ts-ignore
+                        imageminWebp({quality: 50})
                     ]
                 })
                 const image = await this.core.getPrisma().image.create({
@@ -363,6 +364,7 @@ class RegionsController {
                 for (const imageKey in request.files.image) {
                     const webp = await imagemin.buffer(request.files.image[imageKey].data, {
                         plugins: [
+                            // @ts-ignore
                             imageminWebp({ quality: 50 })
                         ]
                     })

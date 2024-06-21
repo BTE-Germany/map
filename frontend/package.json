@@ -8,8 +8,10 @@
     "preview": "vite preview"
   },
   "dependencies": {
+    "@bte-germany/terraconvert": "^1.1.2",
     "@elastic/react-search-ui": "^1.18.3",
     "@emotion/react": "^11.10.5",
+    "@esbuild-plugins/node-globals-polyfill": "^0.2.3",
     "@mantine/carousel": "^5.10.1",
     "@mantine/core": "^5.10.1",
     "@mantine/dates": "^5.10.1",
@@ -21,6 +23,7 @@
     "@mantine/rte": "^5.10.1",
     "@mantine/spotlight": "^5.10.1",
     "@react-keycloak-fork/web": "^4.0.3",
+    "@tabler/icons-react": "^2.45.0",
     "@turf/turf": "^6.5.0",
     "axios": "^1.2.2",
     "dayjs": "^1.11.7",
@@ -47,5 +50,6 @@
     "@vitejs/plugin-react": "^3.0.1",
     "dotenv": "^16.3.1",
     "vite": "^4.0.4"
-  }
+  },
+  "packageManager": "yarn@4.3.1"
 }
