@@ -1,7 +1,7 @@
 /*+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
  + AdminUsers.jsx                                                             +
  +                                                                            +
- + Copyright (c) 2022 Robin Ferch                                             +
+ + Copyright (c) 2022-2024 Robin Ferch                                        +
  + https://robinferch.me                                                      +
  + This project is released under the MIT license.                            +
  +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++*/
@@ -12,6 +12,7 @@ import {useKeycloak} from "@react-keycloak-fork/web";
 import {ActionIcon, Badge, Box, Group, Loader, Select, Table, Tooltip, Pagination} from "@mantine/core";
 import {BsFileEarmarkLock2} from "react-icons/bs";
 import {BiLockOpen} from "react-icons/bi";
+import {useOidc} from "../oidc";
 
 const AdminUsers = (props) => {
     const [users, setUsers] = React.useState([]);
@@ -19,7 +20,8 @@ const AdminUsers = (props) => {
     const [activePage, setPage] = React.useState(1);
     const [currentPageSize, setPageSize] = React.useState(25);
     const [totalPages, setTotalPages] = React.useState(12);
-    const {keycloak} = useKeycloak();
+    const { isUserLoggedIn, login, logout, oidcTokens } = useOidc();
+
 
     useEffect(() => {
         getUsers();
@@ -40,7 +42,7 @@ const AdminUsers = (props) => {
         currentPage = currentPage === undefined ? activePage : currentPage;
         pageSize = pageSize === undefined ? currentPageSize : pageSize;
         const {data} = await axios.get(`api/v1/admin/user/@list`, {
-            headers: {authorization: "Bearer " + keycloak.token},
+            headers: {authorization: "Bearer " + oidcTokens.accessToken},
             params: {page: currentPage, size: pageSize}
         });
         setTotalPages(data.totalPages);
@@ -51,7 +53,7 @@ const AdminUsers = (props) => {
         await axios.post(
             `api/v1/admin/user/@lock`,
             {userId: user},
-            {headers: {authorization: "Bearer " + keycloak.token}}
+            {headers: {authorization: "Bearer " + oidcTokens.accessToken}}
         );
         getUsers();
     };
@@ -60,7 +62,7 @@ const AdminUsers = (props) => {
         await axios.post(
             `api/v1/admin/user/@unlock`,
             {userId: user},
-            {headers: {authorization: "Bearer " + keycloak.token}}
+            {headers: {authorization: "Bearer " + oidcTokens.accessToken}}
         );
         getUsers();
     };

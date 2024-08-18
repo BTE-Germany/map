@@ -1,7 +1,7 @@
 /*+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
  + Admin.jsx                                                                  +
  +                                                                            +
- + Copyright (c) 2022-2023 Robin Ferch                                        +
+ + Copyright (c) 2022-2024 Robin Ferch                                        +
  + https://robinferch.me                                                      +
  + This project is released under the MIT license.                            +
  +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++*/
@@ -16,21 +16,20 @@ import AdminUsers from "../components/AdminUsers";
 import AdminRegions from "../components/AdminRegions";
 import {useKeycloak} from "@react-keycloak-fork/web";
 import AdminGeneral from "../components/AdminGeneral";
+import {useOidc} from "../oidc";
 
 const Admin = () => {
     //simple admin check
-    const {keycloak} = useKeycloak();
-    const login = useCallback(() => {
-        keycloak?.login();
-    }, [keycloak]);
+    const { isUserLoggedIn, login, logout, oidcTokens } = useOidc();
+
 
     const isAdmin =
-        keycloak?.tokenParsed?.realm_access.roles.includes("mapadmin");
-    if (!keycloak?.authenticated) {
+        oidcTokens?.decodedIdToken.realm_access.roles.includes("mapadmin");
+    if (!isUserLoggedIn) {
         return (
             <h1>
                 Not logged in!{" "}
-                <u onClick={() => login()}>Click here to login</u>
+                <u onClick={() => login({ doesCurrentHrefRequiresAuth: true })}>Click here to login</u>
             </h1>
         );
     }

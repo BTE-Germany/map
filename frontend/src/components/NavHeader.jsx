@@ -1,7 +1,7 @@
 /*+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
  + NavHeader.jsx                                                              +
  +                                                                            +
- + Copyright (c) 2022 Robin Ferch                                             +
+ + Copyright (c) 2022-2024 Robin Ferch                                        +
  + https://robinferch.me                                                      +
  + This project is released under the MIT license.                            +
  +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++*/
@@ -16,6 +16,7 @@ import {AiOutlineUser, AiOutlineSearch} from "react-icons/ai";
 import {openSpotlight} from "@mantine/spotlight";
 import {useUser} from "../hooks/useUser";
 import {useDisclosure} from "@mantine/hooks";
+import {useOidc} from "../oidc";
 
 
 const HEADER_HEIGHT = 60;
@@ -113,7 +114,9 @@ const useStyles = createStyles((theme) => ({
 
 const NavHeader = ({mapRef}) => {
 
-    const {keycloak} = useKeycloak();
+
+    const { isUserLoggedIn, login, logout, oidcTokens, initializationError } = useOidc();
+
     const links = [
         {
             "link": "/",
@@ -159,7 +162,7 @@ const NavHeader = ({mapRef}) => {
                         <Group spacing={5} className={classes.links} mr={"md"}>
                             {items}
                             {
-                                keycloak?.tokenParsed?.realm_access.roles.includes("mapadmin") && <Link
+                                oidcTokens?.decodedIdToken?.realm_access.roles.includes("mapadmin") && <Link
                                     to={"/admin"}
                                     className={cx(classes.link, {[classes.linkActive]: active === "/admin"})}
                                     onClick={() => {

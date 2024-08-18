@@ -1,7 +1,7 @@
 /*+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
  + useUser.jsx                                                                +
  +                                                                            +
- + Copyright (c) 2022 Robin Ferch                                             +
+ + Copyright (c) 2022-2024 Robin Ferch                                        +
  + https://robinferch.me                                                      +
  + This project is released under the MIT license.                            +
  +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++*/
@@ -10,6 +10,7 @@ import React, {useState, useEffect, useContext, createContext} from "react";
 import {useKeycloak} from "@react-keycloak-fork/web";
 import axios from "axios";
 import {useLocation} from 'react-router-dom';
+import {useOidc} from "../oidc";
 
 const authContext = createContext();
 
@@ -25,12 +26,12 @@ export const useUser = () => {
 
 function useProvideAuth() {
     const [data, setData] = useState(null);
-    const {keycloak} = useKeycloak();
+    const { isUserLoggedIn, login, logout, oidcTokens } = useOidc();
     const location = useLocation();
 
     const updateData = async () => {
-        if (keycloak && keycloak.authenticated) {
-            axios.get("/api/v1/user/@me", {headers: {authorization: "Bearer " + keycloak.token}})
+        if (isUserLoggedIn) {
+            axios.get("/api/v1/user/@me", {headers: {authorization: "Bearer " + oidcTokens.accessToken}})
                 .then(({data: user}) => {
                     setData(user);
                 })
@@ -38,13 +39,13 @@ function useProvideAuth() {
     }
 
     useEffect(() => {
-        if (keycloak && keycloak.authenticated) {
-            axios.get("/api/v1/user/@me", {headers: {authorization: "Bearer " + keycloak.token}})
+        if (isUserLoggedIn) {
+            axios.get("/api/v1/user/@me", {headers: {authorization: "Bearer " + oidcTokens.accessToken}})
                 .then(({data: user}) => {
                     setData(user);
                 })
         }
-    }, [keycloak, location]);
+    }, [isUserLoggedIn, location]);
     return {
         data,
         updateData

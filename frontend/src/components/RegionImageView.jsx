@@ -1,7 +1,7 @@
 /*+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
  + RegionImageView.jsx                                                        +
  +                                                                            +
- + Copyright (c) 2022-2023 Robin Ferch                                        +
+ + Copyright (c) 2022-2024 Robin Ferch                                        +
  + https://robinferch.me                                                      +
  + This project is released under the MIT license.                            +
  +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++*/
@@ -16,6 +16,7 @@ import axios from "axios";
 import {Carousel} from "@mantine/carousel";
 import {AiFillDelete} from "react-icons/ai";
 import {openConfirmModal} from "@mantine/modals";
+import {useOidc} from "../oidc";
 
 
 const ImageAddDropzone = ({regionId, getData}) => {
@@ -24,7 +25,7 @@ const ImageAddDropzone = ({regionId, getData}) => {
     const [uploading, setUploading] = useState(false);
     const [uploadingStatus, setUploadingStatus] = useState(0);
 
-    const {keycloak} = useKeycloak();
+    const { isUserLoggedIn, login, logout, oidcTokens } = useOidc();
 
     const onUploadProgress = (progressEvent) => {
         const {loaded, total} = progressEvent;
@@ -44,7 +45,7 @@ const ImageAddDropzone = ({regionId, getData}) => {
         try {
             await axios.put(`api/v1/region/${regionId}/image/upload`, formData, {
                 headers: {
-                    'Content-Type': 'multipart/form-data', "Authorization": "Bearer " + keycloak.token
+                    'Content-Type': 'multipart/form-data', "Authorization": "Bearer " + oidcTokens.accessToken
                 },
                 onUploadProgress: (progressEvent) => onUploadProgress(progressEvent)
             })
@@ -121,7 +122,7 @@ const ImageAddDropzone = ({regionId, getData}) => {
 
 const RegionImageView = ({regionId, getData, regionImages, editable}) => {
     const theme = useMantineTheme();
-    const {keycloak} = useKeycloak();
+    const { isUserLoggedIn, login, logout, oidcTokens } = useOidc();
 
 
     const [deleteLoading, setDeleteLoading] = useState(false);
@@ -141,7 +142,7 @@ const RegionImageView = ({regionId, getData, regionImages, editable}) => {
             centered: true,
             onConfirm: async () => {
                 setDeleteLoading(true);
-                await axios.delete(`api/v1/region/${regionId}/image/${id}`, {headers: {authorization: "Bearer " + keycloak.token}})
+                await axios.delete(`api/v1/region/${regionId}/image/${id}`, {headers: {authorization: "Bearer " + oidcTokens.accessToken}})
                 getData()
                 showNotification({
                     "title": "Finished", "message": "Deleted image successful.", "color": "green"

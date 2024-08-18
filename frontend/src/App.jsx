@@ -1,7 +1,7 @@
 /*+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
  + App.jsx                                                                    +
  +                                                                            +
- + Copyright (c) 2022-2023 Robin Ferch                                        +
+ + Copyright (c) 2022-2024 Robin Ferch                                        +
  + https://robinferch.me                                                      +
  + This project is released under the MIT license.                            +
  +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++*/
@@ -20,11 +20,10 @@ import Stats from "./pages/Stats";
 import Admin from "./pages/Admin";
 import User from "./pages/User";
 import {ErrorBoundary} from "./components/ErrorBoundary";
+import {OidcProvider} from "./oidc";
 
 function App() {
-    const keycloak = new Keycloak({
-        "url": "https://auth.bte-germany.de", "realm": "btegermany", "clientId": "mapfrontend"
-    });
+
     const [colorScheme, setColorScheme] = useState(window.localStorage.getItem("color-scheme") || "dark");
     const toggleColorScheme = (value) => {
 
@@ -39,9 +38,8 @@ function App() {
                 <NotificationsProvider>
                     <ModalsProvider>
                         <ErrorBoundary>
-                            <ReactKeycloakProvider
-                                authClient={keycloak}
-                                LoadingComponent={<div style={{
+                            <OidcProvider
+                                fallback={<div style={{
                                     display: "absolute",
                                     top: "0",
                                     left: "0",
@@ -61,7 +59,7 @@ function App() {
                                         <Route path="/stats/:username" element={<User />} exact />
                                     </Routes>
                                 </ProvideAuth>
-                            </ReactKeycloakProvider>
+                            </OidcProvider>
                         </ErrorBoundary>
 
                     </ModalsProvider>

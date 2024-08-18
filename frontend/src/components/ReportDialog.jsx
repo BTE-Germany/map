@@ -1,7 +1,7 @@
 /*+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
  + ReportDialog.jsx                                                           +
  +                                                                            +
- + Copyright (c) 2022-2023 Robin Ferch                                        +
+ + Copyright (c) 2022-2024 Robin Ferch                                        +
  + https://robinferch.me                                                      +
  + This project is released under the MIT license.                            +
  +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++*/
@@ -14,7 +14,7 @@ import axios from "axios";
 import {showNotification} from "@mantine/notifications";
 import {useKeycloak} from "@react-keycloak-fork/web";
 
-const ReportDialog = ({regionId, keycloak}) => {
+const ReportDialog = ({regionId, token}) => {
 
     const [loading, setLoading] = useState(false);
 
@@ -36,7 +36,7 @@ const ReportDialog = ({regionId, keycloak}) => {
         await axios.post(`/api/v1/region/${regionId}/report`, {
             comment: val.comment,
             reason: val.reason
-        }, {headers: {authorization: "Bearer " + keycloak.token}});
+        }, {headers: {authorization: "Bearer " + token}});
         modals.closeAll();
         showNotification({
             title: 'Success',
