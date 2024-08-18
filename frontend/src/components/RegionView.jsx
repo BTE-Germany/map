@@ -1,7 +1,7 @@
 /*+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
  + RegionView.jsx                                                             +
  +                                                                            +
- + Copyright (c) 2022-2023 Robin Ferch                                        +
+ + Copyright (c) 2022-2024 Robin Ferch                                        +
  + https://robinferch.me                                                      +
  + This project is released under the MIT license.                            +
  +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++*/
@@ -46,6 +46,7 @@ import AdditionalBuildersDialog from "./AdditionalBuildersDialog";
 import {GiPartyPopper} from "react-icons/gi";
 import {TbFence} from "react-icons/tb";
 import RegionImageView from "./RegionImageView";
+import {useOidc} from "../oidc";
 
 const RegionView = ({data, open, setOpen, setUpdateMap}) => {
 
@@ -62,8 +63,8 @@ const RegionView = ({data, open, setOpen, setUpdateMap}) => {
     const [description, setDescription] = useState("");
     const [additionalBuildersArray, setAdditionalBuilders] = useState([]);
 
-    const {keycloak} = useKeycloak();
-    const isAdmin = keycloak?.tokenParsed?.realm_access.roles.includes("mapadmin");
+    const { isUserLoggedIn, login, logout, oidcTokens, initializationError } = useOidc();
+    const isAdmin = oidcTokens?.decodedIdToken.realm_access.roles.includes("mapadmin");
 
     const user = useUser();
     const navigate = useNavigate();
@@ -149,7 +150,7 @@ const RegionView = ({data, open, setOpen, setUpdateMap}) => {
     };
 
     const openReportModal = () => {
-        if (!keycloak.authenticated) {
+        if (!isUserLoggedIn) {
             showNotification({
                 title: 'You need to be logged in!',
                 message: 'You need to be logged in to report a region.',
@@ -170,13 +171,13 @@ const RegionView = ({data, open, setOpen, setUpdateMap}) => {
             title: 'Report this region',
             centered: true,
             children: (
-                <ReportDialog regionId={region.id} keycloak={keycloak} />
+                <ReportDialog regionId={region.id} token={oidcTokens.accessToken} />
             ),
         });
     };
 
     const teleportToRegion = async () => {
-        await axios.post(`/api/v1/user/teleport`, {coords: center}, {headers: {authorization: "Bearer " + keycloak.token}});
+        await axios.post(`/api/v1/user/teleport`, {coords: center}, {headers: {authorization: "Bearer " + oidcTokens.accessToken}});
         showNotification({
             title: 'Teleport to region',
             message: 'You will be teleported shortly.',
@@ -185,7 +186,7 @@ const RegionView = ({data, open, setOpen, setUpdateMap}) => {
     };
 
     const deleteRegion = async (id) => {
-        await axios.delete(`/api/v1/region/${id}`, {headers: {authorization: "Bearer " + keycloak.token}});
+        await axios.delete(`/api/v1/region/${id}`, {headers: {authorization: "Bearer " + oidcTokens.accessToken}});
         showNotification({
             title: 'Region deleted!',
             message: 'This region has been deleted.',
@@ -203,7 +204,7 @@ const RegionView = ({data, open, setOpen, setUpdateMap}) => {
     const addBuilderToDB = (builder) => {
         axios.post(`/api/v1/region/${region.id}/additionalBuilder`, {
             username: builder.username
-        }, {headers: {authorization: "Bearer " + keycloak.token}})
+        }, {headers: {authorization: "Bearer " + oidcTokens.accessToken}})
             .then(({data}) => {
                 showNotification({
                     title: 'Success',
@@ -234,7 +235,7 @@ const RegionView = ({data, open, setOpen, setUpdateMap}) => {
     };
 
     const removeBuilderFromDB = (builder) => {
-        axios.delete(`/api/v1/region/${region.id}/additionalBuilder/${builder.id}`, {headers: {authorization: "Bearer " + keycloak.token}})
+        axios.delete(`/api/v1/region/${region.id}/additionalBuilder/${builder.id}`, {headers: {authorization: "Bearer " + oidcTokens.accessToken}})
             .then(() => {
                 showNotification({
                     title: 'Success',
@@ -252,7 +253,7 @@ const RegionView = ({data, open, setOpen, setUpdateMap}) => {
     };
 
     const openAdditionalBuilderModal = () => {
-        if (!keycloak.authenticated) {
+        if (!isUserLoggedIn) {
             showNotification({
                 title: 'You need to be logged in!',
                 message: 'You need to be logged in to report a region.',
@@ -276,7 +277,7 @@ const RegionView = ({data, open, setOpen, setUpdateMap}) => {
                 setOpen(true);
             },
             children: (
-                <AdditionalBuildersDialog regionId={region.id} keycloak={keycloak} onUsers={addNewBuilder} />
+                <AdditionalBuildersDialog regionId={region.id} token={oidcTokens.accessToken} onUsers={addNewBuilder} />
             ),
         });
     };
@@ -307,7 +308,7 @@ const RegionView = ({data, open, setOpen, setUpdateMap}) => {
                 lastModified: new Date(),
             };
             try {
-                await axios.post(`api/v1/region/${region.id}/edit`, params, {headers: {authorization: "Bearer " + keycloak.token}});
+                await axios.post(`api/v1/region/${region.id}/edit`, params, {headers: {authorization: "Bearer " + oidcTokens.accessToken}});
             } catch (error) {
                 alert("Region could not be saved.");
                 console.error(error);
@@ -450,7 +451,7 @@ const RegionView = ({data, open, setOpen, setUpdateMap}) => {
                                 subtitle={""} />
                         </Group>
 
-                        {keycloak?.authenticated ?
+                        {isUserLoggedIn ?
                             <Group spacing={"md"} cols={2} grow mt={"md"}>
                                 {editing ?
                                     <Button color={"red"} leftIcon={<AiFillDelete />} onClick={showDeleteConfirmation}>Delete
@@ -473,7 +474,7 @@ const RegionView = ({data, open, setOpen, setUpdateMap}) => {
                             </Group>
                             :
                             <Button leftIcon={<FiLock size={14} />} fullWidth mt={"md"}
-                                onClick={() => keycloak.login({redirectUri: window.location.origin + "?region=" + region.id + "&details=true"})}>Login
+                                onClick={() =>login({redirectUrl: window.location.origin + "?region=" + region.id + "&details=true"})}>Login
                                 to get more features</Button>
                         }
 
@@ -592,7 +593,8 @@ const RegionView = ({data, open, setOpen, setUpdateMap}) => {
 };
 
 const AdditionalBuilders = ({showEditButtons, openAdditionalBuilderModal, additionalBuilders, removeBuilder}) => {
-    const {keycloak} = useKeycloak();
+    const { isUserLoggedIn, login, logout, oidcTokens, initializationError } = useOidc();
+
     const [load, setLoad] = useState(false);
     return (
         <div style={{width: "100%"}}>

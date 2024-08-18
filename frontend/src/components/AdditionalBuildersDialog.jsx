@@ -1,7 +1,7 @@
 /*+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
  + AdditionalBuildersDialog.jsx                                               +
  +                                                                            +
- + Copyright (c) 2022 Robin Ferch                                             +
+ + Copyright (c) 2022-2024 Robin Ferch                                        +
  + https://robinferch.me                                                      +
  + This project is released under the MIT license.                            +
  +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++*/
@@ -14,7 +14,7 @@ import {showNotification} from "@mantine/notifications";
 import {useModals} from "@mantine/modals";
 import {useDebouncedValue } from '@mantine/hooks';
 
-const AdditionalBuildersDialog = ({regionId, keycloak, onUsers}) => {
+const AdditionalBuildersDialog = ({regionId, onUsers}) => {
     const modals = useModals();
     const [loading, setLoading] = useState(false);
     const [username, setUsername] = useState('');

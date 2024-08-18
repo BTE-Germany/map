@@ -1,3 +1,11 @@
+/*+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+ + AdminRegions.jsx                                                           +
+ +                                                                            +
+ + Copyright (c) 2024 Robin Ferch                                             +
+ + https://robinferch.me                                                      +
+ + This project is released under the MIT license.                            +
+ +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++*/
+
 import React, {useEffect} from 'react';
 import axios from "axios";
 import {useKeycloak} from "@react-keycloak-fork/web";
@@ -9,10 +17,11 @@ import {BiEdit} from 'react-icons/bi';
 import {MdDelete} from 'react-icons/md';
 import {useModals} from "@mantine/modals";
 import {showNotification} from "@mantine/notifications";
+import {useOidc} from "../oidc";
 
 
 const AdminRegions = () => {
-    const {keycloak} = useKeycloak();
+    const { isUserLoggedIn, login, logout, oidcTokens } = useOidc();
     const modals = useModals();
     const [regions, setRegions] = React.useState([]);
     const [isLoading, setIsLoading] = React.useState(true);
@@ -55,7 +64,7 @@ const AdminRegions = () => {
         //console.log('getRegions', {"sort": sort, "direction": direction, "page": currentPage, "pageSize": pageSize});
 
         const {data} = await axios.get(`api/v1/region/all`, {
-            headers: {authorization: "Bearer " + keycloak.token},
+            headers: {authorization: "Bearer " + oidcTokens.accessToken},
             params: {page: currentPage, size: pageSize, sort: sort, direction: direction},
         });
         console.log("response", data);
@@ -82,7 +91,7 @@ const AdminRegions = () => {
     };
 
     const deleteRegion = async (id) => {
-        await axios.delete(`/api/v1/region/${id}`, {headers: {authorization: "Bearer " + keycloak.token}});
+        await axios.delete(`/api/v1/region/${id}`, {headers: {authorization: "Bearer " + oidcTokens.accessToken}});
         showNotification({
             title: 'Region deleted!',
             message: 'This region has been deleted.',

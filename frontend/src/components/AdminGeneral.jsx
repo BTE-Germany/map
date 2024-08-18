@@ -1,7 +1,7 @@
 /*+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
  + AdminGeneral.jsx                                                           +
  +                                                                            +
- + Copyright (c) 2023 Robin Ferch                                             +
+ + Copyright (c) 2023-2024 Robin Ferch                                        +
  + https://robinferch.me                                                      +
  + This project is released under the MIT license.                            +
  +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++*/
@@ -12,6 +12,7 @@ import axios from "axios";
 import {useKeycloak} from "@react-keycloak-fork/web";
 import {IoIosWarning} from "react-icons/io";
 import {showNotification} from "@mantine/notifications";
+import {useOidc} from "../oidc";
 
 const AdminGeneral = props => {
 
@@ -22,7 +23,7 @@ const AdminGeneral = props => {
     const [skipOld, setSkipOld] = useState(false);
     const [skipOldOsm, setSkipOldOsm] = useState(false);
 
-    const {keycloak} = useKeycloak();
+    const { isUserLoggedIn, login, logout, oidcTokens } = useOidc();
 
     useEffect(() => {
         let interval;
@@ -31,9 +32,9 @@ const AdminGeneral = props => {
             setAllBuildingsCount(statsData.totalBuildings)
             interval = setInterval(async () => {
                 const {data: progress} = await axios.get(`/api/v1/admin/calculateProgress`,
-                    {headers: {authorization: "Bearer " + keycloak.token}})
+                    {headers: {authorization: "Bearer " + oidcTokens.accessToken}})
                 const {data: progressOsm} = await axios.get(`/api/v1/admin/osmDisplayNameProgress`,
-                    {headers: {authorization: "Bearer " + keycloak.token}})
+                    {headers: {authorization: "Bearer " + oidcTokens.accessToken}})
 
                 const {data: stats} = await axios.get(`/api/v1/stats/general`)
                 setAllBuildingsCount(stats.totalBuildings)
@@ -48,7 +49,7 @@ const AdminGeneral = props => {
 
     const start = () => {
         setProgress(0.0000000001);
-        axios.get(`/api/v1/admin/recalculateBuildings${skipOld ? "?skipOld=true" : ""}`, {headers: {authorization: "Bearer " + keycloak.token}}).then(({data}) => {
+        axios.get(`/api/v1/admin/recalculateBuildings${skipOld ? "?skipOld=true" : ""}`, {headers: {authorization: "Bearer " + oidcTokens.accessToken}}).then(({data}) => {
             showNotification({
                 title: "Ok",
                 message: `${data.count} Regionen werden neu berechnet`
@@ -58,7 +59,7 @@ const AdminGeneral = props => {
 
     const startOsm = () => {
         setOsmProgress(0.0000000001);
-        axios.get(`/api/v1/admin/getOsmDisplayNames${skipOld ? "?skipOld=true" : ""}`, {headers: {authorization: "Bearer " + keycloak.token}}).then(({data}) => {
+        axios.get(`/api/v1/admin/getOsmDisplayNames${skipOld ? "?skipOld=true" : ""}`, {headers: {authorization: "Bearer " + oidcTokens.accessToken}}).then(({data}) => {
             showNotification({
                 title: "Ok",
                 message: `Von ${data.count} Regionen werden die OSM Namen geholt.`,
@@ -73,7 +74,7 @@ const AdminGeneral = props => {
             message: 'Synchronisiere Search-DB',
             color: "green"
         })
-        await axios.get(`/api/v1/admin/syncWithSearchDB`, {headers: {authorization: "Bearer " + keycloak.token}})
+        await axios.get(`/api/v1/admin/syncWithSearchDB`, {headers: {authorization: "Bearer " + oidcTokens.accessToken}})
         showNotification({
             title: 'Fertig',
             message: 'Synchronisierung abgeschlossen',

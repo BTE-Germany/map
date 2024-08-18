@@ -1,7 +1,7 @@
 /*+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
  + AccountButton.jsx                                                          +
  +                                                                            +
- + Copyright (c) 2022-2023 Robin Ferch                                        +
+ + Copyright (c) 2022-2024 Robin Ferch                                        +
  + https://robinferch.me                                                      +
  + This project is released under the MIT license.                            +
  +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++*/
@@ -19,23 +19,19 @@ import {useUser} from "../hooks/useUser";
 import {showNotification} from "@mantine/notifications";
 import axios from "axios";
 import {BiDotsVerticalRounded} from "react-icons/bi";
+import {useOidc} from "../oidc";
 
 const AccountButton = props => {
 
-    const {keycloak} = useKeycloak()
+    const { isUserLoggedIn, login, logout, oidcTokens, initializationError } = useOidc();
+
     const user = useUser();
 
 
-    const login = useCallback(() => {
-        keycloak?.login()
-    }, [keycloak])
 
-    const logout = useCallback(() => {
-        keycloak?.logout()
-    }, [keycloak])
 
     const unlinkUser = async () => {
-        await axios.post(`/api/v1/user/unlink`, {}, {headers: {authorization: "Bearer " + keycloak.token}})
+        await axios.post(`/api/v1/user/unlink`, {}, {headers: {authorization: "Bearer " + oidcTokens.accessToken}})
         await user.updateData();
         showNotification({
             title: 'Unlink successful', message: 'Your account was unlinked successfully.', color: "green"
@@ -50,17 +46,17 @@ const AccountButton = props => {
 
             <Menu.Dropdown>
                 <Menu.Label>Account</Menu.Label>
-                {keycloak?.authenticated && <Menu.Item icon={<AiOutlineUser size={14}/>}
-                                                       disabled>Hey, {keycloak?.tokenParsed.preferred_username}</Menu.Item>}
-                {keycloak?.authenticated ?
-                    <Menu.Item icon={<FiLock size={14}/>} onClick={() => logout()}>Logout</Menu.Item> :
-                    <Menu.Item icon={<FiLock size={14}/>} onClick={() => login()}>Login</Menu.Item>}
+                {isUserLoggedIn && <Menu.Item icon={<AiOutlineUser size={14}/>}
+                                                       disabled>Hey, {oidcTokens.decodedIdToken.preferred_username}</Menu.Item>}
+                {isUserLoggedIn ?
+                    <Menu.Item icon={<FiLock size={14}/>} onClick={() => logout({redirectTo: "current page"})}>Logout</Menu.Item> :
+                    <Menu.Item icon={<FiLock size={14}/>} onClick={() => login({doesCurrentHrefRequiresAuth: false})}>Login</Menu.Item>}
 
-                {(keycloak?.authenticated && !user?.data?.minecraftUUID) &&
+                {(isUserLoggedIn && !user?.data?.minecraftUUID) &&
                     <Menu.Item icon={<FiLink2 size={14}/>} component={Link} to={"/link"}>Link Minecraft
                         Account</Menu.Item>}
 
-                {(keycloak?.authenticated && user?.data?.minecraftUUID) &&
+                {(isUserLoggedIn && user?.data?.minecraftUUID) &&
                     <Menu.Item icon={<FiLink2 size={14}/>} onClick={unlinkUser}>Unlink Minecraft
                         Account</Menu.Item>}
 
@@ -71,9 +67,9 @@ const AccountButton = props => {
                     Server</Menu.Item>
                 <Menu.Item component={"a"} href="https://bte-germany.de" target={"_blank"}
                            icon={<FiGlobe size={14}/>}>Website</Menu.Item>
-                <Menu.Item component={"a"} href="https://robinferch.me/legal" target={"_blank"}
+                <Menu.Item component={"a"} href="https://bte-germany.de/legal" target={"_blank"}
                            icon={<IoMdPaper size={14}/>}>Impressum</Menu.Item>
-                <Menu.Item component={"a"} href="https://robinferch.me/privacy" target={"_blank"}
+                <Menu.Item component={"a"} href="https://bte-germany.de/privacy" target={"_blank"}
                            icon={<MdOutlinePrivacyTip size={14}/>}>Privacy policy</Menu.Item>
             </Menu.Dropdown>
         </Menu>
