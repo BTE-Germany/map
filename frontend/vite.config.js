@@ -1,3 +1,4 @@
+import { sentryVitePlugin } from "@sentry/vite-plugin";
 /*+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
  + vite.config.js                                                             +
  +                                                                            +
@@ -13,10 +14,23 @@ import importMetaEnv from "@import-meta-env/unplugin";
 
 // https://vitejs.dev/config/
 export default defineConfig({
-  plugins: [react(), importMetaEnv.vite({ example: ".example.env" })],
+  plugins: [
+    react(),
+    importMetaEnv.vite({ example: ".example.env" }),
+    sentryVitePlugin({
+      org: "btegermany",
+      project: "map",
+      url: "https://errors.dachstein.cloud/"
+    })
+  ],
+
   server: {
     proxy: {
       '/api': 'http://localhost:8899',
     }
+  },
+
+  build: {
+    sourcemap: true
   }
 })
