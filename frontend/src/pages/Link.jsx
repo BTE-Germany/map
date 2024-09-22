@@ -1,7 +1,7 @@
 /*+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
  + Link.jsx                                                                   +
  +                                                                            +
- + Copyright (c) 2022 Robin Ferch                                             +
+ + Copyright (c) 2022-2024 Robin Ferch                                        +
  + https://robinferch.me                                                      +
  + This project is released under the MIT license.                            +
  +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++*/
@@ -9,16 +9,16 @@
 import React, {useState} from 'react';
 import {Box, Button, Code, Container, Group, Kbd, Stepper, TextInput, Title} from "@mantine/core";
 import {useForm} from "@mantine/form";
-import {useKeycloak} from "@react-keycloak-fork/web";
 import {Navigate, useNavigate} from "react-router-dom";
 import NavHeader from "../components/NavHeader";
 import {showNotification} from "@mantine/notifications";
 import axios from "axios";
+import {useOidc} from "../oidc";
 
 const Link = props => {
-    const {keycloak} = useKeycloak()
+    const { isUserLoggedIn, login, logout, oidcTokens } = useOidc();
 
-    if (!keycloak?.authenticated)
+    if (!isUserLoggedIn)
         return <Navigate to={"/"}/>
 
     const [active, setActive] = useState(0);
@@ -37,7 +37,7 @@ const Link = props => {
                 status
             } = await axios.post(`/api/v1/user/link`, {code}, {
                 headers: {
-                    authorization: "Bearer " + keycloak.token
+                    authorization: "Bearer " + oidcTokens.accessToken
                 }
             });
 
