@@ -16,6 +16,7 @@ import { fileURLToPath } from "url";
 import Core from '../Core.js';
 import SocketIOController from "../util/SocketIOController.js";
 import Routes from './routes/index.js';
+import type { RequestHandler } from 'express';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -40,12 +41,14 @@ class Web {
 
     public startWebserver() {
         this.app.use(express.json());
-        this.app.use(session({
-            secret: process.env.SESSION_SECRET,
-            resave: false,
-            saveUninitialized: true,
-            store: this.core.memoryStore
-        }));
+        this.app.use(
+            session({
+                secret: process.env.SESSION_SECRET!,
+                resave: false,
+                saveUninitialized: true,
+                store: this.core.memoryStore,
+            }) as unknown as RequestHandler
+        );
         this.app.use(cors())
 
         this.app.use(
@@ -58,9 +61,11 @@ class Web {
         }));
         this.core.getLogger().debug("Enabled keycloak-connect adapter")
 
-        this.app.use(fileUpload({
-            limits: { fileSize: 10 * 1024 * 1024 },
-        }));
+        this.app.use(
+            fileUpload({
+                limits: { fileSize: 10 * 1024 * 1024 },
+            }) as unknown as RequestHandler
+        );
 
 
         this.server.listen(this.getPort(), () => {

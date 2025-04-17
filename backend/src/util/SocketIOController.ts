@@ -1,13 +1,13 @@
 /******************************************************************************
  * SocketIOController.ts                                                      *
  *                                                                            *
- * Copyright (c) 2022-2023 Robin Ferch                                        *
+ * Copyright (c) 2022-2025 Robin Ferch                                        *
  * https://robinferch.me                                                      *
  * This project is released under the MIT license.                            *
  ******************************************************************************/
 import Core from "../Core.js";
 import * as Http from "http";
-import {Server, Socket} from "socket.io";
+import {ExtendedError, Server, Socket} from "socket.io";
 
 
 interface AuthenticatedSocket extends Socket {
@@ -24,11 +24,11 @@ interface Player {
 
 class SocketIOController {
 
-    private httpServer: Http.Server;
+    private readonly httpServer: Http.Server;
 
     private io: Server;
 
-    private core: Core;
+    private readonly core: Core;
 
     private players: Player[] = [];
 
@@ -68,14 +68,14 @@ class SocketIOController {
                     data = data.replace("[", "")
                     data = data.replace("]", "")
                     let split = data.split(", ")
-                    split.forEach((u) => {
-                        let decodedMsg = u.split(";")
+                    split.forEach((userSegment: string) => {
+                        let decodedMsg = userSegment.split(";")
                         const data = {
                             "uuid": decodedMsg[0],
                             "lat": parseFloat(decodedMsg[1]),
                             "lon": parseFloat(decodedMsg[2]),
                             "username": decodedMsg[3],
-                            "server": decodedMsg[4]
+                            "server": socket.id
                         }
                         usersFromServer.push(data)
                     })
@@ -124,23 +124,19 @@ class SocketIOController {
                 }
             });
 
-            socket.on('serverStartup', (data) => {
-                if (socket.authenticated) {
-                    if (this.players.findIndex((pl) => pl.server === data) != -1) {
-                        let idx = this.players.findIndex((pl) => pl.server === data);
-                        this.players.splice(idx, 1);
-                        this.core.getLogger().debug("Removed player " + data)
-                    }
-                }
-            });
-
-
             socket.emit("playerLocations", JSON.stringify({
                 "type": "FeatureCollection",
                 "features": []
             }))
         });
 
+        this.io.on("connection", (socket) => {
+            socket.on("disconnect", _ => {
+                const initialPlayerCount = this.players.length;
+                this.players = this.players.filter((p) => p.server !== socket.id);
+                this.core.getLogger().debug(`Socket ${socket.id} disconnected. Removed ${initialPlayerCount - this.players.length} player(s) associated with this socket.`);
+            });
+        });
     }
 
     public sendTeleportRequest(coords: Array<number>, uuid: string) {
@@ -149,8 +145,8 @@ class SocketIOController {
     }
 }
 
-const authMiddleware = (socket: AuthenticatedSocket, next) => {
-    if (socket.handshake.auth && socket.handshake.auth.token) {
+const authMiddleware = (socket: AuthenticatedSocket, next: (err?: ExtendedError) => void) => {
+    if (socket.handshake.auth?.token) {
         if (socket.handshake.auth.token === process.env.MINECRAFT_PLUGIN_TOKEN) {
             socket.authenticated = true;
             next();
