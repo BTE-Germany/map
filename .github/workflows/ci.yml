@@ -79,6 +79,7 @@ jobs:
       # transparency data even for private images, pass --force to cosign below.
       # https://github.com/sigstore/cosign
       - name: Sign the images with GitHub OIDC Token
+        if: github.event_name != 'pull_request'
         env:
           DIGEST: ${{ steps.build-and-push.outputs.digest }}
           TAGS: ${{ steps.meta.outputs.tags }}
@@ -90,5 +91,5 @@ jobs:
           cosign sign --yes ${images}
       - name: Invoke deployment hook
         uses: distributhor/workflow-webhook@v3
-        env:
+        with:
           webhook_url: ${{ secrets.WEBHOOK }}

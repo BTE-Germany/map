@@ -1,7 +1,7 @@
 /*+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
  + RegionView.jsx                                                             +
  +                                                                            +
- + Copyright (c) 2022-2024 Robin Ferch                                        +
+ + Copyright (c) 2022-2025 Robin Ferch                                        +
  + https://robinferch.me                                                      +
  + This project is released under the MIT license.                            +
  +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++*/
@@ -34,7 +34,6 @@ import {AiFillDelete, AiOutlineDelete, AiOutlineLink} from "react-icons/ai";
 import {MdAdd, MdOutlineShareLocation, MdConstruction, MdDescription} from "react-icons/md";
 import {useModals} from "@mantine/modals";
 import {showNotification} from "@mantine/notifications";
-import {useKeycloak} from "@react-keycloak-fork/web";
 import {FiLock} from "react-icons/fi";
 import {useUser} from "../hooks/useUser";
 import {IoMdFlag} from "react-icons/io";
@@ -47,6 +46,7 @@ import {GiPartyPopper} from "react-icons/gi";
 import {TbFence} from "react-icons/tb";
 import RegionImageView from "./RegionImageView";
 import {useOidc} from "../oidc";
+import * as Sentry from "@sentry/react";
 
 const RegionView = ({data, open, setOpen, setUpdateMap}) => {
 
@@ -61,9 +61,9 @@ const RegionView = ({data, open, setOpen, setUpdateMap}) => {
     const [plotType, setPlotType] = useState("normal");
     const [isFinished, setisFinished] = useState(true);
     const [description, setDescription] = useState("");
-    const [additionalBuildersArray, setAdditionalBuilders] = useState([]);
+    const [additionalBuilders, setAdditionalBuilders] = useState([]);
 
-    const { isUserLoggedIn, login, logout, oidcTokens, initializationError } = useOidc();
+    const { isUserLoggedIn, login, oidcTokens} = useOidc();
     const isAdmin = oidcTokens?.decodedIdToken.realm_access.roles.includes("mapadmin");
 
     const user = useUser();
@@ -82,8 +82,6 @@ const RegionView = ({data, open, setOpen, setUpdateMap}) => {
         if (!data?.id) return;
         const region_ = await axios.get(`/api/v1/region/${data.id}`);
 
-        setAdditionalBuilders(region_.data.additionalBuilder);
-
         if (region_.data.isEventRegion) {
             setPlotType('event');
         } else if (region_.data.isPlotRegion) {
@@ -93,10 +91,33 @@ const RegionView = ({data, open, setOpen, setUpdateMap}) => {
         }
         console.log(region_.data);
         // from the data get the userUUID and get the username from the playerdb api
-        const {data: mcApiData} = await axios.get(`https://playerdb.co/api/player/minecraft/${region_.data.userUUID}`);
-        region_.data.username = mcApiData.data.player.username;
+        try {
+            const {data: mcApiData} = await axios.get(`https://playerdb.co/api/player/minecraft/${region_.data.userUUID}`);
+            region_.data.username = mcApiData.data.player.username;
+        } catch (err) {
+            Sentry.captureException(err, {
+                tags: {section: 'owner‑lookup'},
+                extra: {uuid: region_.data.userUUID, regionId: region_.data.id}
+            });
+        }
+
+        const tasks = region_.data.additionalBuilder.map(async addBuilder => {
+            try {
+                const { fetchedName } = (await axios.get(`https://playerdb.co/api/player/minecraft/${addBuilder.minecraftUUID}`)).data.player.username;
+                if (fetchedName !== addBuilder.username) addBuilder.username = fetchedName;
+            } catch (err) {
+                Sentry.captureException(err, {
+                    tags:  { section: 'builder‑lookup' },
+                    extra: { uuid: addBuilder.minecraftUUID, regionId: region_.data.id}
+                });
+            }
+        });
+
+        await Promise.all(tasks);
+
         console.log(region_.data);
         setRegion(region_.data);
+        setAdditionalBuilders(region_.data.additionalBuilder);
 
         // use the description only if it contains any words and not only html tags
         if (region_.data.description && region_.data.description.replace(/<[^>]*>/g, '').trim().length > 0) {
@@ -198,7 +219,7 @@ const RegionView = ({data, open, setOpen, setUpdateMap}) => {
     const addNewBuilder = async (newBuilder) => {
         const {data: mcApiData} = await axios.get(`https://playerdb.co/api/player/minecraft/${newBuilder.username}`);
         newBuilder.minecraftUUID = mcApiData.data.player.id;
-        setAdditionalBuilders([...additionalBuildersArray, newBuilder]);
+        setAdditionalBuilders([...additionalBuilders, newBuilder]);
     };
 
     const addBuilderToDB = (builder) => {
@@ -231,7 +252,7 @@ const RegionView = ({data, open, setOpen, setUpdateMap}) => {
     };
 
     const removeBuilder = (builder) => {
-        setAdditionalBuilders(additionalBuildersArray.filter(b => b.id !== builder.id));
+        setAdditionalBuilders(additionalBuilders.filter(b => b.id !== builder.id));
     };
 
     const removeBuilderFromDB = (builder) => {
@@ -285,8 +306,8 @@ const RegionView = ({data, open, setOpen, setUpdateMap}) => {
     const onSave = async () => {
         const city = document.getElementById('city')?.value ?? region.city;
         const owner = document.getElementById('owner')?.value ?? region.username;
-        const addedBuilders = additionalBuildersArray.filter((item) => !region.additionalBuilder.includes(item));
-        const removedBuilders = region.additionalBuilder.filter((item) => !additionalBuildersArray.includes(item));
+        const addedBuilders = additionalBuilders.filter((item) => !region.additionalBuilder.includes(item));
+        const removedBuilders = region.additionalBuilder.filter((item) => !additionalBuilders.includes(item));
         setEditing(false);
         setLoading(true);
         for (let builder of addedBuilders) {
@@ -423,7 +444,7 @@ const RegionView = ({data, open, setOpen, setUpdateMap}) => {
                                 additionalElement={
                                     <AdditionalBuilders showEditButtons={editing}
                                         openAdditionalBuilderModal={openAdditionalBuilderModal}
-                                        additionalBuilders={editing ? additionalBuildersArray : region.additionalBuilder}
+                                        additionalBuilders={editing ? additionalBuilders : region.additionalBuilder}
                                         removeBuilder={removeBuilder}
                                     />
                                 } key={"additional-builders"} />
