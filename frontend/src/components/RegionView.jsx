@@ -103,8 +103,8 @@ const RegionView = ({data, open, setOpen, setUpdateMap}) => {
 
         const tasks = region_.data.additionalBuilder.map(async addBuilder => {
             try {
-                const { fetchedName } = (await axios.get(`https://playerdb.co/api/player/minecraft/${addBuilder.minecraftUUID}`)).data.player.username;
-                if (fetchedName !== addBuilder.username) addBuilder.username = fetchedName;
+                const { data: mcApiData } = await axios.get(`https://playerdb.co/api/player/minecraft/${addBuilder.minecraftUUID}`);
+                if (mcApiData.data.player.username !== addBuilder.username) addBuilder.username = mcApiData.data.player.username;
             } catch (err) {
                 Sentry.captureException(err, {
                     tags:  { section: 'builder‑lookup' },
