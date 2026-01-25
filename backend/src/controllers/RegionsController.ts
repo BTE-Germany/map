@@ -45,10 +45,16 @@ class RegionsController {
             select: {
                 id: true,
                 data: true,
+                area: true
             }
         });
-        const coords = regions.map((r) => JSON.parse(r.data)[0]);
-        response.send(coords);
+        const data = regions.map((r) => {
+            return {
+                coords: JSON.parse(r.data)[0],
+                area: r.area
+            }
+        });
+        response.send(data);
     }
 
     public async getOneRegion(request: Request, response: Response) {
