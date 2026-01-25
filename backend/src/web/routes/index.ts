@@ -48,6 +48,10 @@ class Routes {
             await regionsController.getAllRegions(request, response);
         })
 
+        router.addRoute(RequestMethods.GET, "/region/all/coords", async (request, response) => {
+            await regionsController.getRegionPosition(request, response);
+        })
+
         router.addRoute(RequestMethods.GET, "/region/all/geojson", async (request, response) => {
             await regionsController.getAllRegionsAsGeoJSON(request, response);
         })

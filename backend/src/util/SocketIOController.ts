@@ -1,13 +1,13 @@
 /******************************************************************************
  * SocketIOController.ts                                                      *
  *                                                                            *
- * Copyright (c) 2022-2025 Robin Ferch                                        *
+ * Copyright (c) 2022-2026 Robin Ferch                                        *
  * https://robinferch.me                                                      *
  * This project is released under the MIT license.                            *
  ******************************************************************************/
 import Core from "../Core.js";
 import * as Http from "http";
-import {ExtendedError, Server, Socket} from "socket.io";
+import { Server, Socket} from "socket.io";
 
 
 interface AuthenticatedSocket extends Socket {
@@ -145,7 +145,7 @@ class SocketIOController {
     }
 }
 
-const authMiddleware = (socket: AuthenticatedSocket, next: (err?: ExtendedError) => void) => {
+const authMiddleware = (socket: AuthenticatedSocket, next: (err?) => void) => {
     if (socket.handshake.auth?.token) {
         if (socket.handshake.auth.token === process.env.MINECRAFT_PLUGIN_TOKEN) {
             socket.authenticated = true;

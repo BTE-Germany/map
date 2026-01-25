@@ -1,7 +1,7 @@
 /******************************************************************************
  * RegionsController.ts                                                       *
  *                                                                            *
- * Copyright (c) 2022-2024 Robin Ferch                                        *
+ * Copyright (c) 2022-2026 Robin Ferch                                        *
  * https://robinferch.me                                                      *
  * This project is released under the MIT license.                            *
  ******************************************************************************/
@@ -38,6 +38,17 @@ class RegionsController {
             data: regions.slice((page - 1) * size, page * size)
         };
         response.send(resultList);
+    }
+
+    public async getRegionPosition(request, response: Response) {
+        let regions = await this.core.getPrisma().region.findMany({
+            select: {
+                id: true,
+                data: true,
+            }
+        });
+        const coords = regions.map((r) => JSON.parse(r.data)[0]);
+        response.send(coords);
     }
 
     public async getOneRegion(request: Request, response: Response) {
