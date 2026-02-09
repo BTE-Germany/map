@@ -27,7 +27,7 @@
     "@sentry/vite-plugin": "^2.22.2",
     "@tabler/icons-react": "^2.45.0",
     "@turf/turf": "^6.5.0",
-    "axios": "^1.2.2",
+    "axios": "^1.13.5",
     "dayjs": "^1.11.7",
     "embla-carousel-react": "^7.0.5",
     "keycloak-js": "^20.0.3",
