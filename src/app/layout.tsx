@@ -21,6 +21,7 @@ const geistMono = Geist_Mono({
 
 const outfit = Outfit({
     variable: "--font-outfit",
+    subsets: ["latin"],
 })
 
 
