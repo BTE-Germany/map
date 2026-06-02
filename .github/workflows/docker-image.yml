@@ -18,7 +18,7 @@ permissions:
   packages: write
 
 env:
-  PLATFORMS: linux/amd64,linux/arm64
+  PLATFORMS: linux/amd64
 
 concurrency:
   group: docker-image-${{ github.ref }}
