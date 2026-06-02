@@ -12,10 +12,11 @@ export interface LockIconHandle {
 
 interface LockIconProps extends HTMLAttributes<HTMLDivElement> {
   size?: number;
+  animateOnHover?: boolean;
 }
 
 const LockIcon = forwardRef<LockIconHandle, LockIconProps>(
-  ({ onMouseEnter, onMouseLeave, className, size = 28, ...props }, ref) => {
+  ({ onMouseEnter, onMouseLeave, className, size = 28, animateOnHover, ...props }, ref) => {
     const controls = useAnimation();
     const isControlledRef = useRef(false);
 

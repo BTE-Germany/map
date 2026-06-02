@@ -1,6 +1,8 @@
+import { log } from 'console';
 import NextAuth, { AuthOptions, Session, getServerSession } from 'next-auth';
 import { JWT } from 'next-auth/jwt';
 import KeycloakProvider from 'next-auth/providers/keycloak';
+import { signOut } from 'next-auth/react';
 import process from 'process';
 
 /**
@@ -10,19 +12,30 @@ import process from 'process';
  */
 const refreshAccessToken = async (token: JWT) => {
     try {
-        if (Date.now() < token.refreshTokenExpired) throw Error;
+        if (!token.refreshToken) {
+            console.error('[Auth] Missing refresh token');
+            throw new Error('Missing refresh token');
+        }
+
+        if (token.refreshTokenExpired && Date.now() >= token.refreshTokenExpired) {
+            console.error('[Auth] Refresh token has expired');
+            throw new Error('Refresh token expired');
+        }
+
         const details = {
             client_id: process.env.KEYCLOAK_CLIENT_ID,
             client_secret: process.env.KEYCLOAK_CLIENT_SECRET,
             grant_type: 'refresh_token',
             refresh_token: token.refreshToken,
         };
+
         const formBody: string[] = [];
         Object.entries(details).forEach(([key, value]: [string, string | undefined]) => {
             const encodedKey = encodeURIComponent(key);
             const encodedValue = encodeURIComponent(value ?? '');
             formBody.push(encodedKey + '=' + encodedValue);
         });
+
         const formData = formBody.join('&');
         const url = `${process.env.KEYCLOAK_URL}/protocol/openid-connect/token`;
         const response = await fetch(url, {
@@ -32,17 +45,33 @@ const refreshAccessToken = async (token: JWT) => {
             },
             body: formData,
         });
+
         const refreshedTokens = await response.json();
-        if (!response.ok) throw refreshedTokens;
+
+        if (!response.ok) {
+            console.error('[Auth] Failed to refresh token:', refreshedTokens);
+            throw refreshedTokens;
+        }
+
+        const refreshedAccessExpiresIn = refreshedTokens.expires_in ?? 0;
+        const refreshedRefreshExpiresIn = refreshedTokens.refresh_expires_in ?? 0;
+
+        const nextRefreshExpiry = refreshedRefreshExpiresIn
+            ? Date.now() + (refreshedRefreshExpiresIn - 15) * 1000
+            : token.refreshTokenExpired;
+
+        console.log('[Auth] Token refreshed successfully');
+
         return {
             ...token,
             accessToken: refreshedTokens.access_token,
-            accessTokenExpired: Date.now() + (refreshedTokens.expires_in - 15) * 1000,
+            accessTokenExpired: Date.now() + (refreshedAccessExpiresIn - 15) * 1000,
             refreshToken: refreshedTokens.refresh_token ?? token.refreshToken,
-            refreshTokenExpired: Date.now() + (refreshedTokens.refresh_expires_in - 15) * 1000,
+            refreshTokenExpired: nextRefreshExpiry,
+            error: undefined,
         };
     } catch (error) {
-        console.log(error);
+        console.error('[Auth] Error refreshing access token:', error);
         return {
             ...token,
             error: 'RefreshAccessTokenError',
@@ -50,8 +79,11 @@ const refreshAccessToken = async (token: JWT) => {
     }
 };
 
+const isSecureCookies = (process.env.NEXTAUTH_URL ?? '').startsWith('https://');
+
 export const authOptions: AuthOptions = {
     secret: process.env.NEXTAUTH_SECRET,
+    useSecureCookies: isSecureCookies,
     pages: {
         signIn: "/auth/signin",
     },
@@ -79,27 +111,60 @@ export const authOptions: AuthOptions = {
             }
         },
 
-        jwt: async ({ token, account, user }) => {
+        jwt: async ({ token, account, user, trigger }) => {
+            // Session update triggered by useSession().update()
+            if (trigger === "update" && token.accessToken) {
+                try {
+                    const userInfoRes = await fetch(
+                        `${process.env.KEYCLOAK_URL}/protocol/openid-connect/userinfo`,
+                        { headers: { Authorization: `Bearer ${token.accessToken}` } }
+                    );
+                    if (userInfoRes.ok) {
+                        const userInfo = await userInfoRes.json();
+                        token.user = { ...(token.user as object), ...userInfo };
+                    }
+                } catch (e) {
+                    console.error('[Auth] Failed to refresh user info on update:', e);
+                }
+                return token;
+            }
+
             // Initial sign in
             if (account && user) {
                 // Add access_token, refresh_token and expirations to the token right after signin
+                const accessExpiresIn = account.expires_in ?? 0;
+                const refreshExpiresIn = account.refresh_expires_in ?? 0;
+
+                console.log('[Auth] Initial sign in, setting up tokens');
+
                 token.accessToken = account.access_token;
                 token.refreshToken = account.refresh_token;
-                token.accessTokenExpired = Date.now() + (account.expires_in - 15) * 1000;
-                token.refreshTokenExpired = Date.now() + (account.refresh_expires_in - 15) * 1000;
+                token.accessTokenExpired = Date.now() + (accessExpiresIn - 15) * 1000;
+                token.refreshTokenExpired = refreshExpiresIn
+                    ? Date.now() + (refreshExpiresIn - 15) * 1000
+                    : undefined;
                 token.user = user;
                 return token;
             }
-            // Return previous token if the access token has not expired yet
-            if (Date.now() < token.accessTokenExpired || token.accessTokenExpired == null) return token;
 
-            console.log('Access token has expired, trying to refresh it');
+            // Return previous token if the access token has not expired yet
+            if (token.accessTokenExpired && Date.now() < token.accessTokenExpired) {
+                return token;
+            }
 
             // Access token has expired, try to update it
+            console.log('[Auth] Access token expired, attempting refresh');
             return refreshAccessToken(token);
         },
         session: async ({ session, token }: { session: Session; token: JWT }) => {
             if (token) {
+                // If refresh token failed, force logout by setting error
+                if (token.error === 'RefreshAccessTokenError') {
+                    console.error('[Auth] Refresh token error detected, forcing logout');
+                    session.error = 'RefreshAccessTokenError';
+                    return session;
+                }
+
                 // @ts-expect-error shut up typescript
                 session.user = token.user;
                 session.error = token.error;

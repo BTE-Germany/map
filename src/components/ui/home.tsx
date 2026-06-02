@@ -13,6 +13,7 @@ export interface HomeIconHandle {
 
 interface HomeIconProps extends HTMLAttributes<HTMLDivElement> {
   size?: number;
+  animateOnHover?: boolean;
 }
 
 const defaultTransition: Transition = {
@@ -32,7 +33,7 @@ const pathVariants: Variants = {
 };
 
 const HomeIcon = forwardRef<HomeIconHandle, HomeIconProps>(
-  ({ onMouseEnter, onMouseLeave, className, size = 28, ...props }, ref) => {
+  ({ onMouseEnter, onMouseLeave, className, size = 28, animateOnHover, ...props }, ref) => {
     const controls = useAnimation();
     const isControlledRef = useRef(false);
 

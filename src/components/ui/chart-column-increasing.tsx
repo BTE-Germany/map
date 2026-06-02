@@ -13,6 +13,7 @@ export interface ChartColumnIncreasingIconHandle {
 interface ChartColumnIncreasingIconProps
   extends HTMLAttributes<HTMLDivElement> {
   size?: number;
+  animateOnHover?: boolean;
 }
 
 const lineVariants: Variants = {
@@ -23,7 +24,7 @@ const lineVariants: Variants = {
 const ChartColumnIncreasingIcon = forwardRef<
   ChartColumnIncreasingIconHandle,
   ChartColumnIncreasingIconProps
->(({ onMouseEnter, onMouseLeave, className, size = 28, ...props }, ref) => {
+>(({ onMouseEnter, onMouseLeave, className, size = 28, animateOnHover, ...props }, ref) => {
   const controls = useAnimation();
   const isControlledRef = useRef(false);
 

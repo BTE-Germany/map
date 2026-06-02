@@ -1,0 +1,14 @@
+.git
+.github
+.idea
+.claude
+.next
+node_modules
+build-debug.log
+npm-debug.log
+pnpm-debug.log
+.env
+.env.*
+!.env.example
+*.tsbuildinfo
+Dockerfile

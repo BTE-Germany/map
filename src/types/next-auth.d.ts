@@ -27,6 +27,7 @@ declare module 'next-auth' {
             email: string;
             username: string;
             minecraft_uuid?: string;
+            discord_username?: string;
             id: string;
             realm_access: {
                 roles: string[];
@@ -37,8 +38,8 @@ declare module 'next-auth' {
                 };
             };
         };
-        accessToken: string;
-        error: string;
+        accessToken?: string;
+        error?: string;
     }
     /**
      * The shape of the user object returned in the OAuth providers' `profile` callback,
@@ -95,17 +96,14 @@ declare module 'next-auth' {
 declare module 'next-auth/jwt' {
     /** Returned by the `jwt` callback and `getToken`, when using JWT sessions */
     interface JWT {
-        name: string;
-        email: string;
-        sub: string;
-        name: string;
-        email: string;
-        sub: string;
-        accessToken: string;
-        refreshToken: string;
-        accessTokenExpired: number;
-        refreshTokenExpired: number;
-        user: User;
-        error: string;
+        name?: string;
+        email?: string;
+        sub?: string;
+        accessToken?: string;
+        refreshToken?: string;
+        accessTokenExpired?: number;
+        refreshTokenExpired?: number;
+        user?: User;
+        error?: string;
     }
 }

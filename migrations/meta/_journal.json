@@ -1,0 +1,27 @@
+{
+  "version": "7",
+  "dialect": "postgresql",
+  "entries": [
+    {
+      "idx": 0,
+      "version": "7",
+      "when": 1774383014272,
+      "tag": "0000_add_landuse_column",
+      "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1777057310955,
+      "tag": "0001_mixed_the_hand",
+      "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1780338600000,
+      "tag": "0002_mc_server_tokens",
+      "breakpoints": true
+    }
+  ]
+}

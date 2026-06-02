@@ -13,6 +13,7 @@ export interface ChartPieIconHandle {
 
 interface ChartPieIconProps extends HTMLAttributes<HTMLDivElement> {
   size?: number;
+  animateOnHover?: boolean;
 }
 
 const pathVariants: Variants = {
@@ -21,7 +22,7 @@ const pathVariants: Variants = {
 };
 
 const ChartPieIcon = forwardRef<ChartPieIconHandle, ChartPieIconProps>(
-  ({ onMouseEnter, onMouseLeave, className, size = 28, ...props }, ref) => {
+  ({ onMouseEnter, onMouseLeave, className, size = 28, animateOnHover, ...props }, ref) => {
     const controls = useAnimation();
     const isControlledRef = useRef(false);
 

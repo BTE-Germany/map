@@ -1,13 +1,12 @@
-import type {Metadata} from "next";
-import {Geist, Geist_Mono, Outfit} from "next/font/google";
+import type { Metadata } from "next";
+import { Geist, Geist_Mono, Outfit } from "next/font/google";
 import "./globals.css";
-import '@mantine/core/styles.css';
 
-import {ColorSchemeScript, mantineHtmlProps, MantineProvider} from '@mantine/core';
-import mantineTheme from "@/lib/mantineTheme";
 import QueryWrapper from "@/components/common/QueryWrapper";
-import {getSession} from "@/lib/auth";
+import { getSession } from "@/lib/auth";
 import AuthProvider from "@/components/common/AuthProvider";
+import NextTopLoader from 'nextjs-toploader';
+import { Toaster } from "@/components/ui/sonner"
 
 
 const geistSans = Geist({
@@ -32,29 +31,26 @@ export const metadata: Metadata = {
 
 
 export default async function RootLayout({
-                                       children,
-                                   }: Readonly<{
+    children,
+}: Readonly<{
     children: React.ReactNode;
 }>) {
 
     const session = await getSession();
 
     return (
-        <html lang="en" {...mantineHtmlProps}>
-        <head>
-            <ColorSchemeScript/>
-        </head>
-        <body
-            className={`${geistSans.variable} ${outfit.variable} ${geistMono.variable} antialiased dark`}
-        >
-        <AuthProvider session={session}>
-        <QueryWrapper>
-
-            <MantineProvider theme={mantineTheme}>{children}</MantineProvider>
-        </QueryWrapper>
-        </AuthProvider>
-
-        </body>
+        <html lang="en" className="dark bg-background text-foreground">
+            <body
+                className={`${geistSans.variable} ${outfit.variable} ${geistMono.variable} antialiased bg-background`}
+            >
+                <NextTopLoader color="#2476f7" height={2} />
+                <AuthProvider session={session}>
+                    <QueryWrapper>
+                        {children}
+                    </QueryWrapper>
+                </AuthProvider>
+                <Toaster />
+            </body>
         </html>
     );
 }

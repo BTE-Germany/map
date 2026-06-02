@@ -1,7 +1,7 @@
-import {create} from 'zustand'
-import {devtools} from 'zustand/middleware'
-import {LngLatBounds} from "maplibre-gl";
+import { create } from 'zustand'
+import { devtools } from 'zustand/middleware'
 
+export type BoundsTuple = [number, number, number, number];
 
 interface RegionPaneStore {
     open: boolean,
@@ -9,20 +9,20 @@ interface RegionPaneStore {
     openRegion: (region: string) => void,
     setOpen: (open: boolean) => void,
     setRegion: (region: any) => void,
-    restoreBox: LngLatBounds | null
-    setRestoreBox: (restoreBox: LngLatBounds) => void
+    restoreBox: BoundsTuple | null
+    setRestoreBox: (restoreBox: BoundsTuple) => void
 }
 
 const useRegionPane = create<RegionPaneStore>()(devtools((set) => ({
     open: false,
     region: null,
     openRegion: (region: string) => {
-        set({region, open: true})
+        set({ region, open: true })
     },
-    setOpen: (open: boolean) => set({open}),
-    setRegion: (region: any) => set({region}),
+    setOpen: (open: boolean) => set({ open }),
+    setRegion: (region: any) => set({ region }),
     restoreBox: null,
-    setRestoreBox: (restoreBox: LngLatBounds) => set({restoreBox})
+    setRestoreBox: (restoreBox: BoundsTuple) => set({ restoreBox })
 })))
 
 export default useRegionPane
