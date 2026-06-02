@@ -1,4 +1,4 @@
-CREATE TABLE "region_images" (
+CREATE TABLE IF NOT EXISTS "region_images" (
 	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
 	"region_id" uuid NOT NULL,
 	"uploader_uuid" uuid NOT NULL,
