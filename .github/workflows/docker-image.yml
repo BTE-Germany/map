@@ -17,6 +17,9 @@ permissions:
   contents: read
   packages: write
 
+env:
+  PLATFORMS: linux/amd64,linux/arm64
+
 concurrency:
   group: docker-image-${{ github.ref }}
   cancel-in-progress: true
@@ -35,6 +38,7 @@ jobs:
         run: echo "IMAGE_NAME=ghcr.io/${GITHUB_REPOSITORY,,}" >> "$GITHUB_ENV"
 
       - name: Set up QEMU
+        if: contains(env.PLATFORMS, 'arm64') || contains(env.PLATFORMS, 'arm/')
         uses: docker/setup-qemu-action@v3
 
       - name: Set up Docker Buildx
@@ -64,7 +68,7 @@ jobs:
         with:
           context: .
           file: ./Dockerfile
-          platforms: linux/amd64,linux/arm64
+          platforms: ${{ env.PLATFORMS }}
           push: ${{ github.event_name != 'pull_request' }}
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}

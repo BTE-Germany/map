@@ -1,22 +1,24 @@
+# syntax=docker/dockerfile:1.7
+
 # Multi-stage build for Next.js
 FROM node:20-alpine AS base
 RUN apk add --no-cache libc6-compat \
     && corepack enable \
     && corepack prepare pnpm@10.5.2 --activate
 WORKDIR /app
+RUN pnpm config set store-dir /pnpm/store
 
 FROM base AS deps
 COPY package.json pnpm-lock.yaml ./
-RUN pnpm install --frozen-lockfile
+RUN --mount=type=cache,id=pnpm-store,target=/pnpm/store pnpm install --frozen-lockfile
 
 FROM deps AS builder
 COPY . .
 ENV NEXT_TELEMETRY_DISABLED=1
-RUN pnpm build
+RUN --mount=type=cache,id=next-cache,target=/app/.next/cache pnpm build
 
-FROM base AS prod-deps
-COPY package.json pnpm-lock.yaml ./
-RUN pnpm install --prod --frozen-lockfile
+FROM deps AS prod-deps
+RUN pnpm prune --prod
 
 FROM node:20-alpine AS runner
 RUN apk add --no-cache libc6-compat \
