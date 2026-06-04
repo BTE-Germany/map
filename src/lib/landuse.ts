@@ -108,6 +108,8 @@ export async function fetchLandUseStats(polygon: [number, number][]): Promise<La
 );
 out geom;`;
 
+    console.log("[landuse] fetching stats with query:", query);
+
     const { data } = await axios.post(
         process.env.OVERPASS_API_URL!,
         `data=${encodeURIComponent(query)}`,

@@ -16,6 +16,9 @@ export async function fetchBuildingCount(polygon: [number, number][]): Promise<n
 );
 out count;`;
 
+    console.log("[buildings] fetching count with query:", query);
+
+
     try {
         const res = await axios.post(
             process.env.OVERPASS_API_URL!,
