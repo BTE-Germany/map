@@ -8,7 +8,7 @@ import axios from "axios";
 export async function fetchBuildingCount(polygon: [number, number][]): Promise<number> {
     const poly = polygon.map((coord) => coord.join(" ")).join(" ");
 
-    const query = `[out:json][timeout:25];
+    const query = `[out:json][timeout:120];
 (
   node["building"]["building"!~"grandstand"]["building"!~"roof"](poly:"${poly}");
   way["building"]["building"!~"grandstand"]["building"!~"roof"](poly:"${poly}");

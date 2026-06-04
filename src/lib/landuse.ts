@@ -97,7 +97,7 @@ export async function fetchLandUseStats(polygon: [number, number][]): Promise<La
     const PAD = 0.01; // ~1 km
     const bbox = `${Math.min(...lats) - PAD},${Math.min(...lons) - PAD},${Math.max(...lats) + PAD},${Math.max(...lons) + PAD}`;
 
-    const query = `[out:json][timeout:30];
+    const query = `[out:json][timeout:120];
 (
   way${LANDUSE_FILTER}(${bbox});
   way${NATURAL_FILTER}(${bbox});
