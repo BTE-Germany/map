@@ -2,10 +2,16 @@ import { AnimatePresence, motion } from "motion/react";
 import {
     HouseIcon, LandPlotIcon, XIcon, MapPinIcon,
     CalendarIcon, CheckCircle2Icon, ClockIcon, LayersIcon, ArrowRightIcon, PencilRulerIcon,
-    Loader2, NavigationIcon,
+    Loader2, NavigationIcon, Trash2Icon, AlertTriangleIcon,
 } from "lucide-react";
 import { toast } from "sonner";
+import { useQueryClient } from "@tanstack/react-query";
 import { teleportToRegion } from "@/actions/teleport/Teleport";
+import { deleteRegion } from "@/actions/region/DeleteRegion";
+import {
+    AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
+    AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { useMap } from "@vis.gl/react-maplibre";
 import type { LngLatBounds } from "maplibre-gl";
 import { useEffect, useRef, useState } from "react";
@@ -295,7 +301,31 @@ export default function RegionPane() {
     const canEditShape = (isCreator || isAdmin) && !isLoading;
     const can3D = hasPermission(roles, PERMISSIONS.MAP_3D_VIEW);
     const hasMcLink = !!sessionData?.user?.minecraft_uuid;
+    const canDelete = (isCreator || isAdmin) && !isLoading;
     const [isTeleporting, setIsTeleporting] = useState(false);
+    const [isDeleting, setIsDeleting] = useState(false);
+    const [confirmDelete, setConfirmDelete] = useState(false);
+    const queryClient = useQueryClient();
+
+    async function handleDelete() {
+        if (!region) return;
+        setIsDeleting(true);
+        try {
+            await deleteRegion(region.id);
+            toast.success("Region gelöscht.");
+            setConfirmDelete(false);
+            regionPageStore.setOpen(false);
+            await Promise.all([
+                queryClient.invalidateQueries({ queryKey: ["regions"] }),
+                queryClient.invalidateQueries({ queryKey: ["regions_geojson"] }),
+                queryClient.invalidateQueries({ queryKey: ["region", region.id] }),
+            ]);
+        } catch (e: unknown) {
+            toast.error(e instanceof Error ? e.message : "Löschen fehlgeschlagen");
+        } finally {
+            setIsDeleting(false);
+        }
+    }
 
     async function handleTeleport() {
         if (!region) return;
@@ -633,6 +663,30 @@ export default function RegionPane() {
                                 </button>
                             )}
 
+                            {/* Delete button (creator or admin) */}
+                            {canDelete && region && (
+                                <button
+                                    onClick={() => setConfirmDelete(true)}
+                                    disabled={isDeleting}
+                                    className="flex items-center justify-between w-full rounded-2xl bg-red-500/10 hover:bg-red-500/15 border border-red-500/20 px-5 py-3.5 transition-colors group disabled:opacity-60"
+                                >
+                                    <div className="flex items-center gap-2.5">
+                                        {isDeleting ? (
+                                            <Loader2 size={14} className="animate-spin text-red-400" />
+                                        ) : (
+                                            <Trash2Icon size={14} className="text-red-400" />
+                                        )}
+                                        <span className="text-sm font-semibold text-red-300">
+                                            {isDeleting ? "Wird gelöscht…" : "Region löschen"}
+                                        </span>
+                                    </div>
+                                    <ArrowRightIcon
+                                        size={15}
+                                        className="text-red-400 group-hover:translate-x-0.5 transition-transform"
+                                    />
+                                </button>
+                            )}
+
                             {/* Region detail page link */}
                             {!isLoading && regionPageStore.region && (
                                 <Link
@@ -670,6 +724,31 @@ export default function RegionPane() {
                     </motion.div>
                 </motion.div>
             )}
+
+            <AlertDialog open={confirmDelete} onOpenChange={(open) => !open && setConfirmDelete(false)}>
+                <AlertDialogContent>
+                    <AlertDialogHeader>
+                        <AlertDialogTitle className="flex items-center gap-2">
+                            <AlertTriangleIcon className="size-4 text-red-400" />
+                            Region wirklich löschen?
+                        </AlertDialogTitle>
+                        <AlertDialogDescription>
+                            <strong>{region?.address || "Diese Region"}</strong> wird unwiderruflich entfernt —
+                            inklusive aller hochgeladenen Bilder. Diese Aktion lässt sich nicht rückgängig machen.
+                        </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                        <AlertDialogCancel disabled={isDeleting}>Abbrechen</AlertDialogCancel>
+                        <AlertDialogAction
+                            onClick={handleDelete}
+                            disabled={isDeleting}
+                            className="bg-red-500 hover:bg-red-600 text-white"
+                        >
+                            {isDeleting ? "Wird gelöscht…" : "Endgültig löschen"}
+                        </AlertDialogAction>
+                    </AlertDialogFooter>
+                </AlertDialogContent>
+            </AlertDialog>
         </AnimatePresence>
     );
 }

@@ -6,6 +6,7 @@ import {
     TypeDonutChart,
 } from "@/components/stats/StatsCharts";
 import RankingSection from "@/components/stats/RankingSection";
+import ExtendedRankingTable from "@/components/stats/ExtendedRankingTable";
 import { stateCodeToName } from "@/lib/federalStates";
 import {
     BASE_POINTS_PER_1000_SQM,
@@ -147,6 +148,9 @@ export default async function StatsPage() {
 
             {/* Hero: Ranglisten (Punkte / Fläche / Gebäude) */}
             <RankingSection players={stats.ranking} />
+
+            {/* Vollständige sortierbare Tabelle mit eigener Position */}
+            <ExtendedRankingTable players={stats.ranking} />
 
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
                 <SectionCard
