@@ -12,6 +12,7 @@ import RegionQueryParamSync from "@/components/map/RegionQueryParamSync";
 import WelcomeScreen from "@/components/welcome/WelcomeScreen";
 import SearchDialog from "@/components/search/SearchDialog";
 import SearchShortcut from "@/components/search/SearchShortcut";
+import StreetLevelFeature from "@/components/map/street-level/StreetLevelFeature";
 
 export default function Home() {
     return (
@@ -29,6 +30,7 @@ export default function Home() {
                 <Suspense fallback={null}>
                     <RegionQueryParamSync />
                 </Suspense>
+                <StreetLevelFeature />
             </MapProvider>
         </div>
     );

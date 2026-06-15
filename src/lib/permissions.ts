@@ -7,6 +7,7 @@ export const PERMISSIONS = {
     SERVERS_MANAGE: "servers:manage",
     MAP_3D_VIEW: "map:3d_view",
     MAP_STYLES: "map:styles",
+    MAP_STREET_LEVEL_VIEW: "map:street_level_view",
 } as const;
 
 export type Permission = typeof PERMISSIONS[keyof typeof PERMISSIONS];
@@ -22,6 +23,7 @@ const ROLE_PERMISSIONS: Record<string, Permission[]> = {
         PERMISSIONS.SERVERS_MANAGE,
         PERMISSIONS.MAP_3D_VIEW,
         PERMISSIONS.MAP_STYLES,
+        PERMISSIONS.MAP_STREET_LEVEL_VIEW,
     ],
     moderator: [
         PERMISSIONS.ADMIN_ACCESS,
@@ -31,6 +33,7 @@ const ROLE_PERMISSIONS: Record<string, Permission[]> = {
     plus: [
         PERMISSIONS.MAP_3D_VIEW,
         PERMISSIONS.MAP_STYLES,
+        PERMISSIONS.MAP_STREET_LEVEL_VIEW,
     ],
 };
 

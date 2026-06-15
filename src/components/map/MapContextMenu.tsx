@@ -4,8 +4,10 @@ import { useEffect, useRef, useState } from "react";
 import { useMap } from "@vis.gl/react-maplibre";
 import { useSession } from "next-auth/react";
 import { toast } from "sonner";
-import { Copy, ExternalLink, Loader2, MapPin, NavigationIcon } from "lucide-react";
+import { Copy, ExternalLink, Loader2, LockIcon, MapPin, NavigationIcon, PersonStanding } from "lucide-react";
 import { teleportToCoordinates } from "@/actions/teleport/Teleport";
+import useStreetLevelStore from "@/stores/StreetLevelStore";
+import { hasPermission, PERMISSIONS } from "@/lib/permissions";
 
 interface MenuState {
     lng: number;
@@ -22,10 +24,13 @@ export default function MapContextMenu() {
     const { mainMap: map } = useMap();
     const session = useSession();
     const hasMcLink = !!session.data?.user?.minecraft_uuid;
+    const roles = session.data?.user?.realm_access?.roles ?? [];
+    const canUseStreetLevel = hasPermission(roles, PERMISSIONS.MAP_STREET_LEVEL_VIEW);
 
     const [menu, setMenu] = useState<MenuState | null>(null);
     const [isTeleporting, setIsTeleporting] = useState(false);
     const menuRef = useRef<HTMLDivElement>(null);
+    const openStreetLevel = useStreetLevelStore((state) => state.openAt);
 
     useEffect(() => {
         if (!map) return;
@@ -143,6 +148,26 @@ export default function MapContextMenu() {
             >
                 <Copy size={14} className="text-neutral-400" />
                 <span className="text-neutral-200">Koordinaten kopieren</span>
+            </button>
+
+            <button
+                onClick={() => {
+                    if (!canUseStreetLevel) return;
+                    openStreetLevel({ lat, lng });
+                    setMenu(null);
+                }}
+                disabled={!canUseStreetLevel}
+                title={canUseStreetLevel ? undefined : "Plus-Rang erforderlich"}
+                className="w-full flex items-center gap-2.5 px-3 py-2.5 hover:bg-blue-500/10 transition-colors text-left disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:bg-transparent"
+            >
+                {canUseStreetLevel ? (
+                    <PersonStanding size={14} className="text-blue-400" />
+                ) : (
+                    <LockIcon size={14} className="text-neutral-500" />
+                )}
+                <span className="text-neutral-200">
+                    Street View / Look Around{canUseStreetLevel ? "" : " (Plus)"}
+                </span>
             </button>
 
             <div className="border-t border-white/[0.06]">

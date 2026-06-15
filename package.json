@@ -8,6 +8,10 @@
     "build": "next build",
     "start": "next start",
     "db:migrate": "node scripts/migrate.mjs",
+    "migrate:v2": "node scripts/migrate-v2.mjs all",
+    "migrate:v2:dry-run": "node scripts/migrate-v2.mjs all --dry-run",
+    "migrate:v2:test": "node --test scripts/migrate-v2.test.mjs",
+    "migrate:v2:verify": "node scripts/migrate-v2.mjs verify",
     "lint": "next lint"
   },
   "dependencies": {

@@ -1,5 +1,5 @@
 import { useMap } from "@vis.gl/react-maplibre";
-import { EyeIcon, EyeOffIcon, InfoIcon, LockIcon, MapIcon, MinusIcon, PlusIcon } from "lucide-react";
+import { EyeIcon, EyeOffIcon, InfoIcon, LockIcon, MapIcon, MinusIcon, PersonStanding, PlusIcon } from "lucide-react";
 import { useEffect, useState } from "react";
 import { Popover, PopoverContent, PopoverTrigger } from "../ui/popover";
 
@@ -17,6 +17,7 @@ import { Badge } from "../ui/badge";
 import { Tooltip, TooltipContent, TooltipTrigger } from "../ui/tooltip";
 import { useSession } from "next-auth/react";
 import { hasPermission, PERMISSIONS } from "@/lib/permissions";
+import useStreetLevelStore from "@/stores/StreetLevelStore";
 
 const stylePreviewImages: Record<MapStyleId, StaticImageData> = {
     default: defaultImage,
@@ -31,6 +32,9 @@ export default function MapControls() {
     const hidePlayers = useMapOverlayStore((state) => state.hidePlayers);
     const togglePlayers = useMapOverlayStore((state) => state.togglePlayers);
     const styleAttributions = getMapAttributionsById(styleId);
+    const isSelectingStreetLevel = useStreetLevelStore((state) => state.isSelecting);
+    const startSelectingStreetLevel = useStreetLevelStore((state) => state.startSelecting);
+    const cancelSelectingStreetLevel = useStreetLevelStore((state) => state.cancelSelecting);
 
     const [mapHeading, setMapHeading] = useState<number>(0);
     const [isDragging, setIsDragging] = useState<boolean>(false);
@@ -41,6 +45,7 @@ export default function MapControls() {
 
     const roles = session.data?.user?.realm_access?.roles ?? [];
     const canChangeStyle = hasPermission(roles, PERMISSIONS.MAP_STYLES);
+    const canUseStreetLevel = hasPermission(roles, PERMISSIONS.MAP_STREET_LEVEL_VIEW);
 
     useEffect(() => {
         if (!map) return;
@@ -183,6 +188,39 @@ export default function MapControls() {
                     </TooltipTrigger>
                     <TooltipContent side="left">
                         <p>{hidePlayers ? "Spieler einblenden" : "Spieler ausblenden"}</p>
+                    </TooltipContent>
+                </Tooltip>
+
+                <Tooltip>
+                    <TooltipTrigger asChild>
+                        <button
+                            type="button"
+                            onClick={isSelectingStreetLevel ? cancelSelectingStreetLevel : startSelectingStreetLevel}
+                            disabled={!canUseStreetLevel}
+                            className={cn(
+                                "p-2 transition-colors group cursor-pointer",
+                                isSelectingStreetLevel
+                                    ? "bg-blue-500/25 text-blue-200 hover:bg-blue-500/35"
+                                    : "hover:bg-neutral-950/60",
+                                !canUseStreetLevel && "cursor-not-allowed opacity-50 hover:bg-transparent",
+                            )}
+                            aria-pressed={isSelectingStreetLevel}
+                        >
+                            {canUseStreetLevel ? (
+                                <PersonStanding className="group-active:scale-[95%] transition-transform [animation-duration:0.1s]" />
+                            ) : (
+                                <LockIcon />
+                            )}
+                        </button>
+                    </TooltipTrigger>
+                    <TooltipContent side="left">
+                        <p>
+                            {!canUseStreetLevel
+                                ? "Street View / Look Around - Plus-Feature"
+                                : isSelectingStreetLevel
+                                    ? "Standortauswahl abbrechen"
+                                    : "Street View / Look Around"}
+                        </p>
                     </TooltipContent>
                 </Tooltip>
 

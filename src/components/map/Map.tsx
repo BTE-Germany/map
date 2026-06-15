@@ -12,6 +12,7 @@ import RegionShapeEditor from "./RegionShapeEditor";
 import LivePlayersLayer from "./LivePlayersLayer";
 import { getMapStyleById } from "@/lib/mapStyles";
 import maplibregl from "maplibre-gl";
+import useStreetLevelStore from "@/stores/StreetLevelStore";
 
 const mapboxAccessToken = process.env.NEXT_PUBLIC_MAPBOX_ACCESS_TOKEN;
 
@@ -34,6 +35,7 @@ export default function Map() {
         bearing: 0,
         pitch: 0
     });
+    const isSelectingStreetLevel = useStreetLevelStore((state) => state.isSelecting);
 
     useEffect(() => {
         hydrateStyleId();
@@ -98,6 +100,10 @@ export default function Map() {
         if (!isEngineReady || !map) return;
 
         const handleMapClick = (e: any) => {
+            if (isSelectingStreetLevel) {
+                return;
+            }
+
             const features = map.queryRenderedFeatures(e.point, {
                 layers: ['region-layer']
             });
@@ -127,7 +133,7 @@ export default function Map() {
             map.off('mouseenter', 'region-layer', handleMouseEnter);
             map.off('mouseleave', 'region-layer', handleMouseLeave);
         };
-    }, [isEngineReady, map, regionPane]);
+    }, [isEngineReady, isSelectingStreetLevel, map, regionPane]);
 
     // Colors matching the WelcomeScreen legend:
     // red   = event

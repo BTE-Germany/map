@@ -65,6 +65,19 @@ For Mapbox-based map styles, set your public access token:
 NEXT_PUBLIC_MAPBOX_ACCESS_TOKEN=your_mapbox_access_token
 ```
 
+The embedded street-level viewer uses the official Google Maps JavaScript API
+and Apple MapKit JS 5:
+
+```bash
+NEXT_PUBLIC_GOOGLE_MAPS_API_KEY=your_browser_api_key
+APPLE_MAPS_TOKEN=your_mapkit_js_token
+```
+
+Enable the Maps JavaScript API for the Google key and restrict it to the
+application's HTTP referrers. The Apple Maps token must include the production
+and development origins that are allowed to load MapKit JS. It is delivered to
+MapKit JS through `/api/maps/apple-token` with `no-store` caching.
+
 In local development, place it in `mapv3/.env.local`.
 
 You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.

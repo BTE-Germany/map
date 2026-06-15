@@ -2,38 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { Loader2, CuboidIcon, AlertTriangleIcon } from "lucide-react";
-
-declare global {
-    interface Window {
-        google: any;
-        __gmaps3dLoader?: Promise<void>;
-    }
-}
-
-function loadGoogleMaps(apiKey: string): Promise<void> {
-    if (typeof window === "undefined") return Promise.reject(new Error("no window"));
-    if (window.__gmaps3dLoader) return window.__gmaps3dLoader;
-    window.__gmaps3dLoader = new Promise<void>((resolve, reject) => {
-        const existing = document.querySelector<HTMLScriptElement>(
-            "script[data-gmaps3d]",
-        );
-        if (existing) {
-            existing.addEventListener("load", () => resolve());
-            existing.addEventListener("error", () => reject(new Error("load error")));
-            if ((window as any).google?.maps) resolve();
-            return;
-        }
-        const s = document.createElement("script");
-        s.src = `https://maps.googleapis.com/maps/api/js?key=${apiKey}&v=beta&libraries=maps3d`;
-        s.async = true;
-        s.defer = true;
-        s.dataset.gmaps3d = "true";
-        s.onload = () => resolve();
-        s.onerror = () => reject(new Error("Google Maps failed to load"));
-        document.head.appendChild(s);
-    });
-    return window.__gmaps3dLoader;
-}
+import { loadGoogleMaps } from "@/lib/googleMapsBrowser";
 
 type LatLng = [number, number]; // [lat, lng]
 
@@ -64,13 +33,11 @@ export default function Region3DMap({
         setStatus("loading");
         setErrorMsg(null);
 
-        loadGoogleMaps(apiKey)
-            .then(async () => {
+        loadGoogleMaps()
+            .then(async (maps) => {
                 if (cancelled || !containerRef.current) return;
                 try {
-                    const maps3d = await (window as any).google.maps.importLibrary(
-                        "maps3d",
-                    );
+                    const maps3d = await maps.importLibrary("maps3d") as any;
                     const { Map3DElement, Polygon3DElement, AltitudeMode } = maps3d;
 
                     // Compute centroid + range based on polygon bounding box.
