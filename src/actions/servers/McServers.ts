@@ -4,8 +4,8 @@ import { randomBytes } from "crypto";
 import { asc, eq } from "drizzle-orm";
 import db from "@/db/drizzle";
 import { mcServer } from "@/db/schema";
-import { getSession } from "@/lib/auth";
-import { hasPermission, PERMISSIONS } from "@/lib/permissions";
+import { requirePermission } from "@/lib/guards";
+import { PERMISSIONS } from "@/lib/permissions";
 import { hashToken } from "@/lib/mcAuth";
 
 export interface McServerSummary {
@@ -19,11 +19,7 @@ export interface McServerSummary {
 }
 
 async function requireAdmin(): Promise<void> {
-    const session = await getSession();
-    const roles = session?.user?.realm_access?.roles ?? [];
-    if (!hasPermission(roles, PERMISSIONS.SERVERS_MANAGE)) {
-        throw new Error("Not authorized");
-    }
+    await requirePermission(PERMISSIONS.SERVERS_MANAGE);
 }
 
 const KEY_PATTERN = /^[a-z0-9][a-z0-9-_]{0,62}[a-z0-9]$/;

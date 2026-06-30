@@ -7,6 +7,8 @@ import {
   normalizeUuid,
   parseArgs,
   parsePolygon,
+  resolveCreatorUuid,
+  summarizeAwsError,
 } from "./migrate-v2.mjs";
 
 test("normalizeUuid accepts dashed and compact UUIDs", () => {
@@ -52,6 +54,21 @@ test("legacyObjectKey supports path-style MinIO URLs", () => {
   );
 });
 
+test("summarizeAwsError keeps useful S3 diagnostics", () => {
+  assert.equal(
+    summarizeAwsError({
+      name: "UnknownError",
+      message: "socket hang up",
+      $metadata: {
+        httpStatusCode: 403,
+        requestId: "request-1",
+        extendedRequestId: "extended-1",
+      },
+    }),
+    "UnknownError socket hang up http=403 requestId=request-1 extendedRequestId=extended-1",
+  );
+});
+
 test("makeRegionRecord maps legacy fields and builders", () => {
   const regionId = "123e4567-e89b-12d3-a456-426614174000";
   const creator = "123e4567-e89b-12d3-a456-426614174001";
@@ -91,6 +108,76 @@ test("makeRegionRecord maps legacy fields and builders", () => {
   assert.deepEqual(result.builders, [builder]);
   assert.equal(result.finished, true);
   assert.deepEqual(result.polygon.at(-1), result.polygon[0]);
+});
+
+test("legacy EVENT and PLOT markers produce typed regions with valid creators", () => {
+  const previous = process.env.MIGRATION_SYSTEM_CREATOR_UUID;
+  delete process.env.MIGRATION_SYSTEM_CREATOR_UUID;
+  const baseRow = {
+    id: "123e4567-e89b-12d3-a456-426614174010",
+    ownerMinecraftUUID: null,
+    description: "",
+    data: "[[52,13],[52.1,13],[52.1,13.1]]",
+    city: "Berlin",
+    osmDisplayName: "Berlin, Deutschland",
+    area: 100,
+    buildings: 0,
+    createdAt: new Date("2024-01-01T00:00:00Z"),
+    lastModified: new Date("2024-01-01T00:00:00Z"),
+    isEventRegion: 0,
+    isPlotRegion: 0,
+    isFinished: 0,
+  };
+
+  try {
+    const event = makeRegionRecord(
+      { ...baseRow, userUUID: "EVENT" },
+      new Map(),
+    );
+    const plot = makeRegionRecord(
+      {
+        ...baseRow,
+        id: "123e4567-e89b-12d3-a456-426614174011",
+        userUUID: "plot",
+      },
+      new Map(),
+    );
+
+    assert.equal(event.type, "event");
+    assert.equal(event.creatorUUID, "00000000-0000-0000-0000-000000000001");
+    assert.equal(plot.type, "plot");
+    assert.equal(plot.creatorUUID, "00000000-0000-0000-0000-000000000002");
+  } finally {
+    if (previous === undefined) {
+      delete process.env.MIGRATION_SYSTEM_CREATOR_UUID;
+    } else {
+      process.env.MIGRATION_SYSTEM_CREATOR_UUID = previous;
+    }
+  }
+});
+
+test("legacy markers prefer owner and configured creator UUIDs", () => {
+  const owner = "123e4567-e89b-12d3-a456-426614174020";
+  assert.equal(
+    resolveCreatorUuid({ userUUID: "EVENT", ownerMinecraftUUID: owner }),
+    owner,
+  );
+
+  const previous = process.env.MIGRATION_SYSTEM_CREATOR_UUID;
+  process.env.MIGRATION_SYSTEM_CREATOR_UUID =
+    "123e4567-e89b-12d3-a456-426614174021";
+  try {
+    assert.equal(
+      resolveCreatorUuid({ userUUID: "PLOT", ownerMinecraftUUID: null }),
+      "123e4567-e89b-12d3-a456-426614174021",
+    );
+  } finally {
+    if (previous === undefined) {
+      delete process.env.MIGRATION_SYSTEM_CREATOR_UUID;
+    } else {
+      process.env.MIGRATION_SYSTEM_CREATOR_UUID = previous;
+    }
+  }
 });
 
 test("parseArgs supports modes and dry-run", () => {

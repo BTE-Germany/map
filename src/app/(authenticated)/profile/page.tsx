@@ -1,12 +1,10 @@
 import {
+    getCreatorScalarStats,
     getMostPopularStateByCreator,
-    getRegionCountByCreator,
-    getRegionTotalSizeByCreator,
-    getRegionsByCreatorAsGeoJSON,
     getRegionStatsByStateByCreator,
-    getTotalBuildingsByCreator,
     getRegionsByCreator,
 } from "@/actions/region/GetRegions";
+import { regionsToCreatorGeoJSON } from "@/lib/regionGeo";
 import { getSession } from "@/lib/auth";
 import { stateCodeToName } from "@/lib/federalStates";
 import { Building2, CheckCircle2, Circle, LandPlot, Map, MapPin } from "lucide-react";
@@ -28,25 +26,19 @@ export default async function ProfilePage() {
     const session = await getSession();
     const uuid = session?.user.minecraft_uuid || "";
 
-    const [
-        totalRegions,
-        finishedRegions,
-        totalFinishedArea,
-        mostPopularState,
-        geoJSON,
-        stateStats,
-        totalBuildings,
-        recentRegions,
-    ] = await Promise.all([
-        getRegionCountByCreator(uuid),
-        getRegionCountByCreator(uuid, true),
-        getRegionTotalSizeByCreator(uuid, true),
+    // Four headline numbers in one query; the creator's rows fetched ONCE and
+    // reused for both the mini-map geojson and the "recent" cards.
+    const [scalarStats, mostPopularState, regions, stateStats] = await Promise.all([
+        getCreatorScalarStats(uuid),
         getMostPopularStateByCreator(uuid, true),
-        getRegionsByCreatorAsGeoJSON(uuid),
+        getRegionsByCreator(uuid),
         getRegionStatsByStateByCreator(uuid),
-        getTotalBuildingsByCreator(uuid),
-        getRegionsByCreator(uuid).then(r => r?.slice(0, 4) ?? []),
     ]);
+
+    const { totalRegions, finishedRegions, totalFinishedArea, totalBuildings } = scalarStats;
+    const allRegions = regions ?? [];
+    const geoJSON = regionsToCreatorGeoJSON(allRegions);
+    const recentRegions = allRegions.slice(0, 4);
 
     const finishedPct = totalRegions > 0 ? Math.round((finishedRegions / totalRegions) * 100) : 0;
 

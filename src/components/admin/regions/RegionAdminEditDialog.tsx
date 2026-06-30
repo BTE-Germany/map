@@ -14,7 +14,7 @@ import {
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
-import { adminUpdateRegion, type AdminUpdateRegionInput } from "@/actions/region/AdminUpdateRegion";
+import { adminUpdateRegion } from "@/actions/region/AdminUpdateRegion";
 import getUser, { type Player } from "@/actions/minecraft/user";
 import { AnimatePresence, motion } from "motion/react";
 
@@ -125,7 +125,7 @@ export default function RegionAdminEditDialog({ region, open, onOpenChange, onSa
                     .map((p) => ({ uuid: p.raw_id, username: p.username, avatar: p.avatar }))
             );
         });
-    }, [open, region]); // eslint-disable-line react-hooks/exhaustive-deps
+    }, [open, region]);
 
     const isDirty = region
         ? address !== region.address ||

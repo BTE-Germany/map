@@ -7,26 +7,27 @@ import { useAllRegionsAsGeoJSON } from "@/dataHooks/regions/useAllRegions";
 import { useEffect, useState } from "react";
 import useRegionPane from "@/stores/RegionPaneStore";
 import useMapStyleStore from "@/stores/MapStyleStore";
-import useRegionShapeEdit from "@/stores/RegionShapeEditStore";
 import RegionShapeEditor from "./RegionShapeEditor";
 import LivePlayersLayer from "./LivePlayersLayer";
 import { getMapStyleById } from "@/lib/mapStyles";
+import { getPublicRuntimeConfig } from "@/lib/publicRuntimeConfig";
 import maplibregl from "maplibre-gl";
 import useStreetLevelStore from "@/stores/StreetLevelStore";
-
-const mapboxAccessToken = process.env.NEXT_PUBLIC_MAPBOX_ACCESS_TOKEN;
 
 export default function Map() {
 
     const { data: regionGeoJSON, isLoading } = useAllRegionsAsGeoJSON();
     const { mainMap: map } = useMap();
-    const regionPane = useRegionPane();
+    // Select only the (stable) action so this component doesn't re-render — and
+    // the click handler doesn't re-bind — whenever unrelated store fields change.
+    const openRegion = useRegionPane((s) => s.openRegion);
     const styleId = useMapStyleStore((state) => state.styleId);
     const hydrateStyleId = useMapStyleStore((state) => state.hydrateStyleId);
     const mapStyle = getMapStyleById(styleId);
     const isMapboxStyle = typeof mapStyle === "string" && mapStyle.startsWith("mapbox://");
     const [mapLib, setMapLib] = useState<any>(maplibregl);
     const [activeEngine, setActiveEngine] = useState<"maplibre" | "mapbox">("maplibre");
+    const [mapboxAccessToken, setMapboxAccessToken] = useState("");
     const [isStyleReady, setIsStyleReady] = useState<boolean>(false);
     const [viewState, setViewState] = useState({
         longitude: 10.447683,
@@ -51,24 +52,30 @@ export default function Map() {
                 return;
             }
 
-            const mapboxModule = await import("mapbox-gl");
+            const [mapboxModule, runtimeConfig] = await Promise.all([
+                import("mapbox-gl"),
+                getPublicRuntimeConfig(),
+            ]);
+            if (!isMounted) return;
+
             const mapboxgl = mapboxModule.default;
-            if (mapboxAccessToken) {
-                mapboxgl.accessToken = mapboxAccessToken;
+            if (runtimeConfig.mapboxAccessToken) {
+                mapboxgl.accessToken = runtimeConfig.mapboxAccessToken;
             }
 
-            if (isMounted) {
-                setMapLib(mapboxgl);
-                setActiveEngine("mapbox");
-            }
+            setMapboxAccessToken(runtimeConfig.mapboxAccessToken);
+            setMapLib(mapboxgl);
+            setActiveEngine("mapbox");
         };
 
-        resolveMapLib();
+        resolveMapLib().catch((error) => {
+            console.error("Mapbox konnte nicht initialisiert werden:", error);
+        });
 
         return () => {
             isMounted = false;
         };
-    }, [isMapboxStyle, mapboxAccessToken]);
+    }, [isMapboxStyle]);
 
     const isEngineReady = isMapboxStyle ? activeEngine === "mapbox" : activeEngine === "maplibre";
 
@@ -111,7 +118,7 @@ export default function Map() {
                 return;
             }
 
-            regionPane.openRegion(features[0].properties.id);
+            openRegion(features[0].properties.id);
         };
 
         map.on('click', handleMapClick);
@@ -133,7 +140,7 @@ export default function Map() {
             map.off('mouseenter', 'region-layer', handleMouseEnter);
             map.off('mouseleave', 'region-layer', handleMouseLeave);
         };
-    }, [isEngineReady, isSelectingStreetLevel, map, regionPane]);
+    }, [isEngineReady, isSelectingStreetLevel, map, openRegion]);
 
     // Colors matching the WelcomeScreen legend:
     // red   = event

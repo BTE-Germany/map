@@ -85,6 +85,15 @@ export function bearerFromRequest(req: Request): string | null {
 }
 
 export async function requireMcAuth(req: Request): Promise<McAuthContext> {
+    // Optional mTLS gate (no-op unless MC_REQUIRE_MTLS_HEADER=1 is configured).
+    const mtls = checkMtlsHeader(req);
+    if (!mtls.ok) {
+        throw new Response(JSON.stringify({ error: "Forbidden", reason: mtls.reason }), {
+            status: 403,
+            headers: { "content-type": "application/json" },
+        });
+    }
+
     const ctx = await verifyMcToken(bearerFromRequest(req));
     if (!ctx) {
         throw new Response(JSON.stringify({ error: "Unauthorized" }), {

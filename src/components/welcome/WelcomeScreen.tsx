@@ -4,12 +4,10 @@ import {
     Dialog,
     DialogClose,
     DialogContent,
-    DialogDescription,
     DialogFooter,
     DialogHeader,
     DialogOverlay,
     DialogTitle,
-    DialogTrigger,
 } from "@/components/ui/dialog"
 
 import Image from "next/image";

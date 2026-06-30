@@ -13,7 +13,6 @@ import useMapStyleStore from "@/stores/MapStyleStore";
 import useMapOverlayStore from "@/stores/MapOverlayStore";
 import { getMapAttributionsById, MAP_STYLES, type MapStyleId } from "@/lib/mapStyles";
 import type { StaticImageData } from "next/image";
-import { Badge } from "../ui/badge";
 import { Tooltip, TooltipContent, TooltipTrigger } from "../ui/tooltip";
 import { useSession } from "next-auth/react";
 import { hasPermission, PERMISSIONS } from "@/lib/permissions";

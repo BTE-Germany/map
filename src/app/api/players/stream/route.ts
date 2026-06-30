@@ -60,14 +60,23 @@ async function snapshot(): Promise<unknown> {
 export async function GET(req: NextRequest) {
     const encoder = new TextEncoder();
 
-    let tickTimer: ReturnType<typeof setInterval> | null = null;
+    let tickTimer: ReturnType<typeof setTimeout> | null = null;
     let keepaliveTimer: ReturnType<typeof setInterval> | null = null;
+    let stopped = false;
+
+    const cleanup = () => {
+        stopped = true;
+        if (tickTimer) clearTimeout(tickTimer);
+        if (keepaliveTimer) clearInterval(keepaliveTimer);
+        tickTimer = null;
+        keepaliveTimer = null;
+    };
 
     const stream = new ReadableStream({
         async start(controller) {
             let closed = false;
             const safeEnqueue = (chunk: string) => {
-                if (closed) return;
+                if (closed || stopped) return;
                 try {
                     controller.enqueue(encoder.encode(chunk));
                 } catch {
@@ -76,11 +85,23 @@ export async function GET(req: NextRequest) {
                 }
             };
 
-            const cleanup = () => {
-                if (tickTimer) clearInterval(tickTimer);
-                if (keepaliveTimer) clearInterval(keepaliveTimer);
-                tickTimer = null;
-                keepaliveTimer = null;
+            // Self-scheduling tick: the next snapshot is only scheduled once the
+            // current one settles, so a slow DB can't queue overlapping ticks.
+            const scheduleTick = () => {
+                if (stopped || closed) return;
+                tickTimer = setTimeout(async () => {
+                    try {
+                        const snap = await snapshot();
+                        safeEnqueue(`event: snapshot\ndata: ${JSON.stringify(snap)}\n\n`);
+                    } catch (e) {
+                        // Keep the connection alive on transient errors; log the
+                        // real cause server-side rather than leaking it to clients.
+                        console.error("[players/stream] snapshot failed:", e);
+                        safeEnqueue(`: error\n\n`);
+                    } finally {
+                        scheduleTick();
+                    }
+                }, TICK_MS);
             };
 
             // Suggest reconnect delay to the browser's EventSource.
@@ -90,19 +111,11 @@ export async function GET(req: NextRequest) {
             try {
                 const first = await snapshot();
                 safeEnqueue(`event: snapshot\ndata: ${JSON.stringify(first)}\n\n`);
-            } catch {
-                // ignore — we'll retry on the next tick
+            } catch (e) {
+                console.error("[players/stream] initial snapshot failed:", e);
             }
 
-            tickTimer = setInterval(async () => {
-                try {
-                    const snap = await snapshot();
-                    safeEnqueue(`event: snapshot\ndata: ${JSON.stringify(snap)}\n\n`);
-                } catch (e) {
-                    // Send a comment so the connection stays alive even on transient errors.
-                    safeEnqueue(`: error ${(e as Error)?.message ?? "unknown"}\n\n`);
-                }
-            }, TICK_MS);
+            scheduleTick();
 
             keepaliveTimer = setInterval(() => {
                 safeEnqueue(`: ping\n\n`);
@@ -119,8 +132,7 @@ export async function GET(req: NextRequest) {
             });
         },
         cancel() {
-            if (tickTimer) clearInterval(tickTimer);
-            if (keepaliveTimer) clearInterval(keepaliveTimer);
+            cleanup();
         },
     });
 

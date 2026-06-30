@@ -1,9 +1,12 @@
-"use server"
+"use server";
 
-import { getSession } from "@/lib/auth";
 import { region } from "@/db/schema";
 import db from "@/db/drizzle";
 import { eq } from "drizzle-orm";
+import { assertUuid, requireRegionAccess } from "@/lib/guards";
+import { PERMISSIONS } from "@/lib/permissions";
+
+const MAX_BUILDERS = 50;
 
 export async function updateRegion({
     regionId,
@@ -16,23 +19,19 @@ export async function updateRegion({
     finished: boolean;
     builders: string[];
 }) {
-    const session = await getSession();
-    if (!session?.user?.minecraft_uuid) {
-        throw new Error("Not authenticated");
+    // Creator or any user with REGIONS_EDIT may update the region.
+    await requireRegionAccess(regionId, PERMISSIONS.REGIONS_EDIT);
+
+    if (builders.length > MAX_BUILDERS) {
+        throw new Error(`Maximal ${MAX_BUILDERS} Builder pro Region.`);
     }
+    const normalizedBuilders = Array.from(
+        new Set(builders.map((b) => assertUuid(b, "Builder-UUID"))),
+    );
 
-    const existing = await db
-        ?.select({ creatorUUID: region.creatorUUID })
-        .from(region)
-        .where(eq(region.id, regionId))
-        .limit(1)
-        .then((r) => r[0]);
-
-    if (!existing) throw new Error("Region not found");
-    if (existing.creatorUUID !== session.user.minecraft_uuid) {
-        throw new Error("Not authorized");
-    }
-
-    await db?.update(region).set({ description, finished, builders }).where(eq(region.id, regionId));
+    await db
+        .update(region)
+        .set({ description, finished, builders: normalizedBuilders })
+        .where(eq(region.id, regionId));
     return { success: true };
 }

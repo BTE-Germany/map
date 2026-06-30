@@ -19,14 +19,7 @@ export default function Region3DMap({
     );
     const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
-    const apiKey = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY;
-
     useEffect(() => {
-        if (!apiKey) {
-            setStatus("error");
-            setErrorMsg("Google Maps API-Key fehlt");
-            return;
-        }
         if (!polygon?.length || !containerRef.current) return;
 
         let cancelled = false;
@@ -117,7 +110,7 @@ export default function Region3DMap({
         return () => {
             cancelled = true;
         };
-    }, [apiKey, polygon]);
+    }, [polygon]);
 
     return (
         <div className={className}>

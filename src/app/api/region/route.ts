@@ -2,18 +2,25 @@ import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { eq } from "drizzle-orm";
 import * as turf from "@turf/turf";
-import axios from "axios";
 import { Language, PlaceType2 } from "@googlemaps/google-maps-services-js";
 import db from "@/db/drizzle";
 import { region } from "@/db/schema";
 import { requireMcAuth, type McAuthContext } from "@/lib/mcAuth";
 import { fetchLandUseStats } from "@/lib/landuse";
+import { fetchBuildingCount } from "@/lib/buildings";
+import { closePolygon } from "@/lib/geo";
+import { getErrorMessage } from "@/lib/errors";
 import gMapsClient from "@/lib/googleMaps";
 
 export const runtime = "nodejs";
 
+const latLng = z.tuple([
+    z.number().min(-90).max(90),
+    z.number().min(-180).max(180),
+]);
+
 const bodySchema = z.object({
-    polygon: z.array(z.tuple([z.number(), z.number()])).min(3),
+    polygon: z.array(latLng).min(3).max(1000),
     creatorUUID: z.uuid(),
 });
 
@@ -35,14 +42,6 @@ const STATE_NAME_TO_CODE: Record<string, string> = {
     "Schleswig-Holstein": "SH",
     "Thüringen": "TH",
 };
-
-function closePolygon(coords: [number, number][]): [number, number][] {
-    if (coords.length < 2) return coords;
-    const first = coords[0];
-    const last = coords[coords.length - 1];
-    if (first[0] === last[0] && first[1] === last[1]) return coords;
-    return [...coords, first];
-}
 
 async function authOrThrow(req: NextRequest): Promise<McAuthContext | NextResponse> {
     try {
@@ -86,38 +85,9 @@ async function geocodeCenter(polygonLatLng: [number, number][]): Promise<Geocode
             city,
             state,
         };
-    } catch (err: any) {
-        console.error("[region] reverse geocode failed:", err?.message);
+    } catch (err: unknown) {
+        console.error("[region] reverse geocode failed:", getErrorMessage(err));
         return { address: "", city: "Unbekannt", state: "" };
-    }
-}
-
-async function countBuildings(polygonLatLng: [number, number][]): Promise<number> {
-    const poly = polygonLatLng.map((coord) => coord.join(" ")).join(" ");
-    const query = `[out:json][timeout:25];
-(
-  node["building"]["building"!~"grandstand"]["building"!~"roof"](poly:"${poly}");
-  way["building"]["building"!~"grandstand"]["building"!~"roof"](poly:"${poly}");
-  relation["building"]["building"!~"grandstand"]["building"!~"roof"](poly:"${poly}");
-);
-out count;`;
-
-    try {
-        const res = await axios.post(
-            process.env.OVERPASS_API_URL!,
-            `data=${encodeURIComponent(query)}`,
-            {
-                headers: {
-                    "Content-Type": "application/x-www-form-urlencoded",
-                    apikey: process.env.OVERPASS_API_KEY,
-                },
-                timeout: 30_000,
-            },
-        );
-        return parseInt(res.data?.elements?.[0]?.tags?.total) || 0;
-    } catch (err: any) {
-        console.error("[region] building count failed:", err?.message);
-        return 0;
     }
 }
 
@@ -135,24 +105,22 @@ export async function POST(req: NextRequest) {
     let parsed: z.infer<typeof bodySchema>;
     try {
         parsed = bodySchema.parse(await req.json());
-    } catch (e: any) {
-        return NextResponse.json(
-            { error: "Invalid body", details: e?.issues ?? e?.message },
-            { status: 400 },
-        );
+    } catch (e: unknown) {
+        console.error("[region] invalid body:", getErrorMessage(e));
+        return NextResponse.json({ error: "Invalid body" }, { status: 400 });
     }
 
     const polygon = closePolygon(parsed.polygon as [number, number][]);
     const turfPolygon = turf.polygon([polygon.map(([lat, lng]) => [lng, lat])]);
     const area = turf.area(turfPolygon);
 
-    const [meta, buildings] = await Promise.all([
-        geocodeCenter(polygon),
-        countBuildings(polygon),
-    ]);
+    // Only the geocode (fast, ~100-300ms) blocks the plugin's response. Building
+    // count and landuse are slow Overpass calls, so they run fire-and-forget and
+    // backfill the row afterwards (buildings defaults to 0 in the schema).
+    const meta = await geocodeCenter(polygon);
 
     try {
-        const inserted = await db!
+        const inserted = await db
             .insert(region)
             .values({
                 polygon,
@@ -163,16 +131,19 @@ export async function POST(req: NextRequest) {
                 city: meta.city,
                 state: meta.state,
                 area: area.toFixed(2),
-                buildings,
             })
             .returning({ id: region.id });
 
         const regionId = inserted[0].id;
 
-        // Fire-and-forget; never blocks the plugin's response.
+        // Fire-and-forget; never block the plugin's response on Overpass.
+        fetchBuildingCount(polygon)
+            .then((buildings) => db.update(region).set({ buildings }).where(eq(region.id, regionId)))
+            .catch((err) => console.error(`[region] building count failed for ${regionId}:`, getErrorMessage(err)));
+
         fetchLandUseStats(polygon)
-            .then((landuse) => db!.update(region).set({ landuse }).where(eq(region.id, regionId)))
-            .catch((err) => console.error(`[region] landuse fetch failed for ${regionId}:`, err.message));
+            .then((landuse) => db.update(region).set({ landuse }).where(eq(region.id, regionId)))
+            .catch((err) => console.error(`[region] landuse fetch failed for ${regionId}:`, getErrorMessage(err)));
 
         return NextResponse.json({ id: regionId }, { status: 201 });
     } catch (err) {

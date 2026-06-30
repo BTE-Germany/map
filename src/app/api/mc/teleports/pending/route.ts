@@ -86,11 +86,8 @@ export async function POST(req: NextRequest) {
     let parsed: z.infer<typeof AckBody>;
     try {
         parsed = AckBody.parse(await req.json());
-    } catch (e: any) {
-        return NextResponse.json(
-            { error: "Invalid body", details: e?.issues ?? e?.message },
-            { status: 400 },
-        );
+    } catch {
+        return NextResponse.json({ error: "Invalid body" }, { status: 400 });
     }
 
     const now = new Date();

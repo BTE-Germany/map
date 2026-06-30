@@ -44,7 +44,15 @@ function PlayerMarker({ uuid, username }: { uuid: string; username: string }) {
                 title={username}
             >
                 {avatar ? (
-                    <img src={avatar} alt={username} className="size-full object-cover" />
+                    <img
+                        src={avatar}
+                        alt={username}
+                        className="size-full object-cover"
+                        onError={(e) => {
+                            const fallback = `https://minotar.net/helm/${uuid}/64`;
+                            if (e.currentTarget.src !== fallback) e.currentTarget.src = fallback;
+                        }}
+                    />
                 ) : (
                     <div className="size-full bg-neutral-800" />
                 )}

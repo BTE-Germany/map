@@ -1,4 +1,5 @@
 import axios from "axios";
+import { getErrorMessage } from "@/lib/errors";
 
 /**
  * Zählt die Anzahl Gebäude innerhalb eines Polygons via Overpass.
@@ -16,8 +17,9 @@ export async function fetchBuildingCount(polygon: [number, number][]): Promise<n
 );
 out count;`;
 
-    console.log("[buildings] fetching count with query:", query);
-
+    if (process.env.DEBUG_OVERPASS) {
+        console.log("[buildings] fetching count with query:", query);
+    }
 
     try {
         const res = await axios.post(
@@ -32,8 +34,8 @@ out count;`;
             }
         );
         return parseInt(res.data?.elements?.[0]?.tags?.total) || 0;
-    } catch (err: any) {
-        console.error("[buildings] count failed:", err?.message ?? err);
+    } catch (err: unknown) {
+        console.error("[buildings] count failed:", getErrorMessage(err));
         return 0;
     }
 }

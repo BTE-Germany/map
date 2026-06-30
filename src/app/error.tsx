@@ -51,11 +51,16 @@ export default function Error({
             <p className="text-muted-foreground">Das Kompetenzteam arbeitet bereits an einer Lösung.</p>
             <pre className="text-xs mt-4 bg-card rounded-lg p-2">{error.message}</pre>
 
-            <Link href="/">
-                <Button variant="secondary" className="mt-6">
-                    Zur Startseite
+            <div className="flex gap-3 mt-6">
+                <Button variant="default" onClick={() => reset()}>
+                    Erneut versuchen
                 </Button>
-            </Link>
+                <Link href="/">
+                    <Button variant="secondary">
+                        Zur Startseite
+                    </Button>
+                </Link>
+            </div>
         </div>
     );
 }

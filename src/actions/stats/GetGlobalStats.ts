@@ -2,7 +2,6 @@
 
 import db from "@/db/drizzle";
 import { region, type LandUseStats } from "@/db/schema";
-import { count, desc, sum } from "drizzle-orm";
 import { aggregatePlayerScores, type PlayerScore, type ScoringRegion } from "@/lib/scoring";
 
 export interface GlobalStats {
@@ -34,7 +33,25 @@ export interface GlobalStats {
 }
 
 export async function getGlobalStats(): Promise<GlobalStats> {
-    const all = await db!.select().from(region);
+    // Select only the columns the aggregation/scoring actually reads. In
+    // particular this drops the heavy `polygon` JSON (never used here), which is
+    // by far the largest column, from the wire for every region.
+    const all = await db!
+        .select({
+            id: region.id,
+            finished: region.finished,
+            area: region.area,
+            buildings: region.buildings,
+            creatorUUID: region.creatorUUID,
+            builders: region.builders,
+            state: region.state,
+            type: region.type,
+            createdAt: region.createdAt,
+            landuse: region.landuse,
+            address: region.address,
+            city: region.city,
+        })
+        .from(region);
 
     const totals = {
         regions: all.length,

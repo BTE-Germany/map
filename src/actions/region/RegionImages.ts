@@ -1,10 +1,10 @@
 "use server";
 
 import { randomUUID } from "crypto";
-import { and, asc, eq } from "drizzle-orm";
+import { asc, count, eq } from "drizzle-orm";
 import db from "@/db/drizzle";
 import { region, regionImage } from "@/db/schema";
-import { getSession } from "@/lib/auth";
+import { assertUuid, requireRegionAccess, requireSession } from "@/lib/guards";
 import { hasPermission, PERMISSIONS } from "@/lib/permissions";
 import {
     ALLOWED_IMAGE_MIME_TYPES,
@@ -40,31 +40,17 @@ function toDTO(row: typeof regionImage.$inferSelect): RegionImageDTO {
     };
 }
 
-async function assertCanManageRegion(regionId: string) {
-    const session = await getSession();
-    if (!session?.user) throw new Error("Not authenticated");
-
-    const roles = (session.user as any)?.realm_access?.roles ?? [];
-    const isAdmin = hasPermission(roles, PERMISSIONS.REGIONS_EDIT);
-    const userUuid = (session.user as any)?.minecraft_uuid as string | undefined;
-
-    const existing = await db
-        ?.select({ creatorUUID: region.creatorUUID })
-        .from(region)
-        .where(eq(region.id, regionId))
-        .limit(1)
-        .then((r) => r[0]);
-    if (!existing) throw new Error("Region not found");
-
-    const isCreator = !!userUuid && existing.creatorUUID === userUuid;
-    if (!isCreator && !isAdmin) throw new Error("Not authorized");
-
-    return { userUuid: userUuid ?? "", isAdmin, isCreator };
+async function countRegionImages(regionId: string): Promise<number> {
+    return db
+        .select({ value: count() })
+        .from(regionImage)
+        .where(eq(regionImage.regionId, regionId))
+        .then((r) => r[0]?.value ?? 0);
 }
 
 export async function listRegionImages(regionId: string): Promise<RegionImageDTO[]> {
     if (!regionId) return [];
-    const rows = await db!
+    const rows = await db
         .select()
         .from(regionImage)
         .where(eq(regionImage.regionId, regionId))
@@ -88,7 +74,7 @@ export async function createRegionImageUpload(input: {
         throw new Error("S3 ist auf dem Server nicht konfiguriert.");
     }
 
-    await assertCanManageRegion(input.regionId);
+    await requireRegionAccess(input.regionId, PERMISSIONS.REGIONS_EDIT);
 
     if (!ALLOWED_IMAGE_MIME_TYPES.includes(input.mimeType as AllowedImageMime)) {
         throw new Error(
@@ -104,12 +90,7 @@ export async function createRegionImageUpload(input: {
         );
     }
 
-    const existingCount = await db!
-        .select({ count: regionImage.id })
-        .from(regionImage)
-        .where(eq(regionImage.regionId, input.regionId))
-        .then((r) => r.length);
-    if (existingCount >= MAX_IMAGES_PER_REGION) {
+    if (await countRegionImages(input.regionId) >= MAX_IMAGES_PER_REGION) {
         throw new Error(
             `Maximal ${MAX_IMAGES_PER_REGION} Bilder pro Region. Bitte vorher alte Bilder löschen.`
         );
@@ -132,7 +113,10 @@ export async function finalizeRegionImageUpload(input: {
     key: string;
     originalName?: string;
 }): Promise<RegionImageDTO> {
-    const { userUuid } = await assertCanManageRegion(input.regionId);
+    const { userUuid } = await requireRegionAccess(input.regionId, PERMISSIONS.REGIONS_EDIT);
+    if (!userUuid) {
+        throw new Error("Zum Hochladen muss ein Minecraft-Account verknüpft sein.");
+    }
 
     // Schlüssel muss im Region-Namespace liegen (defensive Check).
     const expectedPrefix = `regions/${input.regionId}/`;
@@ -156,7 +140,14 @@ export async function finalizeRegionImageUpload(input: {
         throw new Error("Hochgeladene Datei hat einen ungültigen Typ.");
     }
 
-    const inserted = await db!
+    // Re-check the per-region cap now that the object exists, deleting the
+    // orphaned upload if a concurrent finalize already filled the quota.
+    if (await countRegionImages(input.regionId) >= MAX_IMAGES_PER_REGION) {
+        await deleteObject(input.key).catch(() => {});
+        throw new Error(`Maximal ${MAX_IMAGES_PER_REGION} Bilder pro Region.`);
+    }
+
+    const inserted = await db
         .insert(regionImage)
         .values({
             regionId: input.regionId,
@@ -172,13 +163,11 @@ export async function finalizeRegionImageUpload(input: {
 }
 
 export async function deleteRegionImage(imageId: string): Promise<{ success: true }> {
-    const session = await getSession();
-    if (!session?.user) throw new Error("Not authenticated");
-    const roles = (session.user as any)?.realm_access?.roles ?? [];
+    assertUuid(imageId, "Bild-ID");
+    const { roles, userUuid } = await requireSession();
     const isAdmin = hasPermission(roles, PERMISSIONS.REGIONS_EDIT);
-    const userUuid = (session.user as any)?.minecraft_uuid as string | undefined;
 
-    const row = await db!
+    const row = await db
         .select()
         .from(regionImage)
         .where(eq(regionImage.id, imageId))
@@ -186,7 +175,7 @@ export async function deleteRegionImage(imageId: string): Promise<{ success: tru
         .then((r) => r[0]);
     if (!row) throw new Error("Bild nicht gefunden");
 
-    const creatorUUID = await db!
+    const creatorUUID = await db
         .select({ creatorUUID: region.creatorUUID })
         .from(region)
         .where(eq(region.id, row.regionId))
@@ -195,9 +184,9 @@ export async function deleteRegionImage(imageId: string): Promise<{ success: tru
 
     const isCreator = !!userUuid && creatorUUID === userUuid;
     const isUploader = !!userUuid && row.uploaderUUID === userUuid;
-    if (!isCreator && !isAdmin && !isUploader) throw new Error("Not authorized");
+    if (!isCreator && !isAdmin && !isUploader) throw new Error("Keine Berechtigung");
 
-    await db!.delete(regionImage).where(eq(regionImage.id, imageId));
+    await db.delete(regionImage).where(eq(regionImage.id, imageId));
     await deleteObject(row.s3Key).catch((err) =>
         console.error(`[regionImages] S3 delete failed for ${row.s3Key}:`, err?.message ?? err)
     );

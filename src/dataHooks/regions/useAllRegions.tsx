@@ -1,9 +1,10 @@
-import {useQuery} from "@tanstack/react-query";
-import {getAllRegions, getAllRegionsAsGeoJSON} from "@/actions/region/GetRegions";
+import { useQuery } from "@tanstack/react-query";
+import { getAllRegionsAsGeoJSON, getRegionsForSearch } from "@/actions/region/GetRegions";
 
-const useAllRegions = () => useQuery({
-    queryKey: ['regions'],
-    queryFn: () => getAllRegions()
+// Minimal, public-safe region list for the search box (no creator/builder UUIDs).
+const useRegionsForSearch = () => useQuery({
+    queryKey: ['regions_search'],
+    queryFn: () => getRegionsForSearch()
 })
 
 const useAllRegionsAsGeoJSON = () => useQuery({
@@ -11,4 +12,4 @@ const useAllRegionsAsGeoJSON = () => useQuery({
     queryFn: () => getAllRegionsAsGeoJSON()
 })
 
-export {useAllRegions, useAllRegionsAsGeoJSON};
+export { useRegionsForSearch, useAllRegionsAsGeoJSON };

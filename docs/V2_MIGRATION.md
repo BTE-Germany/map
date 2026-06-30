@@ -20,6 +20,12 @@ werden geschlossen. Das Bundesland wird, soweit möglich, aus
 `osmDisplayName` abgeleitet. `landuse` bleibt leer und kann anschließend über
 die bestehende Admin-Funktion neu berechnet werden.
 
+Legacy-Regionen mit `userUUID = EVENT` oder `userUUID = PLOT` werden ebenfalls
+unterstützt. Der Marker bestimmt den Regionstyp. Als Creator wird zuerst die
+Minecraft-UUID des verknüpften Besitzers verwendet, danach optional
+`MIGRATION_SYSTEM_CREATOR_UUID`. Falls beides fehlt, nutzt das Skript stabile
+Platzhalter-UUIDs für Event- beziehungsweise Plot-Regionen.
+
 `User`, `LinkCodes` und `InteractiveBuilding` haben im aktuellen Schema kein
 Ziel und werden nicht migriert. Die Benutzerauflösung erfolgt in der aktuellen
 Map über Keycloak und Minecraft-UUIDs.
@@ -67,6 +73,9 @@ hochgeladen. Dadurch kann ein abgebrochener Lauf wiederholt werden.
   erfolgreich hochgeladen und per `HEAD` geprüft wurde.
 - Alte Bild-URLs werden auf ihren Objekt-Key reduziert. Das historische Format
   `<image-id>-<original-name>.webp` wird damit direkt unterstützt.
+- Alte leere `Image`-Zeilen ohne MinIO-Objekt werden übersprungen und separat
+  geloggt. Mit `MIGRATION_SKIP_MISSING_IMAGES=true` können auch kaputte
+  nicht-leere Bildreferenzen übersprungen werden.
 - Der Ziel-Key lautet `regions/<region-id>/<image-id>.<ext>`.
 - Das Skript stoppt die DB-Phase, wenn Regions- oder Minecraft-UUIDs ungültig
   sind. Fehlerhafte Bilder werden vollständig aufgelistet und führen am Ende

@@ -1,7 +1,6 @@
 import { getSession } from "@/lib/auth";
 import { getRegionLanduseStats } from "@/actions/region/GetRegions";
-import { getRegionCountByCreator } from "@/actions/region/GetRegions";
-import { LayoutDashboard, LandPlot, CheckCircle2, AlertCircle } from "lucide-react";
+import { LandPlot, CheckCircle2, AlertCircle } from "lucide-react";
 import Link from "next/link";
 import db from "@/db/drizzle";
 import { region } from "@/db/schema";

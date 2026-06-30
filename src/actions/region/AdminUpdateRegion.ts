@@ -1,10 +1,12 @@
 "use server";
 
-import { getSession } from "@/lib/auth";
-import { hasPermission, PERMISSIONS } from "@/lib/permissions";
 import { region } from "@/db/schema";
 import db from "@/db/drizzle";
 import { eq } from "drizzle-orm";
+import { assertUuid, requirePermission } from "@/lib/guards";
+import { PERMISSIONS } from "@/lib/permissions";
+
+const MAX_BUILDERS = 50;
 
 export interface AdminUpdateRegionInput {
     regionId: string;
@@ -21,27 +23,28 @@ export interface AdminUpdateRegionInput {
 }
 
 export async function adminUpdateRegion(input: AdminUpdateRegionInput) {
-    const session = await getSession();
-    if (!session?.user) throw new Error("Not authenticated");
+    await requirePermission(PERMISSIONS.REGIONS_EDIT);
 
-    const roles = session.user.realm_access?.roles ?? [];
-    if (!hasPermission(roles, PERMISSIONS.REGIONS_EDIT)) {
-        throw new Error("Not authorized");
+    const regionId = assertUuid(input.regionId, "Region-ID");
+    const creatorUUID = assertUuid(input.creatorUUID, "Creator-UUID");
+    if (input.builders.length > MAX_BUILDERS) {
+        throw new Error(`Maximal ${MAX_BUILDERS} Builder pro Region.`);
     }
+    const builders = Array.from(
+        new Set(input.builders.map((b) => assertUuid(b, "Builder-UUID"))),
+    );
 
-    const { regionId, ...fields } = input;
-
-    await db?.update(region).set({
-        description: fields.description,
-        finished: fields.finished,
-        type: fields.type,
-        city: fields.city,
-        state: fields.state,
-        address: fields.address,
-        buildings: fields.buildings,
-        area: fields.area,
-        creatorUUID: fields.creatorUUID,
-        builders: fields.builders,
+    await db.update(region).set({
+        description: input.description,
+        finished: input.finished,
+        type: input.type,
+        city: input.city,
+        state: input.state,
+        address: input.address,
+        buildings: input.buildings,
+        area: input.area,
+        creatorUUID,
+        builders,
     }).where(eq(region.id, regionId));
 
     return { success: true };
