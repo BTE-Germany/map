@@ -1,0 +1,1 @@
+ALTER TABLE "regions" ADD COLUMN "landuse_updated_at" timestamp;

@@ -22,6 +22,8 @@ export const region = pgTable("regions", {
 	area: numeric().notNull(),
 	buildings: integer().default(0).notNull(),
 	landuse: json("landuse").$type<LandUseStats>(),
+	/** When `landuse` was last (re)computed — drives the incremental "stale" refresh. */
+	landuseUpdatedAt: timestamp("landuse_updated_at"),
 	createdAt: timestamp().defaultNow(),
 	modifiedAt: timestamp().defaultNow().$onUpdate(() => new Date()).notNull(),
 	type: regionType().default('default').notNull(),

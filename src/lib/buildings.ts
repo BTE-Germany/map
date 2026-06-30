@@ -9,7 +9,10 @@ import { getErrorMessage } from "@/lib/errors";
 export async function fetchBuildingCount(polygon: [number, number][]): Promise<number> {
     const poly = polygon.map((coord) => coord.join(" ")).join(" ");
 
-    const query = `[out:json][timeout:120];
+    // Server-side timeout kept just under the 30s client timeout so an
+    // over-long query stops server-side rather than holding an Overpass slot
+    // after the client has already aborted.
+    const query = `[out:json][timeout:25];
 (
   node["building"]["building"!~"grandstand"]["building"!~"roof"](poly:"${poly}");
   way["building"]["building"!~"grandstand"]["building"!~"roof"](poly:"${poly}");

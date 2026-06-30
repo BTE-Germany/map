@@ -1,22 +1,37 @@
 import { z } from "zod";
 import { getSession } from "@/lib/auth";
 import { hasPermission, PERMISSIONS } from "@/lib/permissions";
-import { fetchLandUseStats } from "@/lib/landuse";
+import { fetchLandUseElements, computeLandUseStats, unionPaddedBbox } from "@/lib/landuse";
 import { getErrorMessage } from "@/lib/errors";
 import db from "@/db/drizzle";
 import { region } from "@/db/schema";
-import { eq, isNull } from "drizzle-orm";
+import { eq, isNull, lt, or } from "drizzle-orm";
 
-const bodySchema = z.object({ mode: z.enum(["all", "missing"]) });
+const bodySchema = z.object({ mode: z.enum(["all", "missing", "stale"]) });
 
-// Process a few regions at once. Overpass instances have limited query slots,
-// so too much concurrency makes the gateway return 504s — keep this modest and
-// let it be tuned per-instance. Each landuse fetch already retries transient
-// 504/502/503/429 errors with backoff (see lib/overpass.ts).
+// How many Overpass cluster-fetches run at once. Overpass instances have
+// limited query slots, so too much concurrency makes the gateway 504 — keep
+// modest and tunable. Each fetch already retries transient errors (lib/overpass.ts).
 const REFRESH_CONCURRENCY = Math.max(
     1,
     Number(process.env.METADATA_REFRESH_CONCURRENCY) || 2,
 );
+
+// Regions are grouped into grid cells (~degrees) so ONE Overpass query serves a
+// whole cluster instead of one query per region; each region is then clipped
+// locally from the shared element set (identical result, far fewer round-trips).
+const CLUSTER_GRID_DEG = Math.max(0.005, Number(process.env.METADATA_REFRESH_GRID_DEG) || 0.05);
+
+// "stale" mode recomputes regions whose landuse is older than this (or never set).
+const STALE_AFTER_MS = Math.max(1, Number(process.env.METADATA_STALE_DAYS) || 30) * 24 * 60 * 60_000;
+
+function clusterKey(polygon: [number, number][]): string {
+    let lat = 0, lng = 0;
+    for (const [a, b] of polygon) { lat += a; lng += b; }
+    lat /= polygon.length;
+    lng /= polygon.length;
+    return `${Math.floor(lat / CLUSTER_GRID_DEG)}:${Math.floor(lng / CLUSTER_GRID_DEG)}`;
+}
 
 type ProgressEvent =
     | { type: "start"; total: number }
@@ -33,7 +48,7 @@ export async function POST(request: Request) {
         return new Response("Forbidden", { status: 403 });
     }
 
-    let mode: "all" | "missing";
+    let mode: "all" | "missing" | "stale";
     try {
         ({ mode } = bodySchema.parse(await request.json()));
     } catch {
@@ -45,44 +60,74 @@ export async function POST(request: Request) {
     const stream = new ReadableStream({
         async start(controller) {
             try {
-                const rows = mode === "missing"
-                    ? await db?.select({ id: region.id, city: region.city, polygon: region.polygon }).from(region).where(isNull(region.landuse)) ?? []
-                    : await db?.select({ id: region.id, city: region.city, polygon: region.polygon }).from(region) ?? [];
+                const base = () =>
+                    db.select({ id: region.id, city: region.city, polygon: region.polygon }).from(region);
+                const staleCutoff = new Date(Date.now() - STALE_AFTER_MS);
+                const rows =
+                    mode === "missing"
+                        ? await base().where(isNull(region.landuse))
+                        : mode === "stale"
+                            ? await base().where(or(isNull(region.landuseUpdatedAt), lt(region.landuseUpdatedAt, staleCutoff)))
+                            : await base();
 
                 const total = rows.length;
                 controller.enqueue(encoder.encode(sse({ type: "start", total })));
 
+                // Group nearby regions so one Overpass query serves the whole cluster.
+                const clusters = new Map<string, typeof rows>();
+                for (const r of rows) {
+                    const key = clusterKey(r.polygon);
+                    const bucket = clusters.get(key);
+                    if (bucket) bucket.push(r);
+                    else clusters.set(key, [r]);
+                }
+                const clusterList = [...clusters.values()];
+
                 let done = 0;
                 let errors = 0;
-                let next = 0;
+                let nextCluster = 0;
 
-                // Bounded worker pool: each worker pulls the next region until the
-                // queue is drained. Landuse is computed independently per region,
-                // so concurrency does not change any result; the in-flight Overpass
-                // requests are capped at REFRESH_CONCURRENCY instead of a per-item
-                // sleep. `done`/`errors` mutations are safe (single-threaded JS).
+                // Bounded worker pool over CLUSTERS — caps concurrent Overpass
+                // fetches at REFRESH_CONCURRENCY. Per-region clipping is local CPU,
+                // so concurrency never changes a result. `done`/`errors` mutations
+                // are safe (single-threaded JS).
                 const worker = async () => {
                     while (true) {
-                        const i = next++;
-                        if (i >= rows.length) return;
-                        const r = rows[i];
+                        const ci = nextCluster++;
+                        if (ci >= clusterList.length) return;
+                        const members = clusterList[ci];
+
+                        let elements;
                         try {
-                            const landuse = await fetchLandUseStats(r.polygon as [number, number][]);
-                            await db?.update(region).set({ landuse }).where(eq(region.id, r.id));
-                            done++;
-                            controller.enqueue(encoder.encode(sse({ type: "progress", done, total, city: r.city, success: true })));
+                            elements = await fetchLandUseElements(unionPaddedBbox(members.map((m) => m.polygon)));
                         } catch (err) {
-                            done++;
-                            errors++;
-                            // Log the real cause server-side; send only a generic message to the client.
-                            console.error(`[refresh-metadata] failed for region ${r.id} (${r.city}):`, getErrorMessage(err));
-                            controller.enqueue(encoder.encode(sse({ type: "progress", done, total, city: r.city, success: false, error: "Verarbeitung fehlgeschlagen" })));
+                            console.error(`[refresh-metadata] cluster fetch failed (${members.length} regions):`, getErrorMessage(err));
+                            for (const r of members) {
+                                done++;
+                                errors++;
+                                controller.enqueue(encoder.encode(sse({ type: "progress", done, total, city: r.city, success: false, error: "Verarbeitung fehlgeschlagen" })));
+                            }
+                            continue;
+                        }
+
+                        for (const r of members) {
+                            try {
+                                const landuse = computeLandUseStats(r.polygon, elements);
+                                await db.update(region).set({ landuse, landuseUpdatedAt: new Date() }).where(eq(region.id, r.id));
+                                done++;
+                                controller.enqueue(encoder.encode(sse({ type: "progress", done, total, city: r.city, success: true })));
+                            } catch (err) {
+                                done++;
+                                errors++;
+                                console.error(`[refresh-metadata] failed for region ${r.id} (${r.city}):`, getErrorMessage(err));
+                                controller.enqueue(encoder.encode(sse({ type: "progress", done, total, city: r.city, success: false, error: "Verarbeitung fehlgeschlagen" })));
+                            }
                         }
                     }
                 };
 
                 await Promise.all(
-                    Array.from({ length: Math.min(REFRESH_CONCURRENCY, rows.length) }, () => worker()),
+                    Array.from({ length: Math.min(REFRESH_CONCURRENCY, clusterList.length) }, () => worker()),
                 );
 
                 controller.enqueue(encoder.encode(sse({ type: "done", done, total, errors })));

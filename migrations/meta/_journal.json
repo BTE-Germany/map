@@ -29,6 +29,13 @@
       "when": 1782849971276,
       "tag": "0003_perf_indexes",
       "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1782859447927,
+      "tag": "0004_landuse_updated_at",
+      "breakpoints": true
     }
   ]
 }

@@ -142,7 +142,7 @@ export async function POST(req: NextRequest) {
             .catch((err) => console.error(`[region] building count failed for ${regionId}:`, getErrorMessage(err)));
 
         fetchLandUseStats(polygon)
-            .then((landuse) => db.update(region).set({ landuse }).where(eq(region.id, regionId)))
+            .then((landuse) => db.update(region).set({ landuse, landuseUpdatedAt: new Date() }).where(eq(region.id, regionId)))
             .catch((err) => console.error(`[region] landuse fetch failed for ${regionId}:`, getErrorMessage(err)));
 
         return NextResponse.json({ id: regionId }, { status: 201 });

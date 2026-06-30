@@ -38,7 +38,7 @@ export async function updateRegionPolygon(regionId: string, polygon: [number, nu
     // "wird neu berechnet" while the background jobs run.
     await db
         .update(region)
-        .set({ polygon: closed, landuse: null, buildings: 0 })
+        .set({ polygon: closed, landuse: null, landuseUpdatedAt: null, buildings: 0 })
         .where(eq(region.id, regionId));
 
     // Only apply a background recalculation if the polygon still matches the
@@ -58,7 +58,7 @@ export async function updateRegionPolygon(regionId: string, polygon: [number, nu
 
     // Recalculate landuse + buildings in the background — doesn't block the response.
     fetchLandUseStats(closed)
-        .then((landuse) => applyIfUnchanged({ landuse }))
+        .then((landuse) => applyIfUnchanged({ landuse, landuseUpdatedAt: new Date() }))
         .catch((err) =>
             console.error(`[updateRegionPolygon] landuse refresh failed for ${regionId}:`, err.message),
         );

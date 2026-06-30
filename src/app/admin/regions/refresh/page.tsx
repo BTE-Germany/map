@@ -15,7 +15,7 @@ export default function AdminRegionsPage() {
     const abortRef = useRef<AbortController | null>(null);
     const logEndRef = useRef<HTMLDivElement>(null);
 
-    async function startRefresh(mode: "all" | "missing") {
+    async function startRefresh(mode: "all" | "missing" | "stale") {
         if (phase === "running") return;
 
         setPhase("running");
@@ -117,6 +117,14 @@ export default function AdminRegionsPage() {
                     >
                         <RefreshCw className={`size-4 ${phase === "running" ? "animate-spin" : ""}`} />
                         Nur fehlende laden
+                    </button>
+                    <button
+                        onClick={() => startRefresh("stale")}
+                        disabled={phase === "running"}
+                        className="inline-flex items-center gap-2 rounded-lg border border-border bg-muted/30 hover:bg-muted/60 disabled:opacity-50 disabled:cursor-not-allowed px-4 py-2 text-sm transition-colors"
+                    >
+                        <RefreshCw className={`size-4 ${phase === "running" ? "animate-spin" : ""}`} />
+                        Veraltete laden
                     </button>
                     <button
                         onClick={() => startRefresh("all")}
