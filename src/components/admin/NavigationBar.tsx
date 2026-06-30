@@ -38,8 +38,7 @@ export default function AdminNavigationBar() {
             </div>
 
             <nav className="flex-1 p-3 space-y-0.5">
-                {NAV_ITEMS.map(({ href, label, icon: Icon, exact, children }) => {
-                    const active = isActive(href, exact);
+                {NAV_ITEMS.map(({ href, label, icon: Icon, children }) => {
                     const sectionActive = pathname.startsWith(href);
                     return (
                         <div key={href}>

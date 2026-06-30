@@ -1,5 +1,5 @@
 import { sql } from "drizzle-orm"
-import { boolean, integer, json, numeric, pgEnum, pgTable, text, timestamp, uuid, varchar } from "drizzle-orm/pg-core";
+import { boolean, index, integer, json, numeric, pgEnum, pgTable, text, timestamp, uuid, varchar } from "drizzle-orm/pg-core";
 
 export const regionType = pgEnum('region_type', ['default', 'plot', 'event']);
 
@@ -28,7 +28,9 @@ export const region = pgTable("regions", {
 	address: text().default('').notNull(),
 	finished: boolean().default(false).notNull(),
 	builders: json("builders").$type<string[]>(),
-});
+}, (table) => [
+	index("regions_creator_uuid_idx").on(table.creatorUUID),
+]);
 
 export const regionImage = pgTable("region_images", {
 	id: uuid().primaryKey().defaultRandom(),
@@ -39,7 +41,9 @@ export const regionImage = pgTable("region_images", {
 	sizeBytes: integer("size_bytes").notNull(),
 	originalName: varchar("original_name", { length: 256 }),
 	createdAt: timestamp("created_at").defaultNow().notNull(),
-});
+}, (table) => [
+	index("region_images_region_id_idx").on(table.regionId),
+]);
 
 /**
  * A single Minecraft Paper server in the network. The plugin running on it
@@ -92,7 +96,10 @@ export const playerPosition = pgTable("player_positions", {
 	lat: numeric("lat"),
 	lng: numeric("lng"),
 	lastSeenAt: timestamp("last_seen_at").defaultNow().notNull(),
-});
+}, (table) => [
+	index("player_positions_server_last_seen_idx").on(table.serverKey, table.lastSeenAt),
+	index("player_positions_last_seen_idx").on(table.lastSeenAt),
+]);
 
 export const teleportStatus = pgEnum('teleport_status', ['pending', 'delivered', 'failed', 'expired']);
 
@@ -121,5 +128,7 @@ export const teleportRequest = pgTable("teleport_requests", {
 	createdAt: timestamp("created_at").defaultNow().notNull(),
 	deliveredAt: timestamp("delivered_at"),
 	error: text("error"),
-});
+}, (table) => [
+	index("teleport_requests_status_idx").on(table.status),
+]);
 

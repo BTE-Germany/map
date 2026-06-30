@@ -1,29 +1,32 @@
 "use server";
 
-import { eq } from "drizzle-orm";
+import { and, eq, gt } from "drizzle-orm";
 import db from "@/db/drizzle";
 import { region, teleportRequest } from "@/db/schema";
-import { getSession } from "@/lib/auth";
-
-function polygonCenterLatLng(polygon: [number, number][]): [number, number] {
-    let lat = 0;
-    let lng = 0;
-    for (const [a, b] of polygon) {
-        lat += a;
-        lng += b;
-    }
-    return [lat / polygon.length, lng / polygon.length];
-}
-
-async function authedUuid(): Promise<string> {
-    const session = await getSession();
-    const uuid = (session?.user as any)?.minecraft_uuid as string | undefined;
-    if (!uuid) throw new Error("Not authenticated or no Minecraft account linked");
-    return uuid;
-}
+import { assertUuid, requireLinkedUuid } from "@/lib/guards";
+import { polygonCenterLatLng } from "@/lib/geo";
 
 export interface TeleportResponse {
     id: string;
+}
+
+/** Reject a new teleport if the user already queued one in the last few seconds. */
+async function assertNoRecentPending(uuid: string): Promise<void> {
+    const since = new Date(Date.now() - 5_000);
+    const recent = await db
+        .select({ id: teleportRequest.id })
+        .from(teleportRequest)
+        .where(
+            and(
+                eq(teleportRequest.minecraftUUID, uuid),
+                eq(teleportRequest.status, "pending"),
+                gt(teleportRequest.createdAt, since),
+            ),
+        )
+        .limit(1);
+    if (recent.length > 0) {
+        throw new Error("Bitte warte einen Moment, bevor du erneut teleportierst.");
+    }
 }
 
 /**
@@ -36,9 +39,11 @@ export interface TeleportResponse {
  * to MC world coordinates via Terra++.
  */
 export async function teleportToRegion(regionId: string): Promise<TeleportResponse> {
-    const uuid = await authedUuid();
+    const uuid = await requireLinkedUuid();
+    assertUuid(regionId, "Region-ID");
+    await assertNoRecentPending(uuid);
 
-    const r = await db!
+    const r = await db
         .select()
         .from(region)
         .where(eq(region.id, regionId))
@@ -48,7 +53,7 @@ export async function teleportToRegion(regionId: string): Promise<TeleportRespon
 
     const [lat, lng] = polygonCenterLatLng(r.polygon as [number, number][]);
 
-    const inserted = await db!
+    const inserted = await db
         .insert(teleportRequest)
         .values({
             minecraftUUID: uuid,
@@ -68,10 +73,16 @@ export async function teleportToRegion(regionId: string): Promise<TeleportRespon
  * coordinate teleport, not a region teleport.
  */
 export async function teleportToCoordinates(lat: number, lng: number): Promise<TeleportResponse> {
-    if (!Number.isFinite(lat) || !Number.isFinite(lng)) throw new Error("Invalid coordinates");
-    const uuid = await authedUuid();
+    if (
+        !Number.isFinite(lat) || !Number.isFinite(lng) ||
+        lat < -90 || lat > 90 || lng < -180 || lng > 180
+    ) {
+        throw new Error("Invalid coordinates");
+    }
+    const uuid = await requireLinkedUuid();
+    await assertNoRecentPending(uuid);
 
-    const inserted = await db!
+    const inserted = await db
         .insert(teleportRequest)
         .values({
             minecraftUUID: uuid,

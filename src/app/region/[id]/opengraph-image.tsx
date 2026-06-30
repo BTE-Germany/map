@@ -12,36 +12,37 @@ export const size = {
 
 export const contentType = 'image/png'
 
+const UUID_RE =
+    /^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/;
+
+// Load the font files once per process, not on every OG-image request.
+let fontsPromise: Promise<[Buffer, Buffer, Buffer, Buffer]> | null = null;
+function loadFonts(): Promise<[Buffer, Buffer, Buffer, Buffer]> {
+    if (!fontsPromise) {
+        fontsPromise = Promise.all([
+            readFile(join(process.cwd(), 'assets/outfit-v15-latin-500.ttf')),
+            readFile(join(process.cwd(), 'assets/outfit-v15-latin-600.ttf')),
+            readFile(join(process.cwd(), 'assets/outfit-v15-latin-700.ttf')),
+            readFile(join(process.cwd(), 'assets/outfit-v15-latin-800.ttf')),
+        ]);
+    }
+    return fontsPromise;
+}
+
 // Image generation
 export default async function Image({ params }: { params: { id: string } }) {
 
-    const region = await getRegion(params.id);
-    const poly = region?.polygon.map(e => e.reverse().join(",")).join("|");
+    // Region fetch and font loading are independent — run them concurrently.
+    const [region, [outfit500, outfit600, outfit700, outfit800]] = await Promise.all([
+        UUID_RE.test(params.id) ? getRegion(params.id) : Promise.resolve(null),
+        loadFonts(),
+    ]);
+
+    // Build "lng,lat|lng,lat|..." WITHOUT mutating the stored polygon array.
+    const poly = region?.polygon.map(e => `${e[1]},${e[0]}`).join("|");
     const imageUrl = "https://tiles.dachstein.cloud/styles/btedarklight/static/auto/500x630.png?path=" + poly + "&fill=rgba(0,128,255,0.3)&stroke=rgba(0,128,255,1)&strokeWidth=4&padding=0.1"
 
-
     const creator = await getUser(region?.creatorUUID || "");
-
-    const outfitRegular = await readFile(
-        join(process.cwd(), 'assets/outfit-v15-latin-regular.ttf')
-    )
-
-    const outfit500 = await readFile(
-        join(process.cwd(), 'assets/outfit-v15-latin-500.ttf')
-    )
-
-    const outfit600 = await readFile(
-        join(process.cwd(), 'assets/outfit-v15-latin-600.ttf')
-    )
-
-    const outfit700 = await readFile(
-        join(process.cwd(), 'assets/outfit-v15-latin-700.ttf')
-    )
-
-    const outfit800 = await readFile(
-        join(process.cwd(), 'assets/outfit-v15-latin-800.ttf')
-    )
-
 
     return new ImageResponse(
         (

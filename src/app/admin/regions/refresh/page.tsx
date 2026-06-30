@@ -75,9 +75,10 @@ export default function AdminRegionsPage() {
                     } catch {}
                 }
             }
-        } catch (e: any) {
-            if (e?.name !== "AbortError") {
-                setLog(prev => [{ city: `Verbindungsfehler: ${e?.message ?? String(e)}`, success: false }, ...prev]);
+        } catch (e: unknown) {
+            if (!(e instanceof Error) || e.name !== "AbortError") {
+                const message = e instanceof Error ? e.message : String(e);
+                setLog(prev => [{ city: `Verbindungsfehler: ${message}`, success: false }, ...prev]);
                 setPhase("idle");
             }
         }

@@ -15,7 +15,7 @@ import {
 } from "@/components/ui/command";
 import useSearchStore from "@/stores/SearchStore";
 import useRegionPane from "@/stores/RegionPaneStore";
-import { useAllRegions } from "@/dataHooks/regions/useAllRegions";
+import { useRegionsForSearch } from "@/dataHooks/regions/useAllRegions";
 import { usePhotonSearch, formatPhotonLabel, type PhotonFeature } from "@/dataHooks/search/usePhotonSearch";
 import { stateCodeToName } from "@/lib/federalStates";
 
@@ -27,7 +27,6 @@ type Region = {
     description: string | null;
     type: string;
     finished: boolean;
-    polygon: [number, number][];
 };
 
 function useDebounced<T>(value: T, delay = 250): T {
@@ -64,7 +63,7 @@ export default function SearchDialog() {
     const [query, setQuery] = useState("");
     const debouncedQuery = useDebounced(query, 250);
 
-    const { data: regions } = useAllRegions();
+    const { data: regions } = useRegionsForSearch();
     const { data: photonResults, isFetching: isPhotonLoading } = usePhotonSearch(debouncedQuery);
 
     // Reset query when dialog closes

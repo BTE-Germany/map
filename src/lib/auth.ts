@@ -1,8 +1,6 @@
-import { log } from 'console';
-import NextAuth, { AuthOptions, Session, getServerSession } from 'next-auth';
+import { AuthOptions, Session, getServerSession } from 'next-auth';
 import { JWT } from 'next-auth/jwt';
 import KeycloakProvider from 'next-auth/providers/keycloak';
-import { signOut } from 'next-auth/react';
 import process from 'process';
 
 /**
@@ -49,8 +47,9 @@ const refreshAccessToken = async (token: JWT) => {
         const refreshedTokens = await response.json();
 
         if (!response.ok) {
-            console.error('[Auth] Failed to refresh token:', refreshedTokens);
-            throw refreshedTokens;
+            // Never log the raw token response — it can contain access/refresh tokens.
+            console.error('[Auth] Failed to refresh token, status:', response.status);
+            throw new Error(`Token refresh failed (${response.status})`);
         }
 
         const refreshedAccessExpiresIn = refreshedTokens.expires_in ?? 0;
@@ -165,8 +164,12 @@ export const authOptions: AuthOptions = {
                     return session;
                 }
 
-                // @ts-expect-error shut up typescript
-                session.user = token.user;
+                // token.user carries the full Keycloak profile at runtime; its
+                // static type (next-auth's User) under-describes those claims,
+                // so we assert the richer session-user shape here at the boundary.
+                if (token.user) {
+                    session.user = token.user as unknown as Session["user"];
+                }
                 session.error = token.error;
                 session.accessToken = token.accessToken;
             }

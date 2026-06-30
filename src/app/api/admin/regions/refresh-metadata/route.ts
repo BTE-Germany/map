@@ -1,9 +1,18 @@
+import { z } from "zod";
 import { getSession } from "@/lib/auth";
 import { hasPermission, PERMISSIONS } from "@/lib/permissions";
 import { fetchLandUseStats } from "@/lib/landuse";
+import { getErrorMessage } from "@/lib/errors";
 import db from "@/db/drizzle";
 import { region } from "@/db/schema";
 import { eq, isNull } from "drizzle-orm";
+
+const bodySchema = z.object({ mode: z.enum(["all", "missing"]) });
+
+// Process several regions at once. OVERPASS_API_URL is a private, keyed
+// instance (apikey header), so a small pool is safe — sized to that instance's
+// capacity rather than the public "2 slots" fair-use limit.
+const REFRESH_CONCURRENCY = 4;
 
 type ProgressEvent =
     | { type: "start"; total: number }
@@ -20,7 +29,12 @@ export async function POST(request: Request) {
         return new Response("Forbidden", { status: 403 });
     }
 
-    const { mode } = await request.json() as { mode: "all" | "missing" };
+    let mode: "all" | "missing";
+    try {
+        ({ mode } = bodySchema.parse(await request.json()));
+    } catch {
+        return new Response("Invalid body", { status: 400 });
+    }
 
     const encoder = new TextEncoder();
 
@@ -31,29 +45,43 @@ export async function POST(request: Request) {
                     ? await db?.select({ id: region.id, city: region.city, polygon: region.polygon }).from(region).where(isNull(region.landuse)) ?? []
                     : await db?.select({ id: region.id, city: region.city, polygon: region.polygon }).from(region) ?? [];
 
-                controller.enqueue(encoder.encode(sse({ type: "start", total: rows.length })));
+                const total = rows.length;
+                controller.enqueue(encoder.encode(sse({ type: "start", total })));
 
                 let done = 0;
                 let errors = 0;
+                let next = 0;
 
-                for (const r of rows) {
-                    try {
-                        const landuse = await fetchLandUseStats(r.polygon as [number, number][]);
-                        await db?.update(region).set({ landuse }).where(eq(region.id, r.id));
-                        done++;
-                        controller.enqueue(encoder.encode(sse({ type: "progress", done, total: rows.length, city: r.city, success: true })));
-                    } catch (err) {
-                        done++;
-                        errors++;
-                        const msg = err instanceof Error ? err.message : String(err);
-                        console.error(`[refresh-metadata] failed for region ${r.id} (${r.city}):`, err);
-                        controller.enqueue(encoder.encode(sse({ type: "progress", done, total: rows.length, city: r.city, success: false, error: msg })));
+                // Bounded worker pool: each worker pulls the next region until the
+                // queue is drained. Landuse is computed independently per region,
+                // so concurrency does not change any result; the in-flight Overpass
+                // requests are capped at REFRESH_CONCURRENCY instead of a per-item
+                // sleep. `done`/`errors` mutations are safe (single-threaded JS).
+                const worker = async () => {
+                    while (true) {
+                        const i = next++;
+                        if (i >= rows.length) return;
+                        const r = rows[i];
+                        try {
+                            const landuse = await fetchLandUseStats(r.polygon as [number, number][]);
+                            await db?.update(region).set({ landuse }).where(eq(region.id, r.id));
+                            done++;
+                            controller.enqueue(encoder.encode(sse({ type: "progress", done, total, city: r.city, success: true })));
+                        } catch (err) {
+                            done++;
+                            errors++;
+                            // Log the real cause server-side; send only a generic message to the client.
+                            console.error(`[refresh-metadata] failed for region ${r.id} (${r.city}):`, getErrorMessage(err));
+                            controller.enqueue(encoder.encode(sse({ type: "progress", done, total, city: r.city, success: false, error: "Verarbeitung fehlgeschlagen" })));
+                        }
                     }
-                    // Small delay to avoid hammering Overpass API
-                    await new Promise(res => setTimeout(res, 500));
-                }
+                };
 
-                controller.enqueue(encoder.encode(sse({ type: "done", done, total: rows.length, errors })));
+                await Promise.all(
+                    Array.from({ length: Math.min(REFRESH_CONCURRENCY, rows.length) }, () => worker()),
+                );
+
+                controller.enqueue(encoder.encode(sse({ type: "done", done, total, errors })));
             } finally {
                 controller.close();
             }

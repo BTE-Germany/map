@@ -73,7 +73,28 @@ function stitchOuterRing(segments: Coord[][]): Coord[] | null {
     return result.length >= 4 ? result : null;
 }
 
-function tryIntersectArea(regionPoly: Feature<Polygon>, coords: Coord[]): number {
+type BBox = [number, number, number, number]; // [minX, minY, maxX, maxY] in [lng, lat]
+
+function bboxOfCoords(coords: Coord[]): BBox {
+    let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+    for (const [x, y] of coords) {
+        if (x < minX) minX = x;
+        if (x > maxX) maxX = x;
+        if (y < minY) minY = y;
+        if (y > maxY) maxY = y;
+    }
+    return [minX, minY, maxX, maxY];
+}
+
+function bboxesOverlap(a: BBox, b: BBox): boolean {
+    return !(a[0] > b[2] || a[2] < b[0] || a[1] > b[3] || a[3] < b[1]);
+}
+
+function tryIntersectArea(regionPoly: Feature<Polygon>, regionBbox: BBox, coords: Coord[]): number {
+    // Cheap axis-aligned bounding-box rejection before the expensive polygon
+    // clip: if the boxes don't overlap the polygons cannot intersect (area 0),
+    // and Overpass's ~1km-padded bbox returns many such non-overlapping elements.
+    if (!bboxesOverlap(bboxOfCoords(coords), regionBbox)) return 0;
     try {
         const poly = turf.polygon([coords]);
         const intersection = turf.intersect(turf.featureCollection([regionPoly, poly]));
@@ -108,7 +129,9 @@ export async function fetchLandUseStats(polygon: [number, number][]): Promise<La
 );
 out geom;`;
 
-    console.log("[landuse] fetching stats with query:", query);
+    if (process.env.DEBUG_OVERPASS) {
+        console.log("[landuse] fetching stats with query:", query);
+    }
 
     const { data } = await axios.post(
         process.env.OVERPASS_API_URL!,
@@ -116,7 +139,9 @@ out geom;`;
         { headers: { "Content-Type": "application/x-www-form-urlencoded", "apikey": process.env.OVERPASS_API_KEY }, timeout: 35_000 }
     );
 
-    const regionPoly = turf.polygon([polygon.map(coord => [coord[1], coord[0]])]);
+    const regionRing: Coord[] = polygon.map(coord => [coord[1], coord[0]] as Coord);
+    const regionPoly = turf.polygon([regionRing]);
+    const regionBbox = bboxOfCoords(regionRing);
     const stats: LandUseStats = { forest: 0, water: 0, farmland: 0, residential: 0, industrial: 0, park: 0 };
 
     for (const element of data?.elements ?? []) {
@@ -135,7 +160,7 @@ out geom;`;
             }
             if (coords.length < 4) continue;
 
-            stats[category] += tryIntersectArea(regionPoly, coords);
+            stats[category] += tryIntersectArea(regionPoly, regionBbox, coords);
 
         } else if (element.type === "relation") {
             if (!Array.isArray(element.members)) continue;
@@ -149,7 +174,7 @@ out geom;`;
             const ring = stitchOuterRing(outerSegments);
             if (!ring) continue;
 
-            stats[category] += tryIntersectArea(regionPoly, ring);
+            stats[category] += tryIntersectArea(regionPoly, regionBbox, ring);
         }
     }
 

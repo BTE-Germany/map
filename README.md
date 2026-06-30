@@ -62,16 +62,21 @@ Open [http://localhost:3000](http://localhost:3000) with your browser to see the
 For Mapbox-based map styles, set your public access token:
 
 ```bash
-NEXT_PUBLIC_MAPBOX_ACCESS_TOKEN=your_mapbox_access_token
+MAPBOX_ACCESS_TOKEN=your_mapbox_access_token
 ```
 
 The embedded street-level viewer uses the official Google Maps JavaScript API
 and Apple MapKit JS 5:
 
 ```bash
-NEXT_PUBLIC_GOOGLE_MAPS_API_KEY=your_browser_api_key
+GOOGLE_MAPS_BROWSER_API_KEY=your_browser_api_key
 APPLE_MAPS_TOKEN=your_mapkit_js_token
 ```
+
+These variables are read at container runtime through `/api/config`, so one
+Docker image can be deployed to multiple environments. The legacy
+`NEXT_PUBLIC_MAPBOX_ACCESS_TOKEN` and `NEXT_PUBLIC_GOOGLE_MAPS_API_KEY` names
+remain supported, but they no longer need to exist during `next build`.
 
 Enable the Maps JavaScript API for the Google key and restrict it to the
 application's HTTP referrers. The Apple Maps token must include the production

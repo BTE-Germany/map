@@ -20,19 +20,24 @@ function getSslConfig() {
     };
 }
 
-if (process.env.NODE_ENV === 'production') {
-    const pool = new Pool({
+// Bound the pool and per-statement time so a stuck upstream can't pin
+// connections (and long-lived SSE handlers) open indefinitely.
+function createPool() {
+    return new Pool({
         connectionString: process.env.DATABASE_URL,
         ssl: getSslConfig(),
+        max: 10,
+        connectionTimeoutMillis: 5_000,
+        statement_timeout: 15_000,
+        query_timeout: 15_000,
     });
-    db = drizzle(pool);
+}
+
+if (process.env.NODE_ENV === 'production') {
+    db = drizzle(createPool());
 } else {
     if (!globalThis.db) {
-        const pool = new Pool({
-            connectionString: process.env.DATABASE_URL,
-            ssl: getSslConfig(),
-        });
-        globalThis.db = drizzle(pool);
+        globalThis.db = drizzle(createPool());
     }
     db = globalThis.db!;
 }

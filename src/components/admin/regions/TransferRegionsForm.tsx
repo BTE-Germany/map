@@ -1,17 +1,13 @@
 "use client";
 
 import { useState, useRef, useCallback, useTransition } from "react";
-import { SearchIcon, LoaderIcon, ArrowRightIcon, AlertTriangleIcon, CheckIcon, XIcon } from "lucide-react";
+import { SearchIcon, LoaderIcon, ArrowRightIcon, AlertTriangleIcon, CheckIcon } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import getUser, { type Player } from "@/actions/minecraft/user";
 import { previewTransfer, executeTransfer, type TransferPreview } from "@/actions/region/TransferRegions";
 import { AnimatePresence, motion } from "motion/react";
 import { Button } from "@/components/ui/button";
-
-interface PlayerCard {
-    player: Player;
-}
 
 function PlayerSearch({
     label,

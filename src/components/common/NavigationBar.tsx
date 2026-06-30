@@ -7,7 +7,6 @@ import { usePathname } from "next/navigation";
 import { cx } from "class-variance-authority";
 import { LockIcon } from "@/components/ui/lock";
 import { HomeIcon } from "@/components/ui/home";
-import { ChartPieIcon } from "@/components/ui/chart-pie";
 import { useState } from "react";
 import { motion } from "motion/react";
 import { ChartColumnIncreasingIcon } from "@/components/ui/chart-column-increasing";
@@ -19,7 +18,7 @@ import useSearchStore from "@/stores/SearchStore";
 
 interface NavigationButtonProps {
     iconOnly?: boolean;
-    icon?: React.JSXElementConstructor<any>;
+    icon?: React.ElementType;
     label?: string;
     pathname?: string;
     onClick?: () => void;
@@ -30,7 +29,7 @@ const NavigationButton = ({ iconOnly, label, icon, onClick, pathname }: Navigati
     const path = usePathname();
 
     if (iconOnly) {
-        let Icon = icon as any;
+        const Icon = icon as React.ElementType;
 
         return (
             <Tooltip>

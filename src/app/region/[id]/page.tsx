@@ -65,18 +65,20 @@ export async function generateMetadata({ params }: { params: Promise<{ id: strin
 
 export default async function RegionPage({ params }: { params: Promise<{ id: string }> }) {
     const { id } = await params;
-    const region = await getRegion(id);
+    // region + session don't depend on each other — fetch concurrently.
+    const [region, session] = await Promise.all([getRegion(id), getSession()]);
     if (!region) notFound();
 
-    const owner = await getUser(region.creatorUUID);
+    // Creator + all builder profiles resolve concurrently (and getUser is cached).
+    const [owner, builderProfilesRaw] = await Promise.all([
+        getUser(region.creatorUUID),
+        Promise.all((region.builders ?? []).map((uuid) => getUser(uuid))),
+    ]);
+    const builderProfiles = builderProfilesRaw.filter((p): p is NonNullable<typeof p> => p !== null);
 
-    const session = await getSession();
     const isCreator = session?.user?.minecraft_uuid === region.creatorUUID;
-    const roles = (session?.user as any)?.realm_access?.roles ?? [];
+    const roles = session?.user?.realm_access?.roles ?? [];
     const canUpload = isCreator || hasPermission(roles, PERMISSIONS.REGIONS_EDIT);
-    const builderProfiles = await Promise.all(
-        (region.builders ?? []).map((uuid) => getUser(uuid))
-    ).then(profiles => profiles.filter((p): p is Awaited<ReturnType<typeof getUser>> & {} => p !== null));
 
     const area = parseFloat(region.area ?? "0");
     const formattedArea = formatAreaWithMode(area, "full");

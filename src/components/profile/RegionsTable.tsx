@@ -4,7 +4,6 @@ import { useState, useMemo } from "react";
 import {
     Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from "@/components/ui/table";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { stateCodeToName } from "@/lib/federalStates";
 import {
@@ -33,18 +32,6 @@ type SortKey = "city" | "state" | "area" | "buildings" | "createdAt" | "type";
 type SortDir = "asc" | "desc";
 
 const PAGE_SIZE = 10;
-
-const TYPE_LABELS: Record<Region["type"], string> = {
-    default: "Standard",
-    plot: "Plot",
-    event: "Event",
-};
-
-const TYPE_STYLES: Record<Region["type"], string> = {
-    default: "border-blue-500/30 bg-blue-500/10 text-blue-400",
-    plot: "border-green-500/30 bg-green-500/10 text-green-400",
-    event: "border-purple-500/30 bg-purple-500/10 text-purple-400",
-};
 
 function formatArea(area: string | number): string {
     const n = typeof area === "string" ? parseFloat(area) : area;

@@ -41,11 +41,8 @@ export async function POST(req: NextRequest) {
     let parsed: z.infer<typeof Body>;
     try {
         parsed = Body.parse(await req.json());
-    } catch (e: any) {
-        return NextResponse.json(
-            { error: "Invalid body", details: e?.issues ?? e?.message },
-            { status: 400 },
-        );
+    } catch {
+        return NextResponse.json({ error: "Invalid body" }, { status: 400 });
     }
 
     if (parsed.players.length === 0) {
@@ -116,7 +113,9 @@ export async function DELETE(req: NextRequest) {
     if (auth instanceof NextResponse) return auth;
 
     const uuid = req.nextUrl.searchParams.get("uuid");
-    if (!uuid) return NextResponse.json({ error: "uuid required" }, { status: 400 });
+    if (!uuid || !z.string().uuid().safeParse(uuid).success) {
+        return NextResponse.json({ error: "valid uuid required" }, { status: 400 });
+    }
 
     await db!
         .delete(playerPosition)

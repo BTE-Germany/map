@@ -10,6 +10,7 @@ for (const envFile of [".env.migration", ".env"]) {
 
 let GetObjectCommand;
 let HeadObjectCommand;
+let ListObjectsV2Command;
 let PutObjectCommand;
 let S3Client;
 
@@ -18,11 +19,16 @@ async function loadS3Sdk() {
   const sdk = await import("@aws-sdk/client-s3");
   GetObjectCommand = sdk.GetObjectCommand;
   HeadObjectCommand = sdk.HeadObjectCommand;
+  ListObjectsV2Command = sdk.ListObjectsV2Command;
   PutObjectCommand = sdk.PutObjectCommand;
   S3Client = sdk.S3Client;
 }
 
 const MODES = new Set(["all", "db", "images", "verify"]);
+const LEGACY_MARKER_UUIDS = {
+  EVENT: "00000000-0000-0000-0000-000000000001",
+  PLOT: "00000000-0000-0000-0000-000000000002",
+};
 const STATE_NAMES = new Map([
   ["baden-württemberg", "BW"],
   ["baden-wuerttemberg", "BW"],
@@ -179,7 +185,31 @@ function detectState(displayName) {
   return "";
 }
 
+function legacyRegionMarker(value) {
+  const marker = String(value ?? "").trim().toUpperCase();
+  return marker === "EVENT" || marker === "PLOT" ? marker : null;
+}
+
+function resolveCreatorUuid(row) {
+  const direct = normalizeUuid(row.userUUID);
+  if (direct) return direct;
+
+  const owner = normalizeUuid(row.ownerMinecraftUUID);
+  if (owner) return owner;
+
+  const marker = legacyRegionMarker(row.userUUID);
+  if (!marker) return null;
+
+  const configuredFallback = normalizeUuid(
+    process.env.MIGRATION_SYSTEM_CREATOR_UUID,
+  );
+  return configuredFallback ?? LEGACY_MARKER_UUIDS[marker];
+}
+
 function regionType(row) {
+  const marker = legacyRegionMarker(row.userUUID);
+  if (marker === "EVENT") return "event";
+  if (marker === "PLOT") return "plot";
   if (Boolean(row.isEventRegion)) return "event";
   if (Boolean(row.isPlotRegion)) return "plot";
   return "default";
@@ -189,8 +219,7 @@ function makeRegionRecord(row, additionalBuilders) {
   const id = normalizeUuid(row.id);
   if (!id) throw new Error(`Region ${row.id}: id is not a UUID`);
 
-  const creatorUUID =
-    normalizeUuid(row.userUUID) || normalizeUuid(row.ownerMinecraftUUID);
+  const creatorUUID = resolveCreatorUuid(row);
   if (!creatorUUID) {
     throw new Error(`Region ${row.id}: no valid creator Minecraft UUID`);
   }
@@ -286,63 +315,162 @@ async function migrateDatabase(mysqlConnection, pgPool, dryRun) {
   }
   if (dryRun) return { migrated: records.length };
 
-  const client = await pgPool.connect();
-  try {
-    await client.query("BEGIN");
-    for (const record of records) {
-      await client.query(
-        `
-          INSERT INTO regions (
-            id, description, "creatorUUID", polygon, city, state, area,
-            buildings, "createdAt", "modifiedAt", type, address, finished, builders
-          )
-          VALUES (
-            $1, $2, $3, $4::json, $5, $6, $7, $8, $9, $10,
-            $11::region_type, $12, $13, $14::json
-          )
-          ON CONFLICT (id) DO UPDATE SET
-            description = EXCLUDED.description,
-            "creatorUUID" = EXCLUDED."creatorUUID",
-            polygon = EXCLUDED.polygon,
-            city = EXCLUDED.city,
-            state = EXCLUDED.state,
-            area = EXCLUDED.area,
-            buildings = EXCLUDED.buildings,
-            "createdAt" = EXCLUDED."createdAt",
-            "modifiedAt" = EXCLUDED."modifiedAt",
-            type = EXCLUDED.type,
-            address = EXCLUDED.address,
-            finished = EXCLUDED.finished,
-            builders = EXCLUDED.builders
-        `,
-        [
-          record.id,
-          record.description,
-          record.creatorUUID,
-          JSON.stringify(record.polygon),
-          record.city,
-          record.state,
-          record.area,
-          record.buildings,
-          record.createdAt,
-          record.modifiedAt,
-          record.type,
-          record.address,
-          record.finished,
-          JSON.stringify(record.builders),
-        ],
-      );
-    }
-    await client.query("COMMIT");
-  } catch (error) {
-    await client.query("ROLLBACK");
-    throw error;
-  } finally {
-    client.release();
+  const batchSize = numberEnv("MIGRATION_DB_BATCH_SIZE", 200);
+  const totalBatches = Math.ceil(records.length / batchSize);
+  for (let offset = 0; offset < records.length; offset += batchSize) {
+    const batch = records.slice(offset, offset + batchSize);
+    await insertRegionBatchWithRetry(pgPool, batch);
+    const batchIndex = Math.floor(offset / batchSize) + 1;
+    console.log(
+      `[db] committed batch ${batchIndex}/${totalBatches} (${Math.min(offset + batch.length, records.length)}/${records.length})`,
+    );
   }
 
   console.log(`[db] migrated ${records.length} regions`);
   return { migrated: records.length };
+}
+
+async function insertRegionBatchWithRetry(pgPool, batch) {
+  const maxAttempts = numberEnv("MIGRATION_DB_BATCH_RETRIES", 30);
+  const maxBackoffMs = numberEnv("MIGRATION_DB_BACKOFF_CAP_MS", 30_000);
+  let lastError;
+  for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+    let client;
+    let succeeded = false;
+    try {
+      client = await pgPool.connect();
+      await client.query("BEGIN");
+      for (const record of batch) {
+        await client.query(
+          `
+            INSERT INTO regions (
+              id, description, "creatorUUID", polygon, city, state, area,
+              buildings, "createdAt", "modifiedAt", type, address, finished, builders
+            )
+            VALUES (
+              $1, $2, $3, $4::json, $5, $6, $7, $8, $9, $10,
+              $11::region_type, $12, $13, $14::json
+            )
+            ON CONFLICT (id) DO UPDATE SET
+              description = EXCLUDED.description,
+              "creatorUUID" = EXCLUDED."creatorUUID",
+              polygon = EXCLUDED.polygon,
+              city = EXCLUDED.city,
+              state = EXCLUDED.state,
+              area = EXCLUDED.area,
+              buildings = EXCLUDED.buildings,
+              "createdAt" = EXCLUDED."createdAt",
+              "modifiedAt" = EXCLUDED."modifiedAt",
+              type = EXCLUDED.type,
+              address = EXCLUDED.address,
+              finished = EXCLUDED.finished,
+              builders = EXCLUDED.builders
+          `,
+          [
+            record.id,
+            record.description,
+            record.creatorUUID,
+            JSON.stringify(record.polygon),
+            record.city,
+            record.state,
+            record.area,
+            record.buildings,
+            record.createdAt,
+            record.modifiedAt,
+            record.type,
+            record.address,
+            record.finished,
+            JSON.stringify(record.builders),
+          ],
+        );
+      }
+      await client.query("COMMIT");
+      succeeded = true;
+      return;
+    } catch (error) {
+      lastError = error;
+      if (client) {
+        try { await client.query("ROLLBACK"); } catch {}
+      }
+      if (!isTransientPgError(error) || attempt === maxAttempts) throw error;
+      const backoffMs = Math.min(1000 * 2 ** Math.min(attempt - 1, 10), maxBackoffMs);
+      console.warn(
+        `[db] batch failed (attempt ${attempt}/${maxAttempts}): ${error?.message ?? error}. Retrying in ${backoffMs}ms — if kubectl port-forward died, restart it now.`,
+      );
+      await new Promise((resolve) => setTimeout(resolve, backoffMs));
+    } finally {
+      if (client) {
+        try { client.release(!succeeded); } catch {}
+      }
+    }
+  }
+  throw lastError;
+}
+
+async function pgQueryWithRetry(pgPool, sql, params) {
+  const maxAttempts = numberEnv("MIGRATION_DB_QUERY_RETRIES", 30);
+  const maxBackoffMs = numberEnv("MIGRATION_DB_BACKOFF_CAP_MS", 30_000);
+  let lastError;
+  for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+    try {
+      return await pgPool.query(sql, params);
+    } catch (error) {
+      lastError = error;
+      if (!isTransientPgError(error) || attempt === maxAttempts) throw error;
+      const backoffMs = Math.min(500 * 2 ** Math.min(attempt - 1, 10), maxBackoffMs);
+      console.warn(
+        `[db] query failed (attempt ${attempt}/${maxAttempts}): ${error?.message ?? error}. Retrying in ${backoffMs}ms — if kubectl port-forward died, restart it now.`,
+      );
+      await new Promise((resolve) => setTimeout(resolve, backoffMs));
+    }
+  }
+  throw lastError;
+}
+
+function isTransientPgError(error) {
+  const codes = collectErrorCodes(error);
+  const message = String(error?.message ?? "").toLowerCase();
+  const transportCodes = new Set([
+    "ECONNRESET",
+    "ECONNREFUSED",
+    "EPIPE",
+    "ETIMEDOUT",
+    "ENETUNREACH",
+    "EHOSTUNREACH",
+    "EAI_AGAIN",
+  ]);
+  const pgFatalCodes = new Set([
+    "57P01", "57P02", "57P03",
+    "08000", "08001", "08003", "08004", "08006",
+  ]);
+  for (const code of codes) {
+    if (transportCodes.has(code) || pgFatalCodes.has(code)) return true;
+  }
+  return (
+    message.includes("connection terminated") ||
+    message.includes("connection reset") ||
+    message.includes("connection refused") ||
+    message.includes("read econnreset") ||
+    message.includes("server closed the connection") ||
+    message.includes("connection ended") ||
+    message.includes("econnrefused") ||
+    message.includes("etimedout")
+  );
+}
+
+function collectErrorCodes(error) {
+  const codes = new Set();
+  if (!error) return codes;
+  if (error.code) codes.add(error.code);
+  if (Array.isArray(error.errors)) {
+    for (const inner of error.errors) {
+      if (inner?.code) codes.add(inner.code);
+    }
+  }
+  if (error.cause) {
+    for (const code of collectErrorCodes(error.cause)) codes.add(code);
+  }
+  return codes;
 }
 
 function legacyObjectKey(imageData, sourceBucket) {
@@ -358,6 +486,31 @@ function legacyObjectKey(imageData, sourceBucket) {
   } catch {
     return raw.replace(/^\/+/, "").replace(new RegExp(`^${escapeRegex(sourceBucket)}/`), "");
   }
+}
+
+function summarizeAwsError(error) {
+  const metadata = error?.$metadata ?? {};
+  const details = [
+    error?.name,
+    error?.Code,
+    error?.code,
+    error?.message,
+    metadata.httpStatusCode ? `http=${metadata.httpStatusCode}` : null,
+    metadata.requestId ? `requestId=${metadata.requestId}` : null,
+    metadata.extendedRequestId
+      ? `extendedRequestId=${metadata.extendedRequestId}`
+      : null,
+  ].filter(Boolean);
+  return details.length > 0 ? details.join(" ") : String(error);
+}
+
+function withS3Context(operation, bucket, key, error) {
+  const suffix = key ? ` key="${key}"` : "";
+  const wrapped = new Error(
+    `${operation} failed bucket="${bucket}"${suffix}: ${summarizeAwsError(error)}`,
+  );
+  wrapped.cause = error;
+  return wrapped;
 }
 
 function escapeRegex(value) {
@@ -397,8 +550,53 @@ async function objectExists(client, bucket, key) {
   } catch (error) {
     const status = error?.$metadata?.httpStatusCode;
     if (status === 404 || error?.name === "NotFound") return null;
-    throw error;
+    throw withS3Context("HeadObject", bucket, key, error);
   }
+}
+
+async function findLegacyObjectByPrefix(client, bucket, imageId) {
+  const prefix = `${imageId}-`;
+  let response;
+  try {
+    response = await client.send(
+      new ListObjectsV2Command({
+        Bucket: bucket,
+        Prefix: prefix,
+        MaxKeys: 2,
+      }),
+    );
+  } catch (error) {
+    throw withS3Context("ListObjectsV2", bucket, prefix, error);
+  }
+
+  const matches = response.Contents ?? [];
+  if (matches.length === 0) return null;
+  if (matches.length > 1) {
+    throw new Error(
+      `Image ${imageId}: multiple source objects found for prefix "${prefix}"`,
+    );
+  }
+  return matches[0].Key ?? null;
+}
+
+async function resolveLegacySourceObject(client, bucket, imageId, imageData) {
+  const directKey = legacyObjectKey(imageData, bucket);
+  if (directKey) {
+    const head = await objectExists(client, bucket, directKey);
+    if (head) return { key: directKey, head };
+  }
+
+  const prefixKey = await findLegacyObjectByPrefix(client, bucket, imageId);
+  if (!prefixKey) return { key: directKey, head: null };
+
+  const head = await objectExists(client, bucket, prefixKey);
+  if (!head) {
+    throw new Error(
+      `Image ${imageId}: prefix match "${prefixKey}" vanished before HEAD`,
+    );
+  }
+
+  return { key: prefixKey, head };
 }
 
 async function loadLegacyImages(connection) {
@@ -428,8 +626,10 @@ async function migrateImages(mysqlConnection, pgPool, dryRun) {
   const targetBucket = requiredEnv("TARGET_S3_BUCKET");
   const images = await loadLegacyImages(mysqlConnection);
   const concurrency = numberEnv("MIGRATION_IMAGE_CONCURRENCY", 3);
+  const skipMissingImages = booleanEnv("MIGRATION_SKIP_MISSING_IMAGES", false);
   let migrated = 0;
   let skipped = 0;
+  let skippedMissing = 0;
   const failures = [];
 
   console.log(`[images] source: ${images.length} image rows`);
@@ -437,18 +637,32 @@ async function migrateImages(mysqlConnection, pgPool, dryRun) {
   async function migrateOne(row) {
     const id = normalizeUuid(row.id);
     const regionId = normalizeUuid(row.regionId);
-    const uploaderUUID =
-      normalizeUuid(row.userUUID) || normalizeUuid(row.ownerMinecraftUUID);
-    const sourceKey = legacyObjectKey(row.imageData, sourceBucket);
-    if (!id || !regionId || !uploaderUUID || !sourceKey) {
+    const uploaderUUID = resolveCreatorUuid(row);
+    if (!id || !regionId || !uploaderUUID) {
       throw new Error(
         `Image ${row.id}: invalid id, region, uploader, or imageData`,
       );
     }
 
-    const sourceHead = await objectExists(source, sourceBucket, sourceKey);
+    const { key: sourceKey, head: sourceHead } = await resolveLegacySourceObject(
+      source,
+      sourceBucket,
+      String(row.id),
+      row.imageData,
+    );
     if (!sourceHead) {
-      throw new Error(`Image ${row.id}: source object "${sourceKey}" not found`);
+      const hasLegacyReference = String(row.imageData ?? "").trim().length > 0;
+      if (!hasLegacyReference || skipMissingImages) {
+        skippedMissing += 1;
+        console.warn(
+          `[images] skipped missing image=${row.id} region=${row.regionId} imageData="${row.imageData ?? ""}"`,
+        );
+        return;
+      }
+
+      throw new Error(
+        `Image ${row.id}: source object not found for imageData="${row.imageData ?? ""}"`,
+      );
     }
 
     const mimeType = mimeFor(sourceKey, sourceHead.ContentType);
@@ -467,23 +681,35 @@ async function migrateImages(mysqlConnection, pgPool, dryRun) {
 
     let targetHead = await objectExists(target, targetBucket, targetKey);
     if (!targetHead || Number(targetHead.ContentLength) !== sizeBytes) {
-      const response = await source.send(
-        new GetObjectCommand({ Bucket: sourceBucket, Key: sourceKey }),
-      );
+      let response;
+      try {
+        response = await source.send(
+          new GetObjectCommand({ Bucket: sourceBucket, Key: sourceKey }),
+        );
+      } catch (error) {
+        throw withS3Context("GetObject", sourceBucket, sourceKey, error);
+      }
+      if (!response.Body?.transformToByteArray) {
+        throw new Error(`Image ${row.id}: source object body is not readable`);
+      }
       const bytes = await response.Body.transformToByteArray();
-      await target.send(
-        new PutObjectCommand({
-          Bucket: targetBucket,
-          Key: targetKey,
-          Body: bytes,
-          ContentLength: bytes.byteLength,
-          ContentType: mimeType,
-          Metadata: {
-            "legacy-image-id": String(row.id),
-            "legacy-sha256": createHash("sha256").update(bytes).digest("hex"),
-          },
-        }),
-      );
+      try {
+        await target.send(
+          new PutObjectCommand({
+            Bucket: targetBucket,
+            Key: targetKey,
+            Body: bytes,
+            ContentLength: bytes.byteLength,
+            ContentType: mimeType,
+            Metadata: {
+              "legacy-image-id": String(row.id),
+              "legacy-sha256": createHash("sha256").update(bytes).digest("hex"),
+            },
+          }),
+        );
+      } catch (error) {
+        throw withS3Context("PutObject", targetBucket, targetKey, error);
+      }
       targetHead = await objectExists(target, targetBucket, targetKey);
       if (!targetHead || Number(targetHead.ContentLength) !== bytes.byteLength) {
         throw new Error(`Image ${row.id}: target object verification failed`);
@@ -492,7 +718,8 @@ async function migrateImages(mysqlConnection, pgPool, dryRun) {
       skipped += 1;
     }
 
-    await pgPool.query(
+    await pgQueryWithRetry(
+      pgPool,
       `
         INSERT INTO region_images (
           id, region_id, uploader_uuid, s3_key, mime_type,
@@ -528,20 +755,23 @@ async function migrateImages(mysqlConnection, pgPool, dryRun) {
       try {
         await migrateOne(row);
       } catch (error) {
-        failures.push(error.message);
-        console.error(`[images] failed: ${error.message}`);
+        const message = error?.message ?? String(error);
+        failures.push(message);
+        console.error(
+          `[images] failed image=${row.id} region=${row.regionId}: ${message}`,
+        );
       }
     }
   }
 
   await Promise.all(Array.from({ length: concurrency }, () => worker()));
   console.log(
-    `[images] processed: ${migrated}, existing objects reused: ${skipped}, failed: ${failures.length}`,
+    `[images] processed: ${migrated}, existing objects reused: ${skipped}, missing skipped: ${skippedMissing}, failed: ${failures.length}`,
   );
   if (failures.length > 0) {
     throw new Error("Image migration completed with failures");
   }
-  return { migrated, skipped };
+  return { migrated, skipped, skippedMissing };
 }
 
 async function verifyMigration(mysqlConnection, pgPool, verifyObjects) {
@@ -551,7 +781,7 @@ async function verifyMigration(mysqlConnection, pgPool, verifyObjects) {
     `SELECT COUNT(*) AS count FROM ${regionsTable}`,
   );
   const [[sourceImageCount]] = await mysqlConnection.query(
-    `SELECT COUNT(*) AS count FROM ${imagesTable}`,
+    `SELECT COUNT(*) AS count FROM ${imagesTable} WHERE COALESCE(imageData, '') <> ''`,
   );
   const targetRegions = await pgPool.query(
     `SELECT COUNT(*)::int AS count FROM regions`,
@@ -572,7 +802,7 @@ async function verifyMigration(mysqlConnection, pgPool, verifyObjects) {
     `SELECT id FROM ${regionsTable}`,
   );
   const [sourceImageRows] = await mysqlConnection.query(
-    `SELECT id FROM ${imagesTable}`,
+    `SELECT id FROM ${imagesTable} WHERE COALESCE(imageData, '') <> ''`,
   );
   const sourceRegionIds = sourceRegionRows.map((row) => normalizeUuid(row.id));
   const sourceImageIds = sourceImageRows.map((row) => normalizeUuid(row.id));
@@ -580,23 +810,35 @@ async function verifyMigration(mysqlConnection, pgPool, verifyObjects) {
     throw new Error("Legacy database contains invalid region or image UUIDs");
   }
 
+  // Compare against the DISTINCT source ids: `id = ANY(...)` matches each target
+  // row at most once, so duplicate legacy UUIDs would otherwise produce false
+  // "missing" failures.
+  const distinctSourceRegionIds = [...new Set(sourceRegionIds)];
+  const distinctSourceImageIds = [...new Set(sourceImageIds)];
+
   const migratedRegions = await pgPool.query(
     `SELECT id::text FROM regions WHERE id = ANY($1::uuid[])`,
-    [sourceRegionIds],
+    [distinctSourceRegionIds],
   );
   const migratedImages = await pgPool.query(
     `SELECT id::text FROM region_images WHERE id = ANY($1::uuid[])`,
-    [sourceImageIds],
+    [distinctSourceImageIds],
   );
-  if (migratedRegions.rowCount !== sourceRegionIds.length) {
+  if (migratedRegions.rowCount !== distinctSourceRegionIds.length) {
     throw new Error(
-      `Missing migrated regions: expected ${sourceRegionIds.length}, found ${migratedRegions.rowCount}`,
+      `Missing migrated regions: expected ${distinctSourceRegionIds.length}, found ${migratedRegions.rowCount}`,
     );
   }
-  if (migratedImages.rowCount !== sourceImageIds.length) {
-    throw new Error(
-      `Missing migrated images: expected ${sourceImageIds.length}, found ${migratedImages.rowCount}`,
-    );
+  // Images may be intentionally skipped (MIGRATION_SKIP_MISSING_IMAGES); only
+  // treat a shortfall as fatal when skipping is disabled.
+  const missingImages = distinctSourceImageIds.length - migratedImages.rowCount;
+  if (missingImages !== 0) {
+    const detail = `expected ${distinctSourceImageIds.length}, found ${migratedImages.rowCount} (${missingImages} not migrated)`;
+    if (booleanEnv("MIGRATION_SKIP_MISSING_IMAGES", false)) {
+      console.warn(`[verify] image count mismatch: ${detail} — allowed because MIGRATION_SKIP_MISSING_IMAGES is set`);
+    } else {
+      throw new Error(`Missing migrated images: ${detail}`);
+    }
   }
 
   if (!verifyObjects) return counts;
@@ -647,10 +889,33 @@ async function main(argv = process.argv.slice(2)) {
   ]);
   const { Pool } = pg;
   const mysqlConnection = await mysql.createConnection(legacyDatabaseUrl);
+  const poolSize = numberEnv("MIGRATION_PG_POOL_SIZE", 3);
   const pgPool = new Pool({
     connectionString: targetDatabaseUrl,
     ssl: pgSslConfig(),
+    keepAlive: true,
+    keepAliveInitialDelayMillis: 10_000,
+    application_name: "migrate-v2",
+    statement_timeout: numberEnv("MIGRATION_STATEMENT_TIMEOUT_MS", 120_000),
+    max: poolSize,
+    min: poolSize,
+    idleTimeoutMillis: 0,
+    allowExitOnIdle: true,
   });
+  pgPool.on("error", (error) => {
+    console.error(`[pg-pool] idle client error: ${error?.message ?? error}`);
+  });
+  pgPool.on("connect", (client) => {
+    client.query(
+      "SET tcp_keepalives_idle = 30; SET tcp_keepalives_interval = 10; SET tcp_keepalives_count = 6;",
+    ).catch(() => {});
+  });
+
+  const heartbeatMs = numberEnv("MIGRATION_HEARTBEAT_MS", 20_000);
+  const heartbeat = setInterval(() => {
+    pgPool.query("SELECT 1").catch(() => {});
+  }, heartbeatMs);
+  heartbeat.unref();
 
   console.log(
     `[migration] mode=${options.mode} dryRun=${options.dryRun ? "yes" : "no"}`,
@@ -666,6 +931,7 @@ async function main(argv = process.argv.slice(2)) {
       await verifyMigration(mysqlConnection, pgPool, true);
     }
   } finally {
+    clearInterval(heartbeat);
     await Promise.allSettled([mysqlConnection.end(), pgPool.end()]);
   }
 }
@@ -689,4 +955,6 @@ export {
   normalizeUuid,
   parseArgs,
   parsePolygon,
+  resolveCreatorUuid,
+  summarizeAwsError,
 };

@@ -69,6 +69,10 @@ export default function AppleLookAround({
             if (!activeRef.current || suppressReportingRef.current || !lookAround) {
                 return;
             }
+            // Skip polling work while the tab is backgrounded.
+            if (typeof document !== "undefined" && document.hidden) {
+                return;
+            }
 
             const coordinate = lookAround.scene?.coordinate ?? lookAround.centerCoordinate;
             if (!coordinate) {
@@ -125,7 +129,7 @@ export default function AppleLookAround({
                         suppressReportingRef.current = false;
                         setStatus("ready");
                         reportCurrentLocation();
-                        locationTimer = window.setInterval(reportCurrentLocation, 200);
+                        locationTimer = window.setInterval(reportCurrentLocation, 500);
                     }
                 }, { once: true });
 

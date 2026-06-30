@@ -1,16 +1,10 @@
-import {useQuery} from "@tanstack/react-query";
-import {getAllRegions, getAllRegionsAsGeoJSON, getRegion} from "@/actions/region/GetRegions";
+import { useQuery } from "@tanstack/react-query";
+import { getRegion } from "@/actions/region/GetRegions";
 
-const useRegion = (regionId: string) => useQuery({
+const useRegion = (regionId: string | null | undefined) => useQuery({
     queryKey: ['region', regionId],
-    queryFn: () => {
-        if (regionId) {
-            return getRegion(regionId)
-        } else {
-            return Promise.resolve(null)
-        }
-    }
-})
+    queryFn: () => getRegion(regionId!),
+    enabled: !!regionId,
+});
 
-
-export {useRegion};
+export { useRegion };
