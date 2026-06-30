@@ -1,5 +1,5 @@
-import axios from "axios";
 import * as turf from "@turf/turf";
+import { postOverpassQuery } from "@/lib/overpass";
 import type { LandUseStats } from "@/db/schema";
 import type { Feature, Polygon } from "geojson";
 
@@ -133,11 +133,7 @@ out geom;`;
         console.log("[landuse] fetching stats with query:", query);
     }
 
-    const { data } = await axios.post(
-        process.env.OVERPASS_API_URL!,
-        `data=${encodeURIComponent(query)}`,
-        { headers: { "Content-Type": "application/x-www-form-urlencoded", "apikey": process.env.OVERPASS_API_KEY }, timeout: 35_000 }
-    );
+    const data = await postOverpassQuery(query, { timeoutMs: 35_000 });
 
     const regionRing: Coord[] = polygon.map(coord => [coord[1], coord[0]] as Coord);
     const regionPoly = turf.polygon([regionRing]);

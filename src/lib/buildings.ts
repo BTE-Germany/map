@@ -1,4 +1,4 @@
-import axios from "axios";
+import { postOverpassQuery } from "@/lib/overpass";
 import { getErrorMessage } from "@/lib/errors";
 
 /**
@@ -22,18 +22,8 @@ out count;`;
     }
 
     try {
-        const res = await axios.post(
-            process.env.OVERPASS_API_URL!,
-            `data=${encodeURIComponent(query)}`,
-            {
-                headers: {
-                    "Content-Type": "application/x-www-form-urlencoded",
-                    apikey: process.env.OVERPASS_API_KEY,
-                },
-                timeout: 30_000,
-            }
-        );
-        return parseInt(res.data?.elements?.[0]?.tags?.total) || 0;
+        const data = await postOverpassQuery(query, { timeoutMs: 30_000 });
+        return parseInt(data?.elements?.[0]?.tags?.total) || 0;
     } catch (err: unknown) {
         console.error("[buildings] count failed:", getErrorMessage(err));
         return 0;

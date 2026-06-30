@@ -9,10 +9,14 @@ import { eq, isNull } from "drizzle-orm";
 
 const bodySchema = z.object({ mode: z.enum(["all", "missing"]) });
 
-// Process several regions at once. OVERPASS_API_URL is a private, keyed
-// instance (apikey header), so a small pool is safe — sized to that instance's
-// capacity rather than the public "2 slots" fair-use limit.
-const REFRESH_CONCURRENCY = 4;
+// Process a few regions at once. Overpass instances have limited query slots,
+// so too much concurrency makes the gateway return 504s — keep this modest and
+// let it be tuned per-instance. Each landuse fetch already retries transient
+// 504/502/503/429 errors with backoff (see lib/overpass.ts).
+const REFRESH_CONCURRENCY = Math.max(
+    1,
+    Number(process.env.METADATA_REFRESH_CONCURRENCY) || 2,
+);
 
 type ProgressEvent =
     | { type: "start"; total: number }
