@@ -1,7 +1,10 @@
 "use client";
 
 import { useState, useRef } from "react";
-import { RefreshCw, AlertCircle, CheckCircle2, Loader2, LandPlot } from "lucide-react";
+import { RefreshCw, AlertCircle, CheckCircle2, Loader2, LandPlot, MapIcon } from "lucide-react";
+
+const METADATA_ENDPOINT = "/api/admin/regions/refresh-metadata";
+const STATES_ENDPOINT = "/api/admin/regions/refresh-states";
 
 type LogEntry = { city: string; success: boolean; error?: string };
 type Phase = "idle" | "running" | "done";
@@ -15,7 +18,7 @@ export default function AdminRegionsPage() {
     const abortRef = useRef<AbortController | null>(null);
     const logEndRef = useRef<HTMLDivElement>(null);
 
-    async function startRefresh(mode: "all" | "missing" | "stale") {
+    async function startRefresh(mode: "all" | "missing" | "stale", endpoint: string = METADATA_ENDPOINT) {
         if (phase === "running") return;
 
         setPhase("running");
@@ -27,7 +30,7 @@ export default function AdminRegionsPage() {
         abortRef.current = new AbortController();
 
         try {
-            const res = await fetch("/api/admin/regions/refresh-metadata", {
+            const res = await fetch(endpoint, {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({ mode }),
@@ -142,6 +145,35 @@ export default function AdminRegionsPage() {
                             Abbrechen
                         </button>
                     )}
+                </div>
+            </div>
+
+            {/* Bundesländer */}
+            <div className="rounded-xl border border-border bg-card p-5 space-y-4">
+                <div className="flex items-center gap-2">
+                    <MapIcon className="size-4 text-primary" />
+                    <h2 className="font-semibold">Bundesländer neu laden</h2>
+                </div>
+                <p className="text-sm text-muted-foreground">
+                    Bestimmt das Bundesland jeder Region anhand ihrer Lage aus einem lokalen Datensatz — schnell und ohne externe API.
+                </p>
+                <div className="flex flex-wrap gap-3">
+                    <button
+                        onClick={() => startRefresh("missing", STATES_ENDPOINT)}
+                        disabled={phase === "running"}
+                        className="inline-flex items-center gap-2 rounded-lg bg-primary text-primary-foreground hover:bg-primary/90 disabled:opacity-50 disabled:cursor-not-allowed px-4 py-2 text-sm font-medium transition-colors"
+                    >
+                        <RefreshCw className={`size-4 ${phase === "running" ? "animate-spin" : ""}`} />
+                        Nur fehlende laden
+                    </button>
+                    <button
+                        onClick={() => startRefresh("all", STATES_ENDPOINT)}
+                        disabled={phase === "running"}
+                        className="inline-flex items-center gap-2 rounded-lg border border-border bg-muted/30 hover:bg-muted/60 disabled:opacity-50 disabled:cursor-not-allowed px-4 py-2 text-sm transition-colors"
+                    >
+                        <RefreshCw className={`size-4 ${phase === "running" ? "animate-spin" : ""}`} />
+                        Alle neu laden
+                    </button>
                 </div>
             </div>
 
