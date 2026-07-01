@@ -21,6 +21,7 @@ import { hasPermission, PERMISSIONS } from "@/lib/permissions";
 import { useRegion } from "@/dataHooks/regions/useRegion";
 import useRegionPane from "@/stores/RegionPaneStore";
 import { useMcUser } from "@/dataHooks/minecraft/useMcUser";
+import SanitizedHtml from "@/components/common/SanitizedHtml";
 import { useSession } from "next-auth/react";
 import type { BoundsTuple } from "@/stores/RegionPaneStore";
 import type { LandUseStats } from "@/db/schema";
@@ -585,9 +586,10 @@ export default function RegionPane() {
                                     <p className="text-[10px] uppercase tracking-widest text-neutral-600 font-semibold mb-2">
                                         Beschreibung
                                     </p>
-                                    <p className="text-sm text-neutral-300 leading-relaxed">
-                                        {region.description}
-                                    </p>
+                                    <SanitizedHtml
+                                        html={region.description}
+                                        className="text-sm text-neutral-300 leading-relaxed"
+                                    />
                                 </div>
                             )}
 

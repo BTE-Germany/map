@@ -23,6 +23,7 @@ import BuilderAvatarStack from "@/components/region/BuilderAvatarStack";
 import RegionImageGallery from "@/components/map/region/RegionImageGallery";
 import Region3DMapGated from "@/components/map/region/Region3DMapGated";
 import { hasPermission, PERMISSIONS } from "@/lib/permissions";
+import SanitizedHtml, { htmlToPlainText } from "@/components/common/SanitizedHtml";
 import type { LandUseStats } from "@/db/schema";
 
 /* ─── helpers ─────────────────────────────────────────────────── */
@@ -57,9 +58,11 @@ export async function generateMetadata({ params }: { params: Promise<{ id: strin
     const { id } = await params;
     const region = await getRegion(id);
     if (!region) return { title: "Region nicht gefunden — BTE Germany" };
+    // Descriptions may contain HTML; use plain text for the meta tag.
+    const plainDescription = htmlToPlainText(region.description);
     return {
         title: `${region.address} — BTE Germany`,
-        description: region.description || `Region in ${region.city}`,
+        description: plainDescription || `Region in ${region.city}`,
     };
 }
 
@@ -224,12 +227,13 @@ export default async function RegionPage({ params }: { params: Promise<{ id: str
                         {/* 3D-Ansicht (Plus) */}
                         <Region3DMapGated polygon={region.polygon as [number, number][]} />
 
-                        {/* Description */}
+                        {/* Description (may contain migrated HTML — rendered sanitized) */}
                         {region.description && (
                             <ContentCard title="Beschreibung">
-                                <p className="text-sm text-muted-foreground leading-relaxed whitespace-pre-wrap">
-                                    {region.description}
-                                </p>
+                                <SanitizedHtml
+                                    html={region.description}
+                                    className="text-sm text-muted-foreground leading-relaxed"
+                                />
                             </ContentCard>
                         )}
 

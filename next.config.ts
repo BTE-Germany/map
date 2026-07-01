@@ -14,6 +14,8 @@ const securityHeaders = [
 const nextConfig: NextConfig = {
   // Enable minimal server output for container images
   output: 'standalone',
+  // Keep isomorphic-dompurify's jsdom dependency out of the bundle (Node-only).
+  serverExternalPackages: ["isomorphic-dompurify"],
   images: {
     remotePatterns: [new URL("https://minotar.net/**")],
   },
