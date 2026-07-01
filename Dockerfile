@@ -34,5 +34,8 @@ COPY --from=prod-deps /app/node_modules ./node_modules
 COPY --from=builder /app/package.json ./package.json
 COPY --from=builder /app/scripts ./scripts
 COPY --from=builder /app/migrations ./migrations
+# Fonts read at runtime by the region opengraph-image route
+# (readFile(join(process.cwd(), "assets/...")) — not traced into standalone).
+COPY --from=builder /app/assets ./assets
 EXPOSE 3000
 CMD ["node", "server.js"]
