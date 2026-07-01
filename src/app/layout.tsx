@@ -4,6 +4,7 @@ import "./globals.css";
 
 import QueryWrapper from "@/components/common/QueryWrapper";
 import { getSession } from "@/lib/auth";
+import { getSiteUrl } from "@/lib/siteUrl";
 import AuthProvider from "@/components/common/AuthProvider";
 import NextTopLoader from 'nextjs-toploader';
 import { Toaster } from "@/components/ui/sonner"
@@ -26,6 +27,9 @@ const outfit = Outfit({
 
 
 export const metadata: Metadata = {
+    // Resolves file-based/relative metadata URLs (e.g. the region opengraph-image
+    // route) to absolute URLs on the deployed domain instead of localhost.
+    metadataBase: new URL(getSiteUrl()),
     title: "BTE Germany Map",
     description: "Finde heraus, wo auf BTE Germany bereits gebaut wurde.",
 };
