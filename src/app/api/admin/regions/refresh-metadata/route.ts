@@ -9,12 +9,10 @@ import { eq, isNull, lt, or } from "drizzle-orm";
 
 const bodySchema = z.object({ mode: z.enum(["all", "missing", "stale"]) });
 
-// How many Overpass cluster-fetches run at once. Overpass instances have
-// limited query slots, so too much concurrency makes the gateway 504 — keep
-// modest and tunable. Each fetch already retries transient errors (lib/overpass.ts).
+
 const REFRESH_CONCURRENCY = Math.max(
     1,
-    Number(process.env.METADATA_REFRESH_CONCURRENCY) || 2,
+    Number(process.env.METADATA_REFRESH_CONCURRENCY) || 4,
 );
 
 // Regions are grouped into grid cells (~degrees) so ONE Overpass query serves a

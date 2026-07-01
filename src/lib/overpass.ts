@@ -19,6 +19,37 @@ function isRetryable(err: unknown): boolean {
     return false;
 }
 
+/**
+ * Build a compact one-line diagnostic for a failed Overpass request. The key
+ * signals for a 504: `elapsed` (a fast 504 = gateway rejection / dead upstream /
+ * rate-limit; a slow one = a real upstream timeout), which `server`/`via`
+ * emitted it (nginx vs cloudflare vs Overpass itself), any `retry-after`, and
+ * the response body (Overpass errors are usually plain text naming the cause).
+ */
+function diagnose(err: unknown, elapsedMs: number): string {
+    if (axios.isAxiosError(err)) {
+        const r = err.response;
+        const h = (r?.headers ?? {}) as Record<string, string>;
+        let body = "";
+        const data = r?.data;
+        if (typeof data === "string") body = data.replace(/\s+/g, " ").trim().slice(0, 300);
+        else if (data) {
+            try { body = JSON.stringify(data).slice(0, 300); } catch { /* ignore */ }
+        }
+        return [
+            `status=${r?.status ?? "(no response)"}`,
+            `elapsed=${elapsedMs}ms`,
+            err.code ? `code=${err.code}` : "",
+            h["server"] ? `server=${h["server"]}` : "",
+            h["via"] ? `via=${h["via"]}` : "",
+            (h["x-cache"] ?? h["cf-cache-status"]) ? `cache=${h["x-cache"] ?? h["cf-cache-status"]}` : "",
+            h["retry-after"] ? `retry-after=${h["retry-after"]}` : "",
+            body ? `body="${body}"` : "",
+        ].filter(Boolean).join(" ");
+    }
+    return `${getErrorMessage(err)} elapsed=${elapsedMs}ms`;
+}
+
 export interface OverpassOptions {
     /** Per-attempt client timeout in ms (default 35s). */
     timeoutMs?: number;
@@ -40,6 +71,7 @@ export async function postOverpassQuery(query: string, opts: OverpassOptions = {
 
     let lastErr: unknown;
     for (let attempt = 1; attempt <= attempts; attempt++) {
+        const startedAt = Date.now();
         try {
             const res = await axios.post(url, `data=${encodeURIComponent(query)}`, {
                 headers: {
@@ -51,12 +83,16 @@ export async function postOverpassQuery(query: string, opts: OverpassOptions = {
             return res.data;
         } catch (err) {
             lastErr = err;
-            if (attempt < attempts && isRetryable(err)) {
+            const elapsed = Date.now() - startedAt;
+            const willRetry = attempt < attempts && isRetryable(err);
+            // Always log (not just under DEBUG) so intermittent gateway 504s are
+            // traceable — the elapsed time + server/body reveal the real cause.
+            console.error(
+                `[overpass] request failed (attempt ${attempt}/${attempts}${willRetry ? ", retrying" : ""}): ${diagnose(err, elapsed)}`,
+            );
+            if (willRetry) {
                 // ~0.6s, 1.2s, 2.4s … plus jitter to avoid synchronized retries.
                 const backoff = 600 * 2 ** (attempt - 1) + Math.floor(Math.random() * 300);
-                if (process.env.DEBUG_OVERPASS) {
-                    console.warn(`[overpass] attempt ${attempt} failed (${getErrorMessage(err)}); retrying in ${backoff}ms`);
-                }
                 await new Promise((resolve) => setTimeout(resolve, backoff));
                 continue;
             }
