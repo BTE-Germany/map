@@ -12,7 +12,7 @@ export type MapAttributionLink = {
     href: string;
 };
 
-const defaultStyle = "https://gist.githubusercontent.com/Nachwahl/7d0969c76922fb5025dac7358fbf9c74/raw/04a9bdfb631784bc6d256e4c6e8c68cef7bbf474/gistfile1.txt";
+const defaultStyle = "https://tiles.dachstein.cloud/styles/btedarklight/style.json";
 
 const hybridStyle = "mapbox://styles/robinferch-bteg/cmmi8076c000y01s6hscq9xhi";
 const satelliteStyle = "mapbox://styles/robinferch-bteg/cmmi82kwv003v01sb2v4yhree";

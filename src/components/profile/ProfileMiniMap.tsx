@@ -4,9 +4,9 @@ import { Layer, Map as MaplibreMap, Source } from "@vis.gl/react-maplibre";
 import "maplibre-gl/dist/maplibre-gl.css";
 import maplibregl from "maplibre-gl";
 import type { FeatureCollection, Polygon } from "geojson";
+import { getMapStyleById } from "@/lib/mapStyles";
 
-const MAP_STYLE =
-    "https://gist.githubusercontent.com/Nachwahl/7d0969c76922fb5025dac7358fbf9c74/raw/04a9bdfb631784bc6d256e4c6e8c68cef7bbf474/gistfile1.txt";
+const MAP_STYLE = getMapStyleById("default");
 
 export type UserRegionsGeoJSON = FeatureCollection<Polygon, { id: string; finished: boolean }>;
 
