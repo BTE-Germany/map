@@ -36,11 +36,11 @@ function formatInt(n: number) {
 }
 
 const COLUMNS: Column[] = [
-    { key: "points",   label: "Punkte",   icon: <Sparkles className="size-3.5" />,      getValue: (p) => p.totalPoints,            format: formatInt,  align: "right" },
-    { key: "area",     label: "Fläche",   icon: <LandPlot className="size-3.5" />,      getValue: (p) => p.totalArea,              format: formatArea, align: "right" },
-    { key: "buildings",label: "Gebäude",  icon: <Building2 className="size-3.5" />,     getValue: (p) => p.buildings,              format: formatInt,  align: "right" },
-    { key: "regions",  label: "Regionen", icon: <Users className="size-3.5" />,         getValue: (p) => p.regionCount,            format: formatInt,  align: "right" },
-    { key: "finished", label: "Fertig",   icon: <CheckCircle2Icon className="size-3.5" />, getValue: (p) => p.finishedRegionCount, format: formatInt,  align: "right" },
+    { key: "points", label: "Punkte", icon: <Sparkles className="size-3.5" />, getValue: (p) => p.totalPoints, format: formatInt, align: "right" },
+    { key: "area", label: "Fläche", icon: <LandPlot className="size-3.5" />, getValue: (p) => p.totalArea, format: formatArea, align: "right" },
+    { key: "buildings", label: "Gebäude", icon: <Building2 className="size-3.5" />, getValue: (p) => p.buildings, format: formatInt, align: "right" },
+    { key: "regions", label: "Regionen", icon: <Users className="size-3.5" />, getValue: (p) => p.regionCount, format: formatInt, align: "right" },
+    { key: "finished", label: "Fertig", icon: <CheckCircle2Icon className="size-3.5" />, getValue: (p) => p.finishedRegionCount, format: formatInt, align: "right" },
 ];
 
 const ROW_HEIGHT = 52;
@@ -114,7 +114,7 @@ export default function ExtendedRankingTable({ players }: { players: PlayerScore
                 <div>
                     <p className="text-sm font-semibold text-white">Gesamtwertung</p>
                     <p className="text-xs text-neutral-500">
-                        {ranked.length.toLocaleString("de-DE")} Builder mit Aktivität — Spalten klickbar zum Sortieren
+                        {ranked.length.toLocaleString("de-DE")} Builder mit Aktivität
                     </p>
                 </div>
 
