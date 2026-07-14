@@ -2,7 +2,7 @@ import { AnimatePresence, motion } from "motion/react";
 import {
     HouseIcon, LandPlotIcon, XIcon, MapPinIcon,
     CalendarIcon, CheckCircle2Icon, ClockIcon, LayersIcon, ArrowRightIcon, PencilRulerIcon,
-    Loader2, NavigationIcon, Trash2Icon, AlertTriangleIcon,
+    Loader2, NavigationIcon, Trash2Icon, AlertTriangleIcon, SparklesIcon,
 } from "lucide-react";
 import { toast } from "sonner";
 import { useQueryClient } from "@tanstack/react-query";
@@ -29,6 +29,7 @@ import { stateCodeToName } from "@/lib/federalStates";
 import useUserSettings, { formatAreaWithMode } from "@/stores/UserSettingsStore";
 import RegionImageGallery from "@/components/map/region/RegionImageGallery";
 import Region3DMap from "@/components/map/region/Region3DMap";
+import { scoreRegion } from "@/lib/scoring";
 
 const isFiniteBounds = (bounds: BoundsTuple): boolean => {
     return bounds.every((value) => Number.isFinite(value));
@@ -434,6 +435,7 @@ export default function RegionPane() {
 
     const area = region?.area ? parseFloat(region.area) : 0;
     const formattedArea = formatAreaWithMode(area, areaUnit);
+    const regionScore = region ? scoreRegion(region) : null;
     const typeConfig = TYPE_CONFIG[region?.type ?? "default"] ?? TYPE_CONFIG.default;
 
     const createdAt = region?.createdAt ? new Date(region.createdAt) : null;
@@ -550,6 +552,26 @@ export default function RegionPane() {
                                         <span className="text-base text-neutral-500 ml-1.5">{formattedArea.unit}</span>
                                     </span>
                                 </StatCard>
+
+                                <div className="col-span-2">
+                                    <StatCard
+                                        icon={<SparklesIcon size={13} />}
+                                        label="Punkte"
+                                        isLoading={isLoading}
+                                        accent="#f59e0b"
+                                    >
+                                        <div className="flex w-full items-end justify-between gap-3">
+                                            <span className="text-3xl font-bold text-white tabular-nums">
+                                                {Math.round(regionScore?.total ?? 0).toLocaleString("de-DE")}
+                                            </span>
+                                            {regionScore && regionScore.team.length > 1 ? (
+                                                <span className="pb-1 text-right text-[11px] text-neutral-500 tabular-nums">
+                                                    {Math.round(regionScore.perBuilder).toLocaleString("de-DE")} je Builder
+                                                </span>
+                                            ) : null}
+                                        </div>
+                                    </StatCard>
+                                </div>
                             </div>
 
                             {/* Meta chips */}

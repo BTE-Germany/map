@@ -10,6 +10,7 @@ import {
     CheckCircle2Icon,
     LayersIcon,
     ExternalLinkIcon,
+    SparklesIcon,
 } from "lucide-react";
 import { getRegion } from "@/actions/region/GetRegions";
 import getUser from "@/actions/minecraft/user";
@@ -25,6 +26,7 @@ import Region3DMapGated from "@/components/map/region/Region3DMapGated";
 import { hasPermission, PERMISSIONS } from "@/lib/permissions";
 import SanitizedHtml, { htmlToPlainText } from "@/components/common/SanitizedHtml";
 import type { LandUseStats } from "@/db/schema";
+import { scoreRegion } from "@/lib/scoring";
 
 /* ─── helpers ─────────────────────────────────────────────────── */
 
@@ -85,6 +87,7 @@ export default async function RegionPage({ params }: { params: Promise<{ id: str
 
     const area = parseFloat(region.area ?? "0");
     const formattedArea = formatAreaWithMode(area, "full");
+    const regionScore = scoreRegion(region);
     const locationParts = [region.city, region.state ? stateCodeToName(region.state) : null].filter(Boolean);
 
     /* landuse */
@@ -192,7 +195,7 @@ export default async function RegionPage({ params }: { params: Promise<{ id: str
             <div className="container mx-auto px-4 pb-20">
 
                 {/* Stats row */}
-                <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-8">
+                <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3 mb-8">
                     <StatCard icon={<HouseIcon size={14} />} label="Gebäude">
                         <span className="text-2xl font-bold">
                             {region.buildings?.toLocaleString("de-DE") ?? "–"}
@@ -204,6 +207,19 @@ export default async function RegionPage({ params }: { params: Promise<{ id: str
                             {formattedArea.value}
                             <span className="text-sm text-muted-foreground ml-1">{formattedArea.unit}</span>
                         </span>
+                    </StatCard>
+
+                    <StatCard icon={<SparklesIcon size={14} />} label="Punkte">
+                        <div>
+                            <span className="text-2xl font-bold tabular-nums">
+                                {Math.round(regionScore.total).toLocaleString("de-DE")}
+                            </span>
+                            {regionScore.team.length > 1 ? (
+                                <p className="mt-1 text-[11px] text-muted-foreground tabular-nums">
+                                    {Math.round(regionScore.perBuilder).toLocaleString("de-DE")} je Builder
+                                </p>
+                            ) : null}
+                        </div>
                     </StatCard>
 
                     <StatCard icon={<CalendarIcon size={14} />} label="Erstellt">
