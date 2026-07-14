@@ -1,11 +1,12 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import { useSession } from "next-auth/react";
 import {
-    ArrowDownIcon, ArrowUpIcon, Building2, CheckCircle2Icon, LandPlot,
-    SearchIcon, Sparkles, Users,
+    ArrowDownIcon, ArrowUpIcon, Building2, CheckCircle2Icon, ChevronDownIcon,
+    ChevronUpIcon, LandPlot, SearchIcon, Sparkles, Users,
 } from "lucide-react";
+import { AnimatePresence, motion } from "motion/react";
 import {
     Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from "@/components/ui/table";
@@ -42,6 +43,12 @@ const COLUMNS: Column[] = [
     { key: "finished", label: "Fertig",   icon: <CheckCircle2Icon className="size-3.5" />, getValue: (p) => p.finishedRegionCount, format: formatInt,  align: "right" },
 ];
 
+const ROW_HEIGHT = 52;
+const PREVIEW_ROW_COUNT = 9;
+const COLLAPSED_HEIGHT = 352;
+const EXPANDED_HEIGHT = 576;
+const VIRTUAL_OVERSCAN = 6;
+
 interface RankedPlayer extends PlayerScore {
     rank: number;
 }
@@ -52,6 +59,9 @@ export default function ExtendedRankingTable({ players }: { players: PlayerScore
 
     const [sortKey, setSortKey] = useState<SortKey>("points");
     const [search, setSearch] = useState("");
+    const [isExpanded, setIsExpanded] = useState(false);
+    const [firstVisibleIndex, setFirstVisibleIndex] = useState(0);
+    const tableViewportRef = useRef<HTMLDivElement>(null);
 
     const ranked = useMemo<RankedPlayer[]>(() => {
         const col = COLUMNS.find((c) => c.key === sortKey)!;
@@ -70,6 +80,34 @@ export default function ExtendedRankingTable({ players }: { players: PlayerScore
         ? ranked.find((p) => p.uuid.toLowerCase() === currentUserUuid.toLowerCase())
         : null;
 
+    const canExpand = filtered.length > PREVIEW_ROW_COUNT;
+    const virtualized = isExpanded && filtered.length > PREVIEW_ROW_COUNT * 2;
+    const visibleRange = useMemo(() => {
+        if (!isExpanded && canExpand) {
+            return { start: 0, end: Math.min(filtered.length, PREVIEW_ROW_COUNT) };
+        }
+        if (!virtualized) return { start: 0, end: filtered.length };
+
+        const visibleRows = Math.ceil(EXPANDED_HEIGHT / ROW_HEIGHT);
+        const start = Math.max(0, firstVisibleIndex - VIRTUAL_OVERSCAN);
+        const end = Math.min(filtered.length, start + visibleRows + VIRTUAL_OVERSCAN * 2);
+        return { start, end };
+    }, [canExpand, filtered.length, firstVisibleIndex, isExpanded, virtualized]);
+
+    const visiblePlayers = filtered.slice(visibleRange.start, visibleRange.end);
+    const topSpacerHeight = visibleRange.start * ROW_HEIGHT;
+    const bottomSpacerHeight = (filtered.length - visibleRange.end) * ROW_HEIGHT;
+
+    function resetTableScroll() {
+        setFirstVisibleIndex(0);
+        tableViewportRef.current?.scrollTo({ top: 0 });
+    }
+
+    function collapseTable() {
+        setIsExpanded(false);
+        resetTableScroll();
+    }
+
     return (
         <section className="rounded-2xl border border-white/[0.06] bg-white/[0.02] overflow-hidden">
             <header className="flex flex-wrap items-center justify-between gap-3 px-5 py-3.5 border-b border-white/[0.04]">
@@ -84,7 +122,10 @@ export default function ExtendedRankingTable({ players }: { players: PlayerScore
                     <SearchIcon className="absolute left-3 top-1/2 -translate-y-1/2 size-3.5 text-neutral-500 pointer-events-none" />
                     <input
                         value={search}
-                        onChange={(e) => setSearch(e.target.value)}
+                        onChange={(e) => {
+                            setSearch(e.target.value);
+                            resetTableScroll();
+                        }}
                         placeholder="Nach UUID-Anfang filtern…"
                         className="w-full bg-white/[0.04] border border-white/[0.06] rounded-lg pl-8 pr-3 py-1.5 text-xs text-white placeholder:text-neutral-500 focus:outline-none focus:border-white/20 transition-colors"
                     />
@@ -95,46 +136,127 @@ export default function ExtendedRankingTable({ players }: { players: PlayerScore
                 <MeBanner me={me} />
             )}
 
-            <div className="max-h-[36rem] overflow-y-auto scrollbar-thin">
-                <Table>
-                    <TableHeader className="sticky top-0 z-10 bg-neutral-950/85 backdrop-blur">
-                        <TableRow className="border-white/[0.05] hover:bg-transparent">
-                            <TableHead className="w-12 text-right text-[10px] uppercase tracking-widest text-neutral-500">
-                                #
-                            </TableHead>
-                            <TableHead className="text-[10px] uppercase tracking-widest text-neutral-500">
-                                Builder
-                            </TableHead>
-                            {COLUMNS.map((col) => (
-                                <SortHead
-                                    key={col.key}
-                                    col={col}
-                                    active={sortKey === col.key}
-                                    onClick={() => setSortKey(col.key)}
-                                />
-                            ))}
-                        </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                        {filtered.length === 0 ? (
-                            <TableRow>
-                                <TableCell colSpan={2 + COLUMNS.length} className="text-center text-neutral-500 py-10 text-sm">
-                                    Keine Builder gefunden.
-                                </TableCell>
+            <div className="relative">
+                <motion.div
+                    id="complete-builder-ranking"
+                    ref={tableViewportRef}
+                    initial={false}
+                    animate={{
+                        height: canExpand
+                            ? isExpanded ? EXPANDED_HEIGHT : COLLAPSED_HEIGHT
+                            : "auto",
+                    }}
+                    transition={{ duration: 0.4, ease: [0.22, 1, 0.36, 1] }}
+                    onScroll={(event) => {
+                        if (!virtualized) return;
+                        const nextIndex = Math.floor(event.currentTarget.scrollTop / ROW_HEIGHT);
+                        setFirstVisibleIndex((current) => current === nextIndex ? current : nextIndex);
+                    }}
+                    className={cn(
+                        "scrollbar-thin",
+                        isExpanded ? "overflow-y-auto" : "overflow-y-hidden",
+                    )}
+                >
+                    <Table>
+                        <TableHeader className="sticky top-0 z-10 bg-neutral-950/85 backdrop-blur">
+                            <TableRow className="border-white/[0.05] hover:bg-transparent">
+                                <TableHead className="w-12 text-right text-[10px] uppercase tracking-widest text-neutral-500">
+                                    #
+                                </TableHead>
+                                <TableHead className="text-[10px] uppercase tracking-widest text-neutral-500">
+                                    Builder
+                                </TableHead>
+                                {COLUMNS.map((col) => (
+                                    <SortHead
+                                        key={col.key}
+                                        col={col}
+                                        active={sortKey === col.key}
+                                        onClick={() => {
+                                            setSortKey(col.key);
+                                            resetTableScroll();
+                                        }}
+                                    />
+                                ))}
                             </TableRow>
-                        ) : (
-                            filtered.map((player) => (
-                                <PlayerRow
-                                    key={player.uuid}
-                                    player={player}
-                                    sortKey={sortKey}
-                                    isMe={!!currentUserUuid && player.uuid.toLowerCase() === currentUserUuid.toLowerCase()}
-                                />
-                            ))
-                        )}
-                    </TableBody>
-                </Table>
+                        </TableHeader>
+                        <TableBody>
+                            {filtered.length === 0 ? (
+                                <TableRow>
+                                    <TableCell colSpan={2 + COLUMNS.length} className="text-center text-neutral-500 py-10 text-sm">
+                                        Keine Builder gefunden.
+                                    </TableCell>
+                                </TableRow>
+                            ) : (
+                                <>
+                                    {topSpacerHeight > 0 ? (
+                                        <TableRow aria-hidden="true" className="border-0 hover:bg-transparent">
+                                            <TableCell
+                                                colSpan={2 + COLUMNS.length}
+                                                className="p-0"
+                                                style={{ height: topSpacerHeight }}
+                                            />
+                                        </TableRow>
+                                    ) : null}
+                                    {visiblePlayers.map((player) => (
+                                        <PlayerRow
+                                            key={player.uuid}
+                                            player={player}
+                                            sortKey={sortKey}
+                                            isMe={!!currentUserUuid && player.uuid.toLowerCase() === currentUserUuid.toLowerCase()}
+                                        />
+                                    ))}
+                                    {bottomSpacerHeight > 0 ? (
+                                        <TableRow aria-hidden="true" className="border-0 hover:bg-transparent">
+                                            <TableCell
+                                                colSpan={2 + COLUMNS.length}
+                                                className="p-0"
+                                                style={{ height: bottomSpacerHeight }}
+                                            />
+                                        </TableRow>
+                                    ) : null}
+                                </>
+                            )}
+                        </TableBody>
+                    </Table>
+                </motion.div>
+
+                <AnimatePresence>
+                    {!isExpanded && canExpand ? (
+                        <motion.div
+                            initial={{ opacity: 0 }}
+                            animate={{ opacity: 1 }}
+                            exit={{ opacity: 0 }}
+                            className="pointer-events-none absolute inset-x-0 bottom-0 flex h-32 items-end justify-center bg-gradient-to-t from-neutral-950 via-neutral-950/90 to-transparent pb-5 backdrop-blur-[1.5px]"
+                        >
+                            <button
+                                type="button"
+                                aria-expanded={false}
+                                aria-controls="complete-builder-ranking"
+                                onClick={() => setIsExpanded(true)}
+                                className="pointer-events-auto inline-flex items-center gap-2 rounded-full border border-white/10 bg-neutral-900/90 px-4 py-2 text-xs font-semibold text-white shadow-xl shadow-black/30 transition-colors hover:bg-neutral-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-300/50"
+                            >
+                                Mehr anzeigen
+                                <ChevronDownIcon className="size-3.5" />
+                            </button>
+                        </motion.div>
+                    ) : null}
+                </AnimatePresence>
             </div>
+
+            {isExpanded && canExpand ? (
+                <div className="flex justify-center border-t border-white/[0.04] px-4 py-3">
+                    <button
+                        type="button"
+                        aria-expanded={true}
+                        aria-controls="complete-builder-ranking"
+                        onClick={collapseTable}
+                        className="inline-flex items-center gap-2 rounded-full px-4 py-2 text-xs font-medium text-neutral-400 transition-colors hover:bg-white/[0.04] hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-300/50"
+                    >
+                        Weniger anzeigen
+                        <ChevronUpIcon className="size-3.5" />
+                    </button>
+                </div>
+            ) : null}
         </section>
     );
 }
@@ -171,7 +293,7 @@ function PlayerRow({
     return (
         <TableRow
             className={cn(
-                "border-white/[0.04] transition-colors",
+                "h-[52px] border-white/[0.04] transition-colors",
                 isMe
                     ? "bg-sky-500/10 hover:bg-sky-500/15 ring-1 ring-sky-500/30"
                     : "hover:bg-white/[0.02]",

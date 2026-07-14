@@ -43,9 +43,9 @@ export default function PlayerRankingRow({
     const avatar = mc?.avatar ?? `https://minotar.net/helm/${player.uuid}`;
 
     return (
-        <div className="grid grid-cols-[auto_auto_1fr_auto] items-center gap-4 px-5 py-3 hover:bg-white/[0.02] transition-colors">
+        <div className="grid grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-2.5 px-3 py-3 transition-colors hover:bg-white/[0.02] sm:grid-cols-[auto_auto_minmax(0,1fr)_auto] sm:gap-4 sm:px-5">
             <div
-                className={`flex items-center justify-center size-10 rounded-xl ring-1 ${colors.bg} ${colors.ring} shrink-0`}
+                className={`flex items-center justify-center size-9 sm:size-10 rounded-xl ring-1 ${colors.bg} ${colors.ring} shrink-0`}
             >
                 {rank <= 3 ? (
                     <Trophy className={`size-4 ${colors.text}`} />
@@ -54,12 +54,12 @@ export default function PlayerRankingRow({
                 )}
             </div>
 
-            <img src={avatar} alt={username} className="size-10 rounded-lg shrink-0" />
+            <img src={avatar} alt={username} className="hidden size-10 rounded-lg shrink-0 sm:block" />
 
             <div className="min-w-0">
                 <div className="flex items-baseline gap-2">
                     <p className="font-semibold text-sm text-white truncate">{username}</p>
-                    <span className="text-[10px] uppercase tracking-widest text-neutral-600">
+                    <span className="hidden text-[10px] uppercase tracking-widest text-neutral-600 min-[420px]:inline">
                         {player.regionCount} {player.regionCount === 1 ? "Region" : "Regionen"}
                     </span>
                 </div>
@@ -71,7 +71,7 @@ export default function PlayerRankingRow({
                         />
                     </div>
                 </div>
-                <div className="mt-1.5 flex items-center gap-3 text-[11px] text-neutral-500">
+                <div className="mt-1.5 hidden items-center gap-3 text-[11px] text-neutral-500 sm:flex">
                     <span className="flex items-center gap-1">
                         <LandPlot className="size-3" />
                         {formatArea(player.totalArea)}
@@ -88,7 +88,7 @@ export default function PlayerRankingRow({
             </div>
 
             <div className="text-right">
-                <p className="text-xl font-bold tabular-nums text-white">{metric.format(value)}</p>
+                <p className="max-w-[7.5rem] truncate text-base font-bold tabular-nums text-white sm:text-xl">{metric.format(value)}</p>
                 <p className="text-[10px] uppercase tracking-widest text-neutral-600">{metric.label}</p>
             </div>
         </div>

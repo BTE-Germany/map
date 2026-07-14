@@ -1,16 +1,25 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useMap } from "@vis.gl/react-maplibre";
 import type maplibregl from "maplibre-gl";
+import type { FeatureCollection, MultiPolygon, Point, Polygon } from "geojson";
 import { useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
-import { LoaderIcon, CheckIcon, XIcon, MousePointerIcon } from "lucide-react";
+import { LoaderIcon, CheckIcon, XIcon, MousePointerIcon, MagnetIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
 import useRegionShapeEdit from "@/stores/RegionShapeEditStore";
 import { updateRegionPolygon } from "@/actions/region/UpdateRegionPolygon";
+import { useAllRegionsAsGeoJSON } from "@/dataHooks/regions/useAllRegions";
 
 type Vertex = [number, number]; // [lng, lat]
+type RegionFeatureCollection = FeatureCollection<Polygon | MultiPolygon, { id?: string }>;
+
+const SNAP_DISTANCE_PX = 14;
+const EMPTY_SNAP_POINTS: FeatureCollection<Point> = {
+    type: "FeatureCollection",
+    features: [],
+};
 
 /* ── GeoJSON builders ─────────────────────────────────────────── */
 
@@ -53,6 +62,60 @@ function midpointsGeoJSON(verts: Vertex[]) {
     };
 }
 
+function snapPointsGeoJSON(
+    collection: RegionFeatureCollection | undefined,
+    currentRegionId: string | null,
+): FeatureCollection<Point> {
+    if (!collection || !currentRegionId) return EMPTY_SNAP_POINTS;
+
+    const features: FeatureCollection<Point>["features"] = [];
+    const seen = new Set<string>();
+
+    const addRing = (ring: number[][]) => {
+        for (const coordinate of ring) {
+            const [lng, lat] = coordinate;
+            if (!Number.isFinite(lng) || !Number.isFinite(lat)) continue;
+
+            // Adjacent polygons often share the same vertex. Keep one target so
+            // rendered-feature queries stay small while dragging.
+            const key = `${lng.toFixed(7)}:${lat.toFixed(7)}`;
+            if (seen.has(key)) continue;
+            seen.add(key);
+
+            features.push({
+                type: "Feature",
+                properties: {},
+                geometry: { type: "Point", coordinates: [lng, lat] },
+            });
+        }
+    };
+
+    for (const feature of collection.features) {
+        if (feature.properties?.id === currentRegionId) continue;
+
+        if (feature.geometry.type === "Polygon") {
+            feature.geometry.coordinates.forEach(addRing);
+        } else {
+            feature.geometry.coordinates.forEach((polygon) => polygon.forEach(addRing));
+        }
+    }
+
+    return { type: "FeatureCollection", features };
+}
+
+function activeSnapGeoJSON(vertex: Vertex | null): FeatureCollection<Point> {
+    return {
+        type: "FeatureCollection",
+        features: vertex
+            ? [{
+                type: "Feature",
+                properties: {},
+                geometry: { type: "Point", coordinates: vertex },
+            }]
+            : [],
+    };
+}
+
 /* ── Raw map helper ───────────────────────────────────────────── */
 
 // vis.gl MapRef proxies most methods, but for imperative GL calls
@@ -63,8 +126,21 @@ function getRaw(mapRef: any): maplibregl.Map {
 
 /* ── Layer / source helpers ───────────────────────────────────── */
 
-const SOURCES = ["shape-poly", "shape-verts", "shape-mids"] as const;
-const LAYERS = ["shape-fill", "shape-line", "shape-mids-layer", "shape-verts-layer"] as const;
+const SOURCES = [
+    "shape-poly",
+    "shape-verts",
+    "shape-mids",
+    "shape-snap-points",
+    "shape-snap-active",
+] as const;
+const LAYERS = [
+    "shape-fill",
+    "shape-line",
+    "shape-mids-layer",
+    "shape-verts-layer",
+    "shape-snap-points-layer",
+    "shape-snap-active-layer",
+] as const;
 
 function updateSources(raw: maplibregl.Map, verts: Vertex[]) {
     (raw.getSource("shape-poly") as any)?.setData(polyGeoJSON(verts));
@@ -72,10 +148,68 @@ function updateSources(raw: maplibregl.Map, verts: Vertex[]) {
     (raw.getSource("shape-mids") as any)?.setData(midpointsGeoJSON(verts));
 }
 
-function addLayersToMap(raw: maplibregl.Map, verts: Vertex[]) {
+function updateSnapTarget(raw: maplibregl.Map, vertex: Vertex | null) {
+    (raw.getSource("shape-snap-active") as any)?.setData(activeSnapGeoJSON(vertex));
+}
+
+function findNearestSnapVertex(
+    raw: maplibregl.Map,
+    point: { x: number; y: number },
+): Vertex | null {
+    if (!raw.getLayer("shape-snap-points-layer")) return null;
+
+    const distance = SNAP_DISTANCE_PX;
+    const candidates = raw.queryRenderedFeatures(
+        [
+            [point.x - distance, point.y - distance],
+            [point.x + distance, point.y + distance],
+        ],
+        { layers: ["shape-snap-points-layer"] },
+    );
+
+    let nearest: Vertex | null = null;
+    let nearestDistance = distance;
+
+    for (const candidate of candidates) {
+        if (candidate.geometry.type !== "Point") continue;
+        const [lng, lat] = candidate.geometry.coordinates;
+        if (!Number.isFinite(lng) || !Number.isFinite(lat)) continue;
+
+        const projected = raw.project([lng, lat]);
+        const candidateDistance = Math.hypot(projected.x - point.x, projected.y - point.y);
+        if (candidateDistance <= nearestDistance) {
+            nearestDistance = candidateDistance;
+            nearest = [lng, lat];
+        }
+    }
+
+    return nearest;
+}
+
+function addLayersToMap(
+    raw: maplibregl.Map,
+    verts: Vertex[],
+    snapPoints: FeatureCollection<Point>,
+    snapEnabled: boolean,
+) {
     raw.addSource("shape-poly", { type: "geojson", data: polyGeoJSON(verts) as any });
     raw.addSource("shape-verts", { type: "geojson", data: verticesGeoJSON(verts) as any });
     raw.addSource("shape-mids", { type: "geojson", data: midpointsGeoJSON(verts) as any });
+    raw.addSource("shape-snap-points", { type: "geojson", data: snapPoints as any });
+    raw.addSource("shape-snap-active", { type: "geojson", data: activeSnapGeoJSON(null) as any });
+
+    raw.addLayer({
+        id: "shape-snap-points-layer",
+        type: "circle",
+        source: "shape-snap-points",
+        paint: {
+            "circle-radius": 3.5,
+            "circle-color": "#22d3ee",
+            "circle-opacity": snapEnabled ? 0.55 : 0,
+            "circle-stroke-width": 1,
+            "circle-stroke-color": "#083344",
+        },
+    });
 
     raw.addLayer({ id: "shape-fill", type: "fill", source: "shape-poly",
         paint: { "fill-color": "#a78bfa", "fill-opacity": 0.25 } });
@@ -98,6 +232,18 @@ function addLayersToMap(raw: maplibregl.Map, verts: Vertex[]) {
             "circle-stroke-color": "#7c3aed",
         },
     });
+    raw.addLayer({
+        id: "shape-snap-active-layer",
+        type: "circle",
+        source: "shape-snap-active",
+        paint: {
+            "circle-radius": 10,
+            "circle-color": "#22d3ee",
+            "circle-opacity": 0.2,
+            "circle-stroke-width": 2,
+            "circle-stroke-color": "#67e8f9",
+        },
+    });
 }
 
 function removeLayersFromMap(raw: maplibregl.Map) {
@@ -110,14 +256,30 @@ function removeLayersFromMap(raw: maplibregl.Map) {
 export default function RegionShapeEditor() {
     const { mainMap: map } = useMap();
     const { isEditing, regionId, vertices, stopEditing, setVertices } = useRegionShapeEdit();
+    const { data: regionGeoJSON } = useAllRegionsAsGeoJSON();
     const queryClient = useQueryClient();
     const [isSaving, setIsSaving] = useState(false);
+    const [snapEnabled, setSnapEnabled] = useState(true);
+
+    const snapPoints = useMemo(
+        () => isEditing
+            ? snapPointsGeoJSON(
+                regionGeoJSON as unknown as RegionFeatureCollection | undefined,
+                regionId,
+            )
+            : EMPTY_SNAP_POINTS,
+        [isEditing, regionGeoJSON, regionId],
+    );
 
     // Refs for use inside event handlers (avoid stale closures)
     const vertsRef = useRef<Vertex[]>(vertices);
     const draggingIdxRef = useRef<number | null>(null);
+    const snapEnabledRef = useRef(snapEnabled);
+    const snapPointsRef = useRef(snapPoints);
 
     useEffect(() => { vertsRef.current = vertices; }, [vertices]);
+    useEffect(() => { snapEnabledRef.current = snapEnabled; }, [snapEnabled]);
+    useEffect(() => { snapPointsRef.current = snapPoints; }, [snapPoints]);
 
     /* ── Setup / teardown map layers ── */
     useEffect(() => {
@@ -126,7 +288,7 @@ export default function RegionShapeEditor() {
         const raw = getRaw(map);
 
         function setup() {
-            addLayersToMap(raw, vertsRef.current);
+            addLayersToMap(raw, vertsRef.current, snapPointsRef.current, snapEnabledRef.current);
 
             /* Vertex drag */
             const onVertexDown = (e: any) => {
@@ -141,15 +303,20 @@ export default function RegionShapeEditor() {
             const onMouseMove = (e: any) => {
                 if (draggingIdxRef.current === null) return;
                 const newVerts = [...vertsRef.current] as Vertex[];
-                newVerts[draggingIdxRef.current] = [e.lngLat.lng, e.lngLat.lat];
+                const snapTarget = snapEnabledRef.current
+                    ? findNearestSnapVertex(raw, e.point)
+                    : null;
+                newVerts[draggingIdxRef.current] = snapTarget ?? [e.lngLat.lng, e.lngLat.lat];
                 vertsRef.current = newVerts;
                 updateSources(raw, newVerts);
+                updateSnapTarget(raw, snapTarget);
             };
 
             const onMouseUp = () => {
                 if (draggingIdxRef.current === null) return;
                 setVertices([...vertsRef.current]);
                 draggingIdxRef.current = null;
+                updateSnapTarget(raw, null);
                 raw.dragPan.enable();
                 raw.getCanvas().style.cursor = "";
             };
@@ -160,7 +327,9 @@ export default function RegionShapeEditor() {
                 const afterIdx = e.features?.[0]?.properties?.afterIdx;
                 if (afterIdx == null) return;
                 const insertAt = Number(afterIdx) + 1;
-                const lngLat: Vertex = [e.lngLat.lng, e.lngLat.lat];
+                const lngLat: Vertex = snapEnabledRef.current
+                    ? findNearestSnapVertex(raw, e.point) ?? [e.lngLat.lng, e.lngLat.lat]
+                    : [e.lngLat.lng, e.lngLat.lat];
                 const newVerts = [...vertsRef.current];
                 newVerts.splice(insertAt, 0, lngLat);
                 vertsRef.current = newVerts;
@@ -231,6 +400,22 @@ export default function RegionShapeEditor() {
         updateSources(raw, vertices);
     }, [vertices]); // eslint-disable-line react-hooks/exhaustive-deps
 
+    /* ── Keep snapping data and visibility in sync ── */
+    useEffect(() => {
+        if (!map || !isEditing) return;
+        const raw = getRaw(map);
+        (raw.getSource("shape-snap-points") as any)?.setData(snapPoints);
+    }, [isEditing, map, snapPoints]);
+
+    useEffect(() => {
+        if (!map || !isEditing) return;
+        const raw = getRaw(map);
+        if (raw.getLayer("shape-snap-points-layer")) {
+            raw.setPaintProperty("shape-snap-points-layer", "circle-opacity", snapEnabled ? 0.55 : 0);
+        }
+        if (!snapEnabled) updateSnapTarget(raw, null);
+    }, [isEditing, map, snapEnabled]);
+
     function handleCancel() {
         stopEditing();
     }
@@ -270,7 +455,7 @@ export default function RegionShapeEditor() {
         <div className="absolute top-4 left-1/2 -translate-x-1/2 z-50 pointer-events-none">
             <div className="pointer-events-auto flex flex-col items-center gap-2">
                 {/* Main toolbar */}
-                <div className="flex items-center gap-3 bg-neutral-950/90 backdrop-blur-xl border border-white/10 rounded-2xl px-4 py-3 shadow-2xl">
+                <div className="flex max-w-[calc(100vw-2rem)] flex-wrap items-center justify-center gap-2 sm:gap-3 bg-neutral-950/90 backdrop-blur-xl border border-white/10 rounded-2xl px-3 sm:px-4 py-3 shadow-2xl">
                     <div className="size-7 rounded-lg bg-violet-500/15 border border-violet-500/20 flex items-center justify-center shrink-0">
                         <MousePointerIcon size={13} className="text-violet-400" />
                     </div>
@@ -279,6 +464,26 @@ export default function RegionShapeEditor() {
                         <p className="text-[11px] text-neutral-500 leading-none">{vertices.length} Punkte</p>
                     </div>
                     <div className="w-px h-8 bg-white/10 mx-1" />
+                    <button
+                        type="button"
+                        role="switch"
+                        aria-checked={snapEnabled}
+                        onClick={() => setSnapEnabled((enabled) => !enabled)}
+                        className={cn(
+                            "flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium transition-colors",
+                            snapEnabled
+                                ? "bg-cyan-500/15 text-cyan-200 ring-1 ring-inset ring-cyan-400/25 hover:bg-cyan-500/20"
+                                : "text-neutral-500 hover:text-white hover:bg-white/10",
+                        )}
+                        title="An Punkten anderer Regionen einrasten"
+                    >
+                        <MagnetIcon size={13} />
+                        <span className="hidden sm:inline">Einrasten</span>
+                        <span className={cn(
+                            "size-1.5 rounded-full",
+                            snapEnabled ? "bg-cyan-300" : "bg-neutral-600",
+                        )} />
+                    </button>
                     <button
                         onClick={handleCancel}
                         disabled={isSaving}
@@ -313,6 +518,12 @@ export default function RegionShapeEditor() {
                         <span className="text-neutral-400">Klick auf Kante</span> zum Hinzufügen
                         {" · "}
                         <span className="text-neutral-400">Doppelklick</span> zum Entfernen
+                        {snapEnabled && (
+                            <>
+                                {" · "}
+                                <span className="text-cyan-300/80">Magnet aktiv</span>
+                            </>
+                        )}
                     </p>
                 </div>
 

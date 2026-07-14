@@ -233,7 +233,7 @@ export function LanduseStackedBar({ landuse }: { landuse: LandUseStats }) {
                     />
                 ))}
             </div>
-            <div className="grid grid-cols-2 gap-x-6 gap-y-2.5">
+            <div className="grid grid-cols-1 gap-y-2.5 sm:grid-cols-2 sm:gap-x-6">
                 {entries.map((e) => {
                     const pct = (e.value / total) * 100;
                     const km2 = e.value / 1_000_000;

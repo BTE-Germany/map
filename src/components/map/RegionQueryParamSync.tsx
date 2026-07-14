@@ -19,6 +19,11 @@ export default function RegionQueryParamSync() {
 
     const lastSyncedFromUrl = useRef<string | null>(null);
     const lastSyncedToUrl = useRef<string | null>(null);
+    // A URL change and a persisted Zustand value can disagree on the first
+    // render after navigating back to the map. Remember URL-driven updates so
+    // the store -> URL effect cannot write the stale store value back in the
+    // same effect pass.
+    const syncingFromUrl = useRef<string | null>(null);
 
     // URL → store
     useEffect(() => {
@@ -30,6 +35,7 @@ export default function RegionQueryParamSync() {
         if (param === lastSyncedFromUrl.current) return;
         lastSyncedFromUrl.current = param;
         if (param !== regionId || !open) {
+            syncingFromUrl.current = param;
             openRegion(param);
         }
     }, [searchParams, regionId, open, openRegion]);
@@ -38,6 +44,15 @@ export default function RegionQueryParamSync() {
     useEffect(() => {
         const current = searchParams.get("region");
         const desired = open && regionId ? String(regionId) : null;
+
+        if (syncingFromUrl.current !== null) {
+            // The next render has received the URL-selected region. Clear the
+            // guard only once the store caught up; until then the URL wins.
+            if (desired === syncingFromUrl.current) {
+                syncingFromUrl.current = null;
+            }
+            return;
+        }
 
         if (current === desired) return;
         if (desired === lastSyncedToUrl.current && current === lastSyncedToUrl.current) return;

@@ -20,6 +20,7 @@ import {
     Building2,
     CheckCircle2,
     ChevronDown,
+    Gauge,
     LandPlot,
     Layers,
     Map as MapIcon,
@@ -30,10 +31,24 @@ import Link from "next/link";
 
 export const dynamic = "force-dynamic";
 
+// Statistisches Bundesamt: Gebietsfläche Deutschlands (357.588 km²).
+const GERMANY_AREA_SQM = 357_588_000_000;
+
 function formatArea(n: number) {
     if (n >= 1_000_000) return `${(n / 1_000_000).toFixed(2)} km²`;
     if (n >= 10_000) return `${(n / 10_000).toFixed(1)} ha`;
     return `${Math.round(n).toLocaleString("de-DE")} m²`;
+}
+
+function formatGermanyCoverage(percent: number) {
+    if (percent === 0) return "0 %";
+    if (percent < 0.000001) return "< 0,000001 %";
+
+    const fractionDigits = percent < 0.001 ? 6 : percent < 0.1 ? 4 : 2;
+    return `${percent.toLocaleString("de-DE", {
+        minimumFractionDigits: fractionDigits,
+        maximumFractionDigits: fractionDigits,
+    })} %`;
 }
 
 function SectionCard({
@@ -93,8 +108,52 @@ function StatCard({
                     </div>
                 </div>
                 <div>
-                    <p className="text-3xl font-bold tabular-nums text-white leading-none">{value}</p>
+                    <p className="text-2xl sm:text-3xl font-bold tabular-nums text-white leading-tight break-words">{value}</p>
                     {sub && <p className="mt-2 text-xs text-neutral-500">{sub}</p>}
+                </div>
+            </div>
+        </div>
+    );
+}
+
+function GermanyProgress({ finishedArea }: { finishedArea: number }) {
+    const percent = Math.min(100, Math.max(0, (finishedArea / GERMANY_AREA_SQM) * 100));
+
+    return (
+        <div className="relative overflow-hidden rounded-2xl border border-emerald-400/10 bg-gradient-to-r from-emerald-500/[0.06] via-white/[0.025] to-sky-500/[0.05] p-5 sm:p-6">
+            <div className="pointer-events-none absolute -left-12 top-1/2 size-36 -translate-y-1/2 rounded-full bg-emerald-400/10 blur-3xl" />
+            <div className="relative flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between">
+                <div className="flex min-w-0 items-start gap-3">
+                    <div className="flex size-9 shrink-0 items-center justify-center rounded-xl bg-emerald-400/10 text-emerald-300 ring-1 ring-inset ring-emerald-400/20">
+                        <Gauge className="size-4" />
+                    </div>
+                    <div className="min-w-0">
+                        <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-emerald-300/70">
+                            Deutschland gebaut
+                        </p>
+                        <p className="mt-1 text-3xl font-bold tabular-nums tracking-tight text-white sm:text-4xl">
+                            {formatGermanyCoverage(percent)}
+                        </p>
+                        <p className="mt-1.5 text-xs text-neutral-500">
+                            {formatArea(finishedArea)} fertiggestellt · bezogen auf 357.588 km² Gesamtfläche
+                        </p>
+                    </div>
+                </div>
+
+                <div className="w-full lg:max-w-xl lg:flex-1">
+                    <div className="relative h-2 rounded-full bg-white/[0.05] ring-1 ring-inset ring-white/[0.04]">
+                        <div
+                            className="absolute inset-y-0 left-0 rounded-full bg-gradient-to-r from-emerald-500 to-sky-400 shadow-[0_0_16px_rgba(52,211,153,0.45)] transition-[width] duration-700"
+                            style={{
+                                width: `${percent}%`,
+                                minWidth: percent > 0 ? "3px" : undefined,
+                            }}
+                        />
+                    </div>
+                    <div className="mt-2 flex items-center justify-between text-[10px] tabular-nums text-neutral-600">
+                        <span>0 %</span>
+                        <span>100 %</span>
+                    </div>
                 </div>
             </div>
         </div>
@@ -115,7 +174,7 @@ export default async function StatsPage() {
                 </div>
             </div>
 
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
                 <StatCard
                     label="Regionen"
                     value={stats.totals.regions.toLocaleString("de-DE")}
@@ -145,6 +204,8 @@ export default async function StatsPage() {
                     accent="#a855f7"
                 />
             </div>
+
+            <GermanyProgress finishedArea={stats.totals.finishedArea} />
 
             {/* Hero: Ranglisten (Punkte / Fläche / Gebäude) */}
             <RankingSection players={stats.ranking} />

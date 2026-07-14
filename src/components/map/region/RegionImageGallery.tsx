@@ -318,6 +318,24 @@ function Lightbox({
 }) {
     const [mounted, setMounted] = useState(false);
     useEffect(() => setMounted(true), []);
+
+    useEffect(() => {
+        if (total <= 1) return;
+
+        const handleKeyDown = (event: KeyboardEvent) => {
+            if (event.key === "ArrowLeft") {
+                event.preventDefault();
+                onPrev();
+            } else if (event.key === "ArrowRight") {
+                event.preventDefault();
+                onNext();
+            }
+        };
+
+        window.addEventListener("keydown", handleKeyDown);
+        return () => window.removeEventListener("keydown", handleKeyDown);
+    }, [onNext, onPrev, total]);
+
     if (!mounted) return null;
 
     return createPortal(
@@ -329,6 +347,7 @@ function Lightbox({
             onClick={onClose}
         >
             <button
+                aria-label="Bildergalerie schließen"
                 onClick={(e) => {
                     e.stopPropagation();
                     onClose();
@@ -368,6 +387,7 @@ function Lightbox({
                 onClick={(e) => e.stopPropagation()}
             >
                 <button
+                    aria-label="Vorheriges Bild"
                     onClick={onPrev}
                     disabled={total <= 1}
                     className="hover:text-white disabled:opacity-30 disabled:cursor-not-allowed"
@@ -378,6 +398,7 @@ function Lightbox({
                     {index + 1} / {total}
                 </span>
                 <button
+                    aria-label="Nächstes Bild"
                     onClick={onNext}
                     disabled={total <= 1}
                     className="hover:text-white disabled:opacity-30 disabled:cursor-not-allowed"
