@@ -8,6 +8,8 @@ import { getSiteUrl } from "@/lib/siteUrl";
 import AuthProvider from "@/components/common/AuthProvider";
 import NextTopLoader from 'nextjs-toploader';
 import { Toaster } from "@/components/ui/sonner"
+import SearchDialog from "@/components/search/SearchDialog";
+import SearchShortcut from "@/components/search/SearchShortcut";
 
 
 const geistSans = Geist({
@@ -52,6 +54,8 @@ export default async function RootLayout({
                 <AuthProvider session={session}>
                     <QueryWrapper>
                         {children}
+                        <SearchDialog />
+                        <SearchShortcut />
                     </QueryWrapper>
                 </AuthProvider>
                 <Toaster />

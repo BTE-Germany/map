@@ -10,8 +10,7 @@ import RegionPane from "@/components/map/region/RegionPane";
 import MapContextMenu from "@/components/map/MapContextMenu";
 import RegionQueryParamSync from "@/components/map/RegionQueryParamSync";
 import WelcomeScreen from "@/components/welcome/WelcomeScreen";
-import SearchDialog from "@/components/search/SearchDialog";
-import SearchShortcut from "@/components/search/SearchShortcut";
+import MapSearchNavigation from "@/components/search/MapSearchNavigation";
 import StreetLevelFeature from "@/components/map/street-level/StreetLevelFeature";
 
 export default function Home() {
@@ -25,8 +24,7 @@ export default function Home() {
                 <MapContextMenu />
                 <MapControls />
                 <LegalBar />
-                <SearchDialog />
-                <SearchShortcut />
+                <MapSearchNavigation />
                 <Suspense fallback={null}>
                     <RegionQueryParamSync />
                 </Suspense>

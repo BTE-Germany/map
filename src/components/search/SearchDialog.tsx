@@ -1,7 +1,7 @@
 "use client"
 
 import { useEffect, useMemo, useState } from "react";
-import { useMap } from "@vis.gl/react-maplibre";
+import { usePathname, useRouter } from "next/navigation";
 import { MapPinIcon, LandmarkIcon, Loader2 } from "lucide-react";
 
 import {
@@ -55,16 +55,20 @@ function scoreRegion(region: Region, needle: string): number {
 }
 
 export default function SearchDialog() {
+    const pathname = usePathname();
+    const router = useRouter();
     const open = useSearchStore((s) => s.open);
     const setOpen = useSearchStore((s) => s.setOpen);
-    const regionPane = useRegionPane();
-    const { mainMap: map } = useMap();
+    const setMapTarget = useSearchStore((s) => s.setMapTarget);
+    const clearMapTarget = useSearchStore((s) => s.clearMapTarget);
+    const openRegion = useRegionPane((s) => s.openRegion);
+    const setRegionPaneOpen = useRegionPane((s) => s.setOpen);
 
     const [query, setQuery] = useState("");
     const debouncedQuery = useDebounced(query, 250);
 
-    const { data: regions } = useRegionsForSearch();
-    const { data: photonResults, isFetching: isPhotonLoading } = usePhotonSearch(debouncedQuery);
+    const { data: regions } = useRegionsForSearch(open);
+    const { data: photonResults, isFetching: isPhotonLoading } = usePhotonSearch(debouncedQuery, open);
 
     // Reset query when dialog closes
     useEffect(() => {
@@ -86,22 +90,30 @@ export default function SearchDialog() {
     }, [query, regions]);
 
     const handleSelectRegion = (region: Region) => {
-        regionPane.openRegion(region.id);
+        clearMapTarget();
         setOpen(false);
+
+        if (pathname === "/") {
+            openRegion(region.id);
+            return;
+        }
+
+        router.push(`/?region=${encodeURIComponent(region.id)}`);
     };
 
     const handleSelectPhoton = (feature: PhotonFeature) => {
         const [lon, lat] = feature.geometry.coordinates;
-        if (regionPane.open) {
-            regionPane.setOpen(false);
-        }
-        map?.flyTo({
-            center: [lon, lat],
+        setRegionPaneOpen(false);
+        setMapTarget({
+            longitude: lon,
+            latitude: lat,
             zoom: 14,
-            duration: 1200,
-            essential: true,
         });
         setOpen(false);
+
+        if (pathname !== "/") {
+            router.push("/");
+        }
     };
 
     return (

@@ -36,11 +36,11 @@ async function fetchPhoton(query: string): Promise<PhotonFeature[]> {
     return data.features ?? [];
 }
 
-export const usePhotonSearch = (query: string) =>
+export const usePhotonSearch = (query: string, enabled = true) =>
     useQuery({
         queryKey: ["photon", query],
         queryFn: () => fetchPhoton(query),
-        enabled: query.trim().length >= 2,
+        enabled: enabled && query.trim().length >= 2,
         staleTime: 1000 * 60 * 5,
     });
 
