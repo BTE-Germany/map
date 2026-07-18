@@ -1,6 +1,8 @@
 "use client";
 
 import { useState, useMemo } from "react";
+import Link from "next/link";
+import { useRouter } from "next/navigation";
 import {
     Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from "@/components/ui/table";
@@ -48,6 +50,7 @@ function formatDate(d: Date | null): string {
 }
 
 export default function RegionsTable({ regions }: { regions: Region[] }) {
+    const router = useRouter();
     const [search, setSearch] = useState("");
     const [typeFilter, setTypeFilter] = useState<Region["type"] | "all">("all");
     const [finishedFilter, setFinishedFilter] = useState<boolean | "all">("all");
@@ -195,14 +198,25 @@ export default function RegionsTable({ regions }: { regions: Region[] }) {
                             </TableRow>
                         ) : (
                             pageData.map((r, i) => (
-                                <TableRow key={r.id} className="group">
+                                <TableRow
+                                    key={r.id}
+                                    onClick={() => router.push(`/region/${r.id}`)}
+                                    className="group cursor-pointer transition-colors hover:bg-muted/30"
+                                >
                                     <TableCell className="text-center text-muted-foreground/50 text-xs font-mono">
                                         {page * PAGE_SIZE + i + 1}
                                     </TableCell>
                                     <TableCell>
                                         <div className="flex items-center gap-2">
                                             <MapPin className="size-3.5 text-muted-foreground/50 shrink-0" />
-                                            <span className="font-medium">{r.city}</span>
+                                            <Link
+                                                href={`/region/${r.id}`}
+                                                onClick={(e) => e.stopPropagation()}
+                                                aria-label={`Region ${r.address || r.city} öffnen`}
+                                                className="font-medium rounded-sm hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50"
+                                            >
+                                                {r.city}
+                                            </Link>
                                         </div>
                                     </TableCell>
                                     <TableCell className="text-muted-foreground text-sm">

@@ -47,6 +47,24 @@ const LANDUSE_LABELS: Record<keyof LandUseStats, string> = {
     park: "Park",
 };
 
+const INTEGER_FORMATTER = new Intl.NumberFormat("de-DE");
+const COMPACT_INTEGER_FORMATTER = new Intl.NumberFormat("de-DE", {
+    notation: "compact",
+    maximumFractionDigits: 1,
+});
+
+function withMonthLabel<T extends { month: string }>(data: T[]) {
+    return data.map((entry) => {
+        const [year, month] = entry.month.split("-");
+        const date = new Date(parseInt(year, 10), parseInt(month, 10) - 1, 1);
+
+        return {
+            ...entry,
+            label: date.toLocaleDateString("de-DE", { month: "short", year: "2-digit" }),
+        };
+    });
+}
+
 function CustomTooltip({ active, payload, label, formatter }: any) {
     if (!active || !payload?.length) return null;
     return (
@@ -158,14 +176,7 @@ export function TimelineChart({
 }: {
     data: Array<{ month: string; created: number; finished: number }>;
 }) {
-    const chartData = data.map((d) => {
-        const [y, m] = d.month.split("-");
-        const date = new Date(parseInt(y, 10), parseInt(m, 10) - 1, 1);
-        return {
-            ...d,
-            label: date.toLocaleDateString("de-DE", { month: "short", year: "2-digit" }),
-        };
-    });
+    const chartData = withMonthLabel(data);
 
     return (
         <ResponsiveContainer width="100%" height={260}>
@@ -197,6 +208,66 @@ export function TimelineChart({
                     type="monotone"
                     dataKey="finished"
                     name="Fertig"
+                    stroke="#22c55e"
+                    strokeWidth={2}
+                    dot={false}
+                    activeDot={{ r: 4 }}
+                />
+            </LineChart>
+        </ResponsiveContainer>
+    );
+}
+
+export function BuildingTimelineChart({
+    data,
+}: {
+    data: Array<{
+        month: string;
+        buildings: number;
+        finishedBuildings: number;
+    }>;
+}) {
+    const chartData = withMonthLabel(data);
+
+    return (
+        <ResponsiveContainer width="100%" height={260}>
+            <LineChart data={chartData} margin={{ top: 8, right: 12, left: 0, bottom: 20 }}>
+                <CartesianGrid stroke="rgba(255,255,255,0.04)" vertical={false} />
+                <XAxis
+                    dataKey="label"
+                    tick={{ fill: "#737373", fontSize: 11 }}
+                    axisLine={false}
+                    tickLine={false}
+                    minTickGap={24}
+                />
+                <YAxis
+                    tick={{ fill: "#737373", fontSize: 11 }}
+                    tickFormatter={(value: number) => COMPACT_INTEGER_FORMATTER.format(value)}
+                    axisLine={false}
+                    tickLine={false}
+                    allowDecimals={false}
+                    width={42}
+                />
+                <Tooltip
+                    content={
+                        <CustomTooltip
+                            formatter={(value: number) => INTEGER_FORMATTER.format(value)}
+                        />
+                    }
+                />
+                <Line
+                    type="monotone"
+                    dataKey="buildings"
+                    name="Gebäude gesamt"
+                    stroke="#f59e0b"
+                    strokeWidth={2}
+                    dot={false}
+                    activeDot={{ r: 4 }}
+                />
+                <Line
+                    type="monotone"
+                    dataKey="finishedBuildings"
+                    name="In fertigen Regionen"
                     stroke="#22c55e"
                     strokeWidth={2}
                     dot={false}

@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { LayoutDashboard, LandPlot, Shield, ListIcon, RefreshCwIcon, ArrowRightLeftIcon, ServerIcon } from "lucide-react";
+import { LayoutDashboard, LandPlot, Shield, ListIcon, RefreshCwIcon, ArrowRightLeftIcon, ServerIcon, PlusIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 const NAV_ITEMS = [
@@ -14,6 +14,7 @@ const NAV_ITEMS = [
         exact: true,
         children: [
             { href: "/admin/regions", label: "Liste", icon: ListIcon, exact: true },
+            { href: "/admin/regions/create", label: "Erstellen", icon: PlusIcon },
             { href: "/admin/regions/transfer", label: "Übertragen", icon: ArrowRightLeftIcon },
             { href: "/admin/regions/refresh", label: "Metadaten", icon: RefreshCwIcon },
         ],

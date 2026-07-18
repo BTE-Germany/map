@@ -16,7 +16,13 @@ export interface GlobalStats {
     };
     byState: Array<{ state: string; count: number; totalArea: number }>;
     byType: Array<{ type: string; count: number }>;
-    timeline: Array<{ month: string; created: number; finished: number }>;
+    timeline: Array<{
+        month: string;
+        created: number;
+        finished: number;
+        buildings: number;
+        finishedBuildings: number;
+    }>;
     landuse: LandUseStats;
     landuseCoverage: number;
     topRegions: Array<{
@@ -67,7 +73,10 @@ export async function getGlobalStats(): Promise<GlobalStats> {
 
     const stateMap = new Map<string, { count: number; totalArea: number }>();
     const typeMap = new Map<string, number>();
-    const timelineMap = new Map<string, { created: number; finished: number }>();
+    const timelineMap = new Map<
+        string,
+        { created: number; finished: number; buildings: number; finishedBuildings: number }
+    >();
 
     const landuseTotals: LandUseStats = {
         forest: 0,
@@ -81,9 +90,10 @@ export async function getGlobalStats(): Promise<GlobalStats> {
 
     for (const r of all) {
         const area = parseFloat(r.area ?? "0") || 0;
+        const buildingCount = r.buildings ?? 0;
         totals.totalArea += area;
         if (r.finished) totals.finishedArea += area;
-        totals.buildings += r.buildings ?? 0;
+        totals.buildings += buildingCount;
 
         builderSet.add(r.creatorUUID);
         for (const uuid of r.builders ?? []) {
@@ -101,10 +111,21 @@ export async function getGlobalStats(): Promise<GlobalStats> {
         if (r.createdAt) {
             const d = new Date(r.createdAt);
             const monthKey = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
-            if (!timelineMap.has(monthKey)) timelineMap.set(monthKey, { created: 0, finished: 0 });
+            if (!timelineMap.has(monthKey)) {
+                timelineMap.set(monthKey, {
+                    created: 0,
+                    finished: 0,
+                    buildings: 0,
+                    finishedBuildings: 0,
+                });
+            }
             const t = timelineMap.get(monthKey)!;
             t.created += 1;
-            if (r.finished) t.finished += 1;
+            t.buildings += buildingCount;
+            if (r.finished) {
+                t.finished += 1;
+                t.finishedBuildings += buildingCount;
+            }
         }
 
         if (r.landuse) {

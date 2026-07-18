@@ -2,6 +2,7 @@
 
 import { useMemo, useRef, useState } from "react";
 import { useSession } from "next-auth/react";
+import Link from "next/link";
 import {
     ArrowDownIcon, ArrowUpIcon, Building2, CheckCircle2Icon, ChevronDownIcon,
     ChevronUpIcon, LandPlot, SearchIcon, Sparkles, Users,
@@ -313,17 +314,22 @@ function PlayerRow({
                 </span>
             </TableCell>
             <TableCell>
-                <div className="flex items-center gap-2.5">
+                <Link
+                    href={`/builder/${player.uuid}`}
+                    prefetch={false}
+                    aria-label={`Builderprofil von ${username} öffnen`}
+                    className="group flex items-center gap-2.5 rounded-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-400/50"
+                >
                     <img src={avatar} alt={username} className="size-7 rounded-md shrink-0" />
                     <div className="min-w-0">
-                        <p className="text-sm font-medium text-white truncate">
+                        <p className="truncate text-sm font-medium text-white transition-colors group-hover:text-sky-300">
                             {username}
                             {isMe && (
                                 <span className="ml-2 text-[10px] uppercase tracking-widest text-sky-300">Du</span>
                             )}
                         </p>
                     </div>
-                </div>
+                </Link>
             </TableCell>
             {COLUMNS.map((col) => {
                 const v = col.getValue(player);
@@ -349,7 +355,12 @@ function MeBanner({ me }: { me: RankedPlayer }) {
     const avatar = mc?.avatar ?? `https://minotar.net/helm/${me.uuid}`;
 
     return (
-        <div className="flex items-center justify-between gap-3 px-5 py-3 border-b border-sky-500/20 bg-sky-500/[0.07]">
+        <Link
+            href={`/builder/${me.uuid}`}
+            prefetch={false}
+            aria-label={`Eigenes Builderprofil von ${username} öffnen`}
+            className="group flex items-center justify-between gap-3 border-b border-sky-500/20 bg-sky-500/[0.07] px-5 py-3 transition-colors hover:bg-sky-500/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-sky-400/50"
+        >
             <div className="flex items-center gap-3">
                 <div className="inline-flex items-center justify-center size-9 rounded-lg bg-sky-500/15 ring-1 ring-sky-500/30 text-sky-300 text-sm font-bold tabular-nums">
                     #{me.rank}
@@ -359,7 +370,7 @@ function MeBanner({ me }: { me: RankedPlayer }) {
                     <p className="text-[10px] uppercase tracking-widest text-sky-300/80 font-semibold">
                         Deine Position
                     </p>
-                    <p className="text-sm font-semibold text-white">
+                    <p className="text-sm font-semibold text-white transition-colors group-hover:text-sky-200">
                         {username}
                         <span className="ml-2 text-xs font-normal text-neutral-400">
                             • {formatInt(me.totalPoints)} Punkte • {formatArea(me.totalArea)}
@@ -369,6 +380,6 @@ function MeBanner({ me }: { me: RankedPlayer }) {
                 </div>
             </div>
             <ArrowUpIcon className="size-4 text-sky-300/60" />
-        </div>
+        </Link>
     );
 }

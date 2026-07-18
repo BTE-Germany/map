@@ -2,7 +2,6 @@ import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { eq } from "drizzle-orm";
 import * as turf from "@turf/turf";
-import { Language, PlaceType2 } from "@googlemaps/google-maps-services-js";
 import db from "@/db/drizzle";
 import { region } from "@/db/schema";
 import { requireMcAuth, type McAuthContext } from "@/lib/mcAuth";
@@ -10,7 +9,7 @@ import { fetchLandUseStats } from "@/lib/landuse";
 import { fetchBuildingCount } from "@/lib/buildings";
 import { closePolygon } from "@/lib/geo";
 import { getErrorMessage } from "@/lib/errors";
-import gMapsClient from "@/lib/googleMaps";
+import { geocodeRegionCenter } from "@/lib/regionGeocode";
 
 export const runtime = "nodejs";
 
@@ -24,70 +23,12 @@ const bodySchema = z.object({
     creatorUUID: z.uuid(),
 });
 
-const STATE_NAME_TO_CODE: Record<string, string> = {
-    "Baden-Württemberg": "BW",
-    "Bayern": "BY",
-    "Berlin": "BE",
-    "Brandenburg": "BB",
-    "Bremen": "HB",
-    "Hamburg": "HH",
-    "Hessen": "HE",
-    "Mecklenburg-Vorpommern": "MV",
-    "Niedersachsen": "NI",
-    "Nordrhein-Westfalen": "NW",
-    "Rheinland-Pfalz": "RP",
-    "Saarland": "SL",
-    "Sachsen": "SN",
-    "Sachsen-Anhalt": "ST",
-    "Schleswig-Holstein": "SH",
-    "Thüringen": "TH",
-};
-
 async function authOrThrow(req: NextRequest): Promise<McAuthContext | NextResponse> {
     try {
         return await requireMcAuth(req);
     } catch (res) {
         if (res instanceof Response) return res as NextResponse;
         throw res;
-    }
-}
-
-interface GeocodedMeta {
-    address: string;
-    city: string;
-    state: string;
-}
-
-async function geocodeCenter(polygonLatLng: [number, number][]): Promise<GeocodedMeta> {
-    const turfPolygon = turf.polygon([polygonLatLng.map(([lat, lng]) => [lng, lat])]);
-    const center = turf.center(turfPolygon);
-    const [lng, lat] = center.geometry.coordinates as [number, number];
-
-    try {
-        const { data } = await gMapsClient.reverseGeocode({
-            params: {
-                key: process.env.GOOGLE_MAPS_API_KEY!,
-                latlng: [lat, lng],
-                language: Language.de,
-            },
-        });
-        const components = data.results.flatMap((r) => r.address_components);
-        const city = components.find((c) => c.types.includes(PlaceType2.locality))?.long_name ?? "Unbekannt";
-        const stateName = components.find((c) => c.types.includes(PlaceType2.administrative_area_level_1))?.long_name ?? "";
-        const state = STATE_NAME_TO_CODE[stateName] ?? "";
-
-        const streetAddress =
-            data.results.find((r) => r.types.includes(PlaceType2.street_address)) ??
-            data.results.find((r) => r.types.includes(PlaceType2.plus_code));
-
-        return {
-            address: streetAddress?.formatted_address ?? "",
-            city,
-            state,
-        };
-    } catch (err: unknown) {
-        console.error("[region] reverse geocode failed:", getErrorMessage(err));
-        return { address: "", city: "Unbekannt", state: "" };
     }
 }
 
@@ -117,7 +58,7 @@ export async function POST(req: NextRequest) {
     // Only the geocode (fast, ~100-300ms) blocks the plugin's response. Building
     // count and landuse are slow Overpass calls, so they run fire-and-forget and
     // backfill the row afterwards (buildings defaults to 0 in the schema).
-    const meta = await geocodeCenter(polygon);
+    const meta = await geocodeRegionCenter(polygon);
 
     try {
         const inserted = await db

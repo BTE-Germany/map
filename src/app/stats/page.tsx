@@ -1,5 +1,6 @@
 import { getGlobalStats } from "@/actions/stats/GetGlobalStats";
 import {
+    BuildingTimelineChart,
     LanduseStackedBar,
     StateBarChart,
     TimelineChart,
@@ -254,6 +255,20 @@ export default async function StatsPage() {
                     <LanduseStackedBar landuse={stats.landuse} />
                 </SectionCard>
             </div>
+
+            <SectionCard
+                icon={<Building2 className="size-4" />}
+                title="Gebäude über die Zeit"
+                subtitle="nach Erstellmonat der Region"
+            >
+                {stats.timeline.some((entry) => entry.buildings > 0) ? (
+                    <BuildingTimelineChart data={stats.timeline} />
+                ) : (
+                    <p className="text-sm text-neutral-500 text-center py-10">
+                        Noch keine Gebäude-Zeitreihendaten verfügbar.
+                    </p>
+                )}
+            </SectionCard>
 
             <SectionCard
                 icon={<CheckCircle2 className="size-4" />}

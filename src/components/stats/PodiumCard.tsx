@@ -2,6 +2,7 @@
 
 import { useMcUser } from "@/dataHooks/minecraft/useMcUser";
 import { Crown } from "lucide-react";
+import Link from "next/link";
 import type { PlayerScore } from "@/lib/scoring";
 
 type Rank = 1 | 2 | 3;
@@ -66,7 +67,12 @@ export default function PodiumCard({
     const avatar = mc?.avatar ?? `https://minotar.net/helm/${player.uuid}`;
 
     return (
-        <div className="flex min-w-0 flex-col items-center">
+        <Link
+            href={`/builder/${player.uuid}`}
+            prefetch={false}
+            aria-label={`Builderprofil von ${username} öffnen`}
+            className="group flex min-w-0 flex-col items-center rounded-2xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-400/50"
+        >
             {/* Avatar + crown above podium base */}
             <div className="relative flex flex-col items-center">
                 {style.crown && (
@@ -82,7 +88,7 @@ export default function PodiumCard({
                         className={`relative ${style.avatar} rounded-2xl ring-2 ${style.ring} bg-neutral-900`}
                     />
                 </div>
-                <p className="mt-2 sm:mt-3 w-full max-w-[10rem] truncate text-center text-xs font-semibold text-white sm:text-sm">
+                <p className="mt-2 w-full max-w-[10rem] truncate text-center text-xs font-semibold text-white transition-colors group-hover:text-sky-300 sm:mt-3 sm:text-sm">
                     {username}
                 </p>
                 <p className="mt-0.5 whitespace-nowrap text-[8px] uppercase tracking-wide text-neutral-500 sm:text-[10px] sm:tracking-widest">
@@ -92,7 +98,7 @@ export default function PodiumCard({
 
             {/* Podium base */}
             <div
-                className={`relative mt-2 sm:mt-3 w-full ${style.height} rounded-xl sm:rounded-2xl border border-white/[0.06] bg-gradient-to-b ${style.gradient} overflow-hidden flex flex-col items-center justify-center px-1.5 sm:px-4`}
+                className={`relative mt-2 sm:mt-3 w-full ${style.height} rounded-xl sm:rounded-2xl border border-white/[0.06] bg-gradient-to-b ${style.gradient} overflow-hidden flex flex-col items-center justify-center px-1.5 transition-all group-hover:-translate-y-0.5 group-hover:border-white/[0.14] sm:px-4`}
             >
                 <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-white/10 to-transparent" />
                 <div
@@ -110,6 +116,6 @@ export default function PodiumCard({
                     {valueLabel}
                 </p>
             </div>
-        </div>
+        </Link>
     );
 }

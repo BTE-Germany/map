@@ -36,7 +36,7 @@ The interface is responsive and supports both public exploration and authenticat
 - **Interactive project map** with region search, shareable region links, dark and light themes, and optional satellite or hybrid styles.
 - **Detailed region information** including polygon points, area, status, type, address, state, builders, creator, buildings, score, land use, descriptions, and image galleries.
 - **Region editing tools** for creating and reshaping polygons, with an optional snapping mode that aligns vertices to points from existing regions.
-- **Progress and statistics** with totals, built area as a share of Germany, state and category breakdowns, timelines, land-use charts, region scores, and expandable leaderboards.
+- **Progress and statistics** with totals, built area as a share of Germany, state and category breakdowns, timelines, land-use charts, region scores, expandable leaderboards, and public builder profiles with project histories.
 - **Image galleries** backed by S3-compatible object storage, including upload management and keyboard navigation.
 - **Live Minecraft integration** for online-player positions, multiple server instances, account linking, and in-game teleport requests.
 - **Street-level exploration** through Google Street View and Apple Look Around when the corresponding providers are configured.

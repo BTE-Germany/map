@@ -4,12 +4,25 @@ import { useState, useMemo, useTransition } from "react";
 import {
     SearchIcon, PencilIcon, ChevronUpIcon, ChevronDownIcon,
     ChevronsUpDownIcon, ChevronLeftIcon, ChevronRightIcon,
-    CheckCircle2Icon, ClockIcon,
+    CheckCircle2Icon, ClockIcon, Trash2Icon, LoaderIcon,
 } from "lucide-react";
+import Link from "next/link";
+import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { stateCodeToName } from "@/lib/federalStates";
 import RegionAdminEditDialog from "./RegionAdminEditDialog";
 import { useRouter } from "next/navigation";
+import { deleteRegion } from "@/actions/region/DeleteRegion";
+import {
+    AlertDialog, AlertDialogContent, AlertDialogDescription,
+    AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import { Button } from "@/components/ui/button";
+
+export type CreatorProfile = {
+    username: string;
+    avatar: string;
+};
 
 type RegionRow = {
     id: string;
@@ -43,7 +56,15 @@ const TYPE_COLORS: Record<string, string> = {
 
 const PAGE_SIZE = 50;
 
-export default function RegionsTable({ regions }: { regions: RegionRow[] }) {
+export default function RegionsTable({
+    regions,
+    creatorProfiles = {},
+    canEdit = false,
+}: {
+    regions: RegionRow[];
+    creatorProfiles?: Record<string, CreatorProfile | null>;
+    canEdit?: boolean;
+}) {
     const router = useRouter();
     const [search, setSearch] = useState("");
     const [typeFilter, setTypeFilter] = useState<"all" | "default" | "plot" | "event">("all");
@@ -56,12 +77,32 @@ export default function RegionsTable({ regions }: { regions: RegionRow[] }) {
     const [editRegion, setEditRegion] = useState<RegionRow | null>(null);
     const [editOpen, setEditOpen] = useState(false);
 
+    const [deleteTarget, setDeleteTarget] = useState<RegionRow | null>(null);
+    const [isDeleting, setIsDeleting] = useState(false);
+
     const [, startTransition] = useTransition();
 
     function openEdit(region: RegionRow) {
         setEditRegion(region);
         setEditOpen(true);
     }
+
+    async function confirmDelete() {
+        if (!deleteTarget || isDeleting) return;
+        setIsDeleting(true);
+        try {
+            await deleteRegion(deleteTarget.id);
+            toast.success("Region gelöscht");
+            setDeleteTarget(null);
+            startTransition(() => router.refresh());
+        } catch (e: any) {
+            toast.error(e?.message ?? "Fehler beim Löschen");
+        } finally {
+            setIsDeleting(false);
+        }
+    }
+
+    const colCount = canEdit ? 9 : 8;
 
     function handleSort(key: SortKey) {
         if (sortKey === key) {
@@ -181,6 +222,7 @@ export default function RegionsTable({ regions }: { regions: RegionRow[] }) {
                                 <Th onClick={() => handleSort("city")}>
                                     <span className="flex items-center gap-1">Stadt <SortIcon col="city" /></span>
                                 </Th>
+                                <Th>Ersteller</Th>
                                 <Th>Typ</Th>
                                 <Th>Status</Th>
                                 <Th onClick={() => handleSort("buildings")} className="text-right">
@@ -192,13 +234,13 @@ export default function RegionsTable({ regions }: { regions: RegionRow[] }) {
                                 <Th onClick={() => handleSort("createdAt")}>
                                     <span className="flex items-center gap-1">Erstellt <SortIcon col="createdAt" /></span>
                                 </Th>
-                                <Th className="w-10" />
+                                {canEdit && <Th className="w-20" />}
                             </tr>
                         </thead>
                         <tbody>
                             {pageRows.length === 0 ? (
                                 <tr>
-                                    <td colSpan={8} className="py-16 text-center text-muted-foreground text-sm">
+                                    <td colSpan={colCount} className="py-16 text-center text-muted-foreground text-sm">
                                         Keine Regionen gefunden.
                                     </td>
                                 </tr>
@@ -206,16 +248,42 @@ export default function RegionsTable({ regions }: { regions: RegionRow[] }) {
                                 pageRows.map((region) => (
                                     <tr
                                         key={region.id}
-                                        className="border-b border-border/50 last:border-0 hover:bg-muted/20 transition-colors group"
+                                        onClick={() => router.push(`/region/${region.id}`)}
+                                        className="border-b border-border/50 last:border-0 hover:bg-muted/20 transition-colors group cursor-pointer"
                                     >
-                                        <Td className="font-medium max-w-[200px] truncate">
-                                            {region.address || <span className="text-muted-foreground/50 italic">–</span>}
+                                        <Td className="font-medium max-w-[200px]">
+                                            <Link
+                                                href={`/region/${region.id}`}
+                                                onClick={(e) => e.stopPropagation()}
+                                                aria-label={`Region ${region.address || region.city} öffnen`}
+                                                className="block truncate rounded-sm hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50"
+                                            >
+                                                {region.address || <span className="text-muted-foreground/50 italic">–</span>}
+                                            </Link>
                                         </Td>
                                         <Td className="text-muted-foreground">
                                             {region.city}
                                             {region.state && (
                                                 <span className="ml-1 text-muted-foreground/50">{region.state}</span>
                                             )}
+                                        </Td>
+                                        <Td>
+                                            <Link
+                                                href={`/builder/${region.creatorUUID}`}
+                                                onClick={(e) => e.stopPropagation()}
+                                                className="flex items-center gap-2 w-fit group/creator"
+                                                title={creatorProfiles[region.creatorUUID]?.username ?? region.creatorUUID}
+                                            >
+                                                {/* eslint-disable-next-line @next/next/no-img-element */}
+                                                <img
+                                                    src={creatorProfiles[region.creatorUUID]?.avatar ?? `https://minotar.net/helm/${region.creatorUUID}/32`}
+                                                    alt=""
+                                                    className="size-6 rounded-full shrink-0"
+                                                />
+                                                <span className="text-muted-foreground group-hover/creator:text-foreground transition-colors truncate max-w-[130px]">
+                                                    {creatorProfiles[region.creatorUUID]?.username ?? `${region.creatorUUID.slice(0, 8)}…`}
+                                                </span>
+                                            </Link>
                                         </Td>
                                         <Td>
                                             <span className={cn(
@@ -249,15 +317,29 @@ export default function RegionsTable({ regions }: { regions: RegionRow[] }) {
                                                   })
                                                 : "–"}
                                         </Td>
-                                        <Td>
-                                            <button
-                                                onClick={() => openEdit(region)}
-                                                className="opacity-0 group-hover:opacity-100 transition-opacity p-1.5 rounded-lg hover:bg-muted/60 text-muted-foreground hover:text-foreground"
-                                                title="Bearbeiten"
-                                            >
-                                                <PencilIcon size={13} />
-                                            </button>
-                                        </Td>
+                                        {canEdit && (
+                                            <Td>
+                                                <div
+                                                    onClick={(e) => e.stopPropagation()}
+                                                    className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity"
+                                                >
+                                                    <button
+                                                        onClick={() => openEdit(region)}
+                                                        className="p-1.5 rounded-lg hover:bg-muted/60 text-muted-foreground hover:text-foreground transition-colors"
+                                                        title="Bearbeiten"
+                                                    >
+                                                        <PencilIcon size={13} />
+                                                    </button>
+                                                    <button
+                                                        onClick={() => setDeleteTarget(region)}
+                                                        className="p-1.5 rounded-lg hover:bg-destructive/10 text-muted-foreground hover:text-destructive transition-colors"
+                                                        title="Löschen"
+                                                    >
+                                                        <Trash2Icon size={13} />
+                                                    </button>
+                                                </div>
+                                            </Td>
+                                        )}
                                     </tr>
                                 ))
                             )}
@@ -314,6 +396,30 @@ export default function RegionsTable({ regions }: { regions: RegionRow[] }) {
                 onOpenChange={setEditOpen}
                 onSaved={() => startTransition(() => router.refresh())}
             />
+
+            <AlertDialog open={!!deleteTarget} onOpenChange={(o) => { if (!o && !isDeleting) setDeleteTarget(null); }}>
+                <AlertDialogContent>
+                    <AlertDialogHeader>
+                        <AlertDialogTitle>Region löschen?</AlertDialogTitle>
+                        <AlertDialogDescription>
+                            {deleteTarget?.address || deleteTarget?.city || "Diese Region"} wird dauerhaft gelöscht –
+                            inklusive aller Bilder. Diese Aktion kann nicht rückgängig gemacht werden.
+                        </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                        <Button variant="outline" onClick={() => setDeleteTarget(null)} disabled={isDeleting}>
+                            Abbrechen
+                        </Button>
+                        <Button variant="destructive" onClick={confirmDelete} disabled={isDeleting} className="gap-1.5 min-w-[100px]">
+                            {isDeleting ? (
+                                <><LoaderIcon size={13} className="animate-spin" />Löschen…</>
+                            ) : (
+                                <><Trash2Icon size={13} />Löschen</>
+                            )}
+                        </Button>
+                    </AlertDialogFooter>
+                </AlertDialogContent>
+            </AlertDialog>
         </>
     );
 }

@@ -2,6 +2,7 @@
 
 import { useMcUser } from "@/dataHooks/minecraft/useMcUser";
 import { Building2, LandPlot, Trophy } from "lucide-react";
+import Link from "next/link";
 import type { PlayerScore } from "@/lib/scoring";
 
 function formatArea(n: number) {
@@ -43,7 +44,12 @@ export default function PlayerRankingRow({
     const avatar = mc?.avatar ?? `https://minotar.net/helm/${player.uuid}`;
 
     return (
-        <div className="grid grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-2.5 px-3 py-3 transition-colors hover:bg-white/[0.02] sm:grid-cols-[auto_auto_minmax(0,1fr)_auto] sm:gap-4 sm:px-5">
+        <Link
+            href={`/builder/${player.uuid}`}
+            prefetch={false}
+            aria-label={`Builderprofil von ${username} öffnen`}
+            className="group grid grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-2.5 px-3 py-3 transition-colors hover:bg-white/[0.035] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-sky-400/50 sm:grid-cols-[auto_auto_minmax(0,1fr)_auto] sm:gap-4 sm:px-5"
+        >
             <div
                 className={`flex items-center justify-center size-9 sm:size-10 rounded-xl ring-1 ${colors.bg} ${colors.ring} shrink-0`}
             >
@@ -58,7 +64,7 @@ export default function PlayerRankingRow({
 
             <div className="min-w-0">
                 <div className="flex items-baseline gap-2">
-                    <p className="font-semibold text-sm text-white truncate">{username}</p>
+                    <p className="truncate text-sm font-semibold text-white transition-colors group-hover:text-sky-300">{username}</p>
                     <span className="hidden text-[10px] uppercase tracking-widest text-neutral-600 min-[420px]:inline">
                         {player.regionCount} {player.regionCount === 1 ? "Region" : "Regionen"}
                     </span>
@@ -91,6 +97,6 @@ export default function PlayerRankingRow({
                 <p className="max-w-[7.5rem] truncate text-base font-bold tabular-nums text-white sm:text-xl">{metric.format(value)}</p>
                 <p className="text-[10px] uppercase tracking-widest text-neutral-600">{metric.label}</p>
             </div>
-        </div>
+        </Link>
     );
 }

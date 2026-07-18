@@ -1,3 +1,5 @@
+import { normalizeMinecraftUuid } from "@/lib/minecraftUuid";
+
 export interface Player {
     meta:         Meta;
     username:     string;
@@ -19,13 +21,11 @@ export interface Property {
     signature: string;
 }
 
-const UUID_RE =
-    /^[0-9a-fA-F]{8}-?[0-9a-fA-F]{4}-?[0-9a-fA-F]{4}-?[0-9a-fA-F]{4}-?[0-9a-fA-F]{12}$/;
-
 export default async function getUser(uuid: string): Promise<Player | null> {
     // Validate before interpolating into the upstream URL (prevents path
     // injection / SSRF via a crafted "uuid").
-    if (!uuid || !UUID_RE.test(uuid)) return null;
+    const normalizedUuid = normalizeMinecraftUuid(uuid);
+    if (!normalizedUuid) return null;
 
     try {
         // Minecraft profiles change rarely, so cache for 24h in the Next Data
@@ -36,7 +36,7 @@ export default async function getUser(uuid: string): Promise<Player | null> {
         // that degrades to null instead, so a hung upstream can't stall a render.
         const res = await Promise.race([
             fetch(
-                `https://playerdb.co/api/player/minecraft/${encodeURIComponent(uuid)}`,
+                `https://playerdb.co/api/player/minecraft/${encodeURIComponent(normalizedUuid)}`,
                 { next: { revalidate: 86400 } },
             ),
             new Promise<null>((resolve) => setTimeout(() => resolve(null), 5000)),
