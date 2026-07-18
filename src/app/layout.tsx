@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono, Outfit } from "next/font/google";
+import Script from "next/script";
 import "./globals.css";
 
 import QueryWrapper from "@/components/common/QueryWrapper";
@@ -10,6 +11,7 @@ import NextTopLoader from 'nextjs-toploader';
 import { Toaster } from "@/components/ui/sonner"
 import SearchDialog from "@/components/search/SearchDialog";
 import SearchShortcut from "@/components/search/SearchShortcut";
+import CookieBanner from "@/components/common/CookieBanner";
 
 
 const geistSans = Geist({
@@ -59,6 +61,12 @@ export default async function RootLayout({
                     </QueryWrapper>
                 </AuthProvider>
                 <Toaster />
+                <CookieBanner />
+                <Script
+                    defer
+                    src="https://umami.app.k8s.bteger.dev/script.js"
+                    data-website-id="9cfe6709-83ab-4950-806d-a1cb3bd4a8d8"
+                />
             </body>
         </html>
     );
