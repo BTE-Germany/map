@@ -117,6 +117,73 @@ function StatCard({
     );
 }
 
+function RegionTypeCard({
+    label,
+    description,
+    count,
+    area,
+    buildings,
+    icon,
+    accent,
+}: {
+    label: string;
+    description: string;
+    count: number;
+    area: number;
+    buildings: number;
+    icon: React.ReactNode;
+    accent: string;
+}) {
+    return (
+        <article className="relative overflow-hidden rounded-2xl border border-white/[0.06] bg-white/[0.02]">
+            <div
+                className="pointer-events-none absolute -right-8 -top-8 size-28 rounded-full opacity-25 blur-3xl"
+                style={{ backgroundColor: accent }}
+            />
+
+            <div className="relative p-5">
+                <div className="flex items-start gap-3">
+                    <div
+                        className="flex size-9 shrink-0 items-center justify-center rounded-xl ring-1 ring-inset"
+                        style={{
+                            backgroundColor: `${accent}14`,
+                            color: accent,
+                            boxShadow: `inset 0 0 0 1px ${accent}28`,
+                        }}
+                    >
+                        {icon}
+                    </div>
+                    <div className="min-w-0 flex-1">
+                        <p className="text-sm font-semibold text-white">{label}</p>
+                        <p className="mt-0.5 text-xs text-neutral-500">{description}</p>
+                    </div>
+                </div>
+
+                <dl className="mt-5 grid grid-cols-3 divide-x divide-white/[0.06]">
+                    <div className="pr-3">
+                        <dd className="text-xl font-bold tabular-nums text-white sm:text-2xl">
+                            {count.toLocaleString("de-DE")}
+                        </dd>
+                        <dt className="mt-1 text-[10px] uppercase tracking-wider text-neutral-600">Regionen</dt>
+                    </div>
+                    <div className="px-3">
+                        <dd className="text-sm font-semibold tabular-nums text-neutral-200 sm:text-base">
+                            {formatArea(area)}
+                        </dd>
+                        <dt className="mt-1 text-[10px] uppercase tracking-wider text-neutral-600">Fläche</dt>
+                    </div>
+                    <div className="pl-3">
+                        <dd className="text-xl font-bold tabular-nums text-white sm:text-2xl">
+                            {buildings.toLocaleString("de-DE")}
+                        </dd>
+                        <dt className="mt-1 text-[10px] uppercase tracking-wider text-neutral-600">Gebäude</dt>
+                    </div>
+                </dl>
+            </div>
+        </article>
+    );
+}
+
 function GermanyProgress({ finishedArea }: { finishedArea: number }) {
     const percent = Math.min(100, Math.max(0, (finishedArea / GERMANY_AREA_SQM) * 100));
 
@@ -165,6 +232,16 @@ export default async function StatsPage() {
     const stats = await getGlobalStats();
 
     const finishedPct = stats.totals.regions > 0 ? Math.round((stats.totals.finished / stats.totals.regions) * 100) : 0;
+    const plotStats = stats.byType.find((entry) => entry.type === "plot") ?? {
+        count: 0,
+        totalArea: 0,
+        buildings: 0,
+    };
+    const eventStats = stats.byType.find((entry) => entry.type === "event") ?? {
+        count: 0,
+        totalArea: 0,
+        buildings: 0,
+    };
 
     return (
         <div className="container mx-auto px-4 pt-32 pb-16 space-y-8">
@@ -193,7 +270,7 @@ export default async function StatsPage() {
                 <StatCard
                     label="Gebäude"
                     value={stats.totals.buildings.toLocaleString("de-DE")}
-                    sub="über alle Regionen"
+                    sub={`${stats.totals.finishedBuildings.toLocaleString("de-DE")} in fertigen Regionen`}
                     icon={<Building2 className="size-4" />}
                     accent="#f59e0b"
                 />
@@ -205,6 +282,27 @@ export default async function StatsPage() {
                     accent="#a855f7"
                 />
             </div>
+
+            <section aria-label="Plot- und Eventregionen" className="grid grid-cols-1 gap-4 md:grid-cols-2">
+                <RegionTypeCard
+                    label="Plotregionen"
+                    description="Ausgewiesene Flächen für Plots"
+                    count={plotStats.count}
+                    area={plotStats.totalArea}
+                    buildings={plotStats.buildings}
+                    icon={<LandPlot className="size-4" />}
+                    accent="#3b82f6"
+                />
+                <RegionTypeCard
+                    label="Eventregionen"
+                    description="Gemeinsam im Rahmen von Bauevents entstanden"
+                    count={eventStats.count}
+                    area={eventStats.totalArea}
+                    buildings={eventStats.buildings}
+                    icon={<Sparkles className="size-4" />}
+                    accent="#ef4444"
+                />
+            </section>
 
             <GermanyProgress finishedArea={stats.totals.finishedArea} />
 

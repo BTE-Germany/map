@@ -12,10 +12,16 @@ export interface GlobalStats {
         totalArea: number;
         finishedArea: number;
         buildings: number;
+        finishedBuildings: number;
         uniqueBuilders: number;
     };
     byState: Array<{ state: string; count: number; totalArea: number }>;
-    byType: Array<{ type: string; count: number }>;
+    byType: Array<{
+        type: string;
+        count: number;
+        totalArea: number;
+        buildings: number;
+    }>;
     timeline: Array<{
         month: string;
         created: number;
@@ -66,13 +72,17 @@ export async function getGlobalStats(): Promise<GlobalStats> {
         totalArea: 0,
         finishedArea: 0,
         buildings: 0,
+        finishedBuildings: 0,
         uniqueBuilders: 0,
     };
 
     const builderSet = new Set<string>();
 
     const stateMap = new Map<string, { count: number; totalArea: number }>();
-    const typeMap = new Map<string, number>();
+    const typeMap = new Map<
+        string,
+        { count: number; totalArea: number; buildings: number }
+    >();
     const timelineMap = new Map<
         string,
         { created: number; finished: number; buildings: number; finishedBuildings: number }
@@ -92,7 +102,10 @@ export async function getGlobalStats(): Promise<GlobalStats> {
         const area = parseFloat(r.area ?? "0") || 0;
         const buildingCount = r.buildings ?? 0;
         totals.totalArea += area;
-        if (r.finished) totals.finishedArea += area;
+        if (r.finished) {
+            totals.finishedArea += area;
+            totals.finishedBuildings += buildingCount;
+        }
         totals.buildings += buildingCount;
 
         builderSet.add(r.creatorUUID);
@@ -106,7 +119,13 @@ export async function getGlobalStats(): Promise<GlobalStats> {
         s.count += 1;
         s.totalArea += area;
 
-        typeMap.set(r.type, (typeMap.get(r.type) ?? 0) + 1);
+        if (!typeMap.has(r.type)) {
+            typeMap.set(r.type, { count: 0, totalArea: 0, buildings: 0 });
+        }
+        const typeStats = typeMap.get(r.type)!;
+        typeStats.count += 1;
+        typeStats.totalArea += area;
+        typeStats.buildings += buildingCount;
 
         if (r.createdAt) {
             const d = new Date(r.createdAt);
@@ -143,7 +162,7 @@ export async function getGlobalStats(): Promise<GlobalStats> {
         .sort((a, b) => b.totalArea - a.totalArea);
 
     const byType = Array.from(typeMap.entries())
-        .map(([type, cnt]) => ({ type, count: cnt }))
+        .map(([type, values]) => ({ type, ...values }))
         .sort((a, b) => b.count - a.count);
 
     const timeline = Array.from(timelineMap.entries())

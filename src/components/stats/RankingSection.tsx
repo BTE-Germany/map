@@ -78,7 +78,7 @@ export default function RankingSection({ players }: { players: PlayerScore[] }) 
                                 Leaderboard
                             </p>
                             <h2 className="text-2xl md:text-3xl font-bold text-white leading-tight">
-                                Die besten Builder
+                                Builder Rangliste
                             </h2>
                         </div>
                     </div>
