@@ -48,6 +48,25 @@ const ROW_HEIGHT = 52;
 const PREVIEW_ROW_COUNT = 9;
 const COLLAPSED_HEIGHT = 352;
 const EXPANDED_HEIGHT = 576;
+
+/**
+ * Eased alpha ramp for den Ausblend-Verlauf am unteren Tabellenrand: [Position %, Alpha].
+ * Ein 3-Stop-Verlauf steigt in der Mitte zu schnell an und erzeugt eine sichtbare Kante.
+ */
+const FADE_STOPS: [number, number][] = [
+    [0, 0], [12, 0.03], [24, 0.1], [36, 0.22], [48, 0.38],
+    [60, 0.56], [72, 0.73], [84, 0.88], [93, 0.97], [100, 1],
+];
+
+/** Blendet auf die echte Seitenfarbe aus, damit unten keine dunklere Kante stehen bleibt. */
+const FADE_GRADIENT = `linear-gradient(to bottom, ${FADE_STOPS
+    .map(([pos, alpha]) => `color-mix(in oklab, var(--color-background) ${alpha * 100}%, transparent) ${pos}%`)
+    .join(", ")})`;
+
+/** Gleiche Kurve als Maske — ohne sie bricht der backdrop-blur an der Oberkante hart ab. */
+const FADE_MASK = `linear-gradient(to bottom, ${FADE_STOPS
+    .map(([pos, alpha]) => `rgba(0,0,0,${alpha}) ${pos}%`)
+    .join(", ")})`;
 const VIRTUAL_OVERSCAN = 6;
 
 interface RankedPlayer extends PlayerScore {
@@ -227,14 +246,24 @@ export default function ExtendedRankingTable({ players }: { players: PlayerScore
                             initial={{ opacity: 0 }}
                             animate={{ opacity: 1 }}
                             exit={{ opacity: 0 }}
-                            className="pointer-events-none absolute inset-x-0 bottom-0 flex h-32 items-end justify-center bg-gradient-to-t from-neutral-950 via-neutral-950/90 to-transparent pb-5 backdrop-blur-[1.5px]"
+                            className="pointer-events-none absolute inset-x-0 bottom-0 flex h-44 items-end justify-center pb-5"
                         >
+                            <div
+                                aria-hidden="true"
+                                className="absolute inset-0 backdrop-blur-[2px]"
+                                style={{ maskImage: FADE_MASK, WebkitMaskImage: FADE_MASK }}
+                            />
+                            <div
+                                aria-hidden="true"
+                                className="absolute inset-0"
+                                style={{ backgroundImage: FADE_GRADIENT }}
+                            />
                             <button
                                 type="button"
                                 aria-expanded={false}
                                 aria-controls="complete-builder-ranking"
                                 onClick={() => setIsExpanded(true)}
-                                className="pointer-events-auto inline-flex items-center gap-2 rounded-full border border-white/10 bg-neutral-900/90 px-4 py-2 text-xs font-semibold text-white shadow-xl shadow-black/30 transition-colors hover:bg-neutral-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-300/50"
+                                className="pointer-events-auto relative inline-flex items-center gap-2 rounded-full border border-white/10 bg-neutral-900/90 px-4 py-2 text-xs font-semibold text-white shadow-xl shadow-black/30 transition-colors hover:bg-neutral-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-300/50"
                             >
                                 Mehr anzeigen
                                 <ChevronDownIcon className="size-3.5" />
