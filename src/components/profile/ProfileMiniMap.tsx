@@ -3,8 +3,10 @@
 import { Layer, Map as MaplibreMap, Source } from "@vis.gl/react-maplibre";
 import "maplibre-gl/dist/maplibre-gl.css";
 import maplibregl from "maplibre-gl";
+import { useMemo } from "react";
 import type { FeatureCollection, Polygon } from "geojson";
 import { getMapStyleById } from "@/lib/mapStyles";
+import { regionGeoJSONToPoints } from "@/lib/regionGeo";
 
 const MAP_STYLE = getMapStyleById("default");
 
@@ -20,6 +22,8 @@ type MapLoadEvent = {
 };
 
 export default function ProfileMiniMap({ geoJSON }: { geoJSON: UserRegionsGeoJSON }) {
+    const markers = useMemo(() => regionGeoJSONToPoints(geoJSON), [geoJSON]);
+
     function onMapLoad(e: MapLoadEvent) {
         const map = e.target;
         if (geoJSON.features.length === 0) return;
@@ -76,6 +80,39 @@ export default function ProfileMiniMap({ geoJSON }: { geoJSON: UserRegionsGeoJSO
                             "rgba(59,130,246,1)",
                         ],
                         "line-width": 1.5,
+                    }}
+                />
+            </Source>
+
+            <Source id="user-region-markers" type="geojson" data={markers}>
+                <Layer
+                    id="user-region-marker-halo"
+                    type="circle"
+                    paint={{
+                        "circle-radius": ["interpolate", ["linear"], ["zoom"], 4, 7, 9, 11, 13, 15],
+                        "circle-color": [
+                            "case",
+                            ["==", ["get", "finished"], true],
+                            "rgba(16,185,129,1)",
+                            "rgba(59,130,246,1)",
+                        ],
+                        "circle-opacity": 0.18,
+                        "circle-blur": 0.4,
+                    }}
+                />
+                <Layer
+                    id="user-region-marker"
+                    type="circle"
+                    paint={{
+                        "circle-radius": ["interpolate", ["linear"], ["zoom"], 4, 3.5, 9, 5, 13, 6.5],
+                        "circle-color": [
+                            "case",
+                            ["==", ["get", "finished"], true],
+                            "#10b981",
+                            "#3b82f6",
+                        ],
+                        "circle-stroke-width": 1.5,
+                        "circle-stroke-color": "rgba(255,255,255,0.85)",
                     }}
                 />
             </Source>
