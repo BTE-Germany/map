@@ -16,7 +16,7 @@ import useStreetLevelStore from "@/stores/StreetLevelStore";
 
 export default function Map() {
 
-    const { data: regionGeoJSON, isLoading } = useAllRegionsAsGeoJSON();
+    const { data: regionGeoJSON } = useAllRegionsAsGeoJSON();
     const { mainMap: map } = useMap();
     // Select only the (stable) action so this component doesn't re-render — and
     // the click handler doesn't re-bind — whenever unrelated store fields change.
@@ -28,7 +28,6 @@ export default function Map() {
     const [mapLib, setMapLib] = useState<any>(maplibregl);
     const [activeEngine, setActiveEngine] = useState<"maplibre" | "mapbox">("maplibre");
     const [mapboxAccessToken, setMapboxAccessToken] = useState("");
-    const [isStyleReady, setIsStyleReady] = useState<boolean>(false);
     const [viewState, setViewState] = useState({
         longitude: 10.447683,
         latitude: 51.163361,
@@ -78,30 +77,6 @@ export default function Map() {
     }, [isMapboxStyle]);
 
     const isEngineReady = isMapboxStyle ? activeEngine === "mapbox" : activeEngine === "maplibre";
-
-    useEffect(() => {
-        setIsStyleReady(false);
-    }, [mapStyle, activeEngine]);
-
-    useEffect(() => {
-        if (!map) return;
-
-        const handleStyleReady = () => {
-            setIsStyleReady(true);
-        };
-
-        if (typeof map.isStyleLoaded === "function" && map.isStyleLoaded()) {
-            setIsStyleReady(true);
-        }
-
-        map.on('style.load', handleStyleReady);
-        map.on('load', handleStyleReady);
-
-        return () => {
-            map.off('style.load', handleStyleReady);
-            map.off('load', handleStyleReady);
-        };
-    }, [map]);
 
     useEffect(() => {
         if (!isEngineReady || !map) return;
@@ -202,12 +177,23 @@ export default function Map() {
                 {...(isMapboxStyle && mapboxAccessToken ? { mapboxAccessToken } : {})}
             >
                 {
-                    !isLoading && isStyleReady && <Source id="regions" type="geojson" data={regionGeoJSON as any}>
+                    // Deliberately not gated on a style-loaded flag. <Source>
+                    // listens for `styledata` itself and re-creates the source
+                    // whenever a style swap has dropped it — but only while it
+                    // stays mounted. Unmounting it on style change meant it
+                    // waited for a `style.load` that maplibre only fires for
+                    // the very first style, so the regions never came back.
+                    // Gated on the data itself, not on `isLoading`: a *failed*
+                    // query also reports `isLoading === false`, and mounting
+                    // the source with `data: undefined` makes maplibre reject
+                    // it outright ("missing required property data").
+                    regionGeoJSON && <Source id="regions" type="geojson" data={regionGeoJSON as any}>
                         <Layer {...layerStyle} id={"region-layer"} />
                         <Layer {...layerStyleLine} />
                     </Source>
                 }
-                {isStyleReady && <LivePlayersLayer />}
+                {/* Markers are DOM overlays and survive a style swap untouched. */}
+                <LivePlayersLayer />
             </Maplibre>
                 : <div id="mainMap" style={{ width: "100%", height: "100%", zIndex: 0 }} />}
             <RegionShapeEditor />
