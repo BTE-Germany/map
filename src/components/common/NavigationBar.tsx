@@ -79,10 +79,13 @@ export function FloatingNavigationBar({ collapsable }: { collapsable?: boolean }
     const HEADER_HEIGHT = 100;
 
     return (
+        // The 100px-tall header band is mostly empty space around the pill.
+        // Over the map that space has to stay transparent to gestures, so only
+        // the pill and the collapse handle take pointer events.
         <motion.div className={cn(
             "top-0 right-0 flex justify-center items-center w-full z-50",
             {
-                "absolute": isCollapsible,
+                "absolute pointer-events-none": isCollapsible,
             }
         )} style={{ height: HEADER_HEIGHT }}
             initial={{ y: 0 }}
@@ -90,7 +93,7 @@ export function FloatingNavigationBar({ collapsable }: { collapsable?: boolean }
             transition={{ type: "spring", stiffness: 100, damping: 20 }}
         >
             <div
-                className={"py-3 px-8 bg-neutral-950/30 backdrop-blur-xl z-50 rounded-full m-8 mb-3 text-white"}>
+                className={"py-3 px-8 bg-neutral-950/30 backdrop-blur-xl z-50 rounded-full m-8 mb-3 text-white pointer-events-auto"}>
                 <div className={"flex items-center gap-3"}>
                     <img src="https://cdn.bte-germany.de/general/logos/Logo.png" alt="BTE Germany Logo"
                         className={"w-8 mr-4"} />
@@ -115,7 +118,7 @@ export function FloatingNavigationBar({ collapsable }: { collapsable?: boolean }
             </div>
             {
                 isCollapsible &&
-                <div className={"h-1.5 w-8 bg-white/70 rounded-full absolute bottom-0 left-1/2 transform -translate-x-1/2 z-40 cursor-pointer hover:bg-white/90 transition-colors"} onClick={() => {
+                <div className={"h-1.5 w-8 bg-white/70 rounded-full absolute bottom-0 left-1/2 transform -translate-x-1/2 z-40 cursor-pointer hover:bg-white/90 transition-colors pointer-events-auto"} onClick={() => {
                     setIsCollapsed((c) => !c);
                 }}></div>
             }
