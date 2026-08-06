@@ -1,6 +1,6 @@
 import { create } from "zustand";
 
-import type { MapStyleId } from "@/lib/mapStyles";
+import { isMapStyleId, type MapStyleId } from "@/lib/mapStyles";
 
 type MapStyleState = {
     styleId: MapStyleId;
@@ -10,13 +10,10 @@ type MapStyleState = {
 
 const STORAGE_KEY = "map-style-id";
 
-const parseStyleId = (value: string | null): MapStyleId | null => {
-    if (value === "default" || value === "hybrid" || value === "satellite") {
-        return value;
-    }
-
-    return null;
-};
+// Validated against the style list itself so adding a style can't leave a
+// stale allow-list behind that silently drops it on reload.
+const parseStyleId = (value: string | null): MapStyleId | null =>
+    isMapStyleId(value) ? value : null;
 
 const useMapStyleStore = create<MapStyleState>((set) => ({
     styleId: "default",

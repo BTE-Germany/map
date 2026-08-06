@@ -11,18 +11,27 @@ import Image from "next/image";
 import { cn } from "@/lib/utils";
 import useMapStyleStore from "@/stores/MapStyleStore";
 import useMapOverlayStore from "@/stores/MapOverlayStore";
-import { getMapAttributionsById, MAP_STYLES, type MapStyleId } from "@/lib/mapStyles";
+import {
+    getMapAttributionsById,
+    getMapStyleFamily,
+    getMapStyleVariants,
+    PRIMARY_MAP_STYLES,
+    type PrimaryMapStyleId,
+} from "@/lib/mapStyles";
 import type { StaticImageData } from "next/image";
 import { Tooltip, TooltipContent, TooltipTrigger } from "../ui/tooltip";
 import { useSession } from "next-auth/react";
 import { hasPermission, PERMISSIONS } from "@/lib/permissions";
 import useStreetLevelStore from "@/stores/StreetLevelStore";
 
-const stylePreviewImages: Record<MapStyleId, StaticImageData> = {
+const stylePreviewImages: Record<PrimaryMapStyleId, StaticImageData> = {
     default: defaultImage,
     hybrid: hybridImage,
     satellite: satelliteImage
 };
+
+/** Mapbox-backed styles send request data to a third party and need Plus. */
+const isPlusStyle = (styleId: PrimaryMapStyleId) => styleId === "hybrid" || styleId === "satellite";
 
 export default function MapControls() {
     const { mainMap: map } = useMap();
@@ -31,6 +40,10 @@ export default function MapControls() {
     const hidePlayers = useMapOverlayStore((state) => state.hidePlayers);
     const togglePlayers = useMapOverlayStore((state) => state.togglePlayers);
     const styleAttributions = getMapAttributionsById(styleId);
+    // A variant (e.g. monochrome) keeps its parent's tile selected in the grid
+    // and is picked from the smaller control underneath it.
+    const activeFamily = getMapStyleFamily(styleId);
+    const familyVariants = getMapStyleVariants(activeFamily);
     const isSelectingStreetLevel = useStreetLevelStore((state) => state.isSelecting);
     const startSelectingStreetLevel = useStreetLevelStore((state) => state.startSelecting);
     const cancelSelectingStreetLevel = useStreetLevelStore((state) => state.cancelSelecting);
@@ -112,9 +125,14 @@ export default function MapControls() {
     }
 
     return (
-        <div className={"absolute bottom-0 right-0 z-40 m-4 flex flex-col gap-2 items-end text-xs text-neutral-400"}>
+        // This column is as wide as the attribution line below it — ~300px,
+        // which on a phone is most of the screen width and nearly a third of
+        // its height. Almost all of that is empty space between the button
+        // stacks, so the frame stays transparent to pointer events and only
+        // the visible chrome opts back in.
+        <div className={"absolute bottom-0 right-0 z-40 m-4 flex flex-col gap-2 items-end text-xs text-neutral-400 pointer-events-none"}>
             <div
-                className={"rounded-xl overflow-hidden flex flex-col divide-y divide-neutral-600/30 text-foreground bg-neutral-950/30 backdrop-blur-xl"}>
+                className={"rounded-xl overflow-hidden flex flex-col divide-y divide-neutral-600/30 text-foreground bg-neutral-950/30 backdrop-blur-xl pointer-events-auto"}>
                 <Popover >
                     <PopoverTrigger asChild>
                         <div className={" p-2 hover:bg-neutral-950/60 transition-colors group"}>
@@ -123,48 +141,80 @@ export default function MapControls() {
                     </PopoverTrigger>
                     <PopoverContent className="w-80 bg-card/60 backdrop-blur-2xl" side="left" sideOffset={20}>
                         <div className="grid grid-cols-3 gap-4">
-                            {MAP_STYLES.map((style) => (
-                                <button
-                                    type="button"
-                                    key={style.id}
-                                    className={cn("flex flex-col justify-center items-center cursor-pointer active:ring-0 focus:outline-none relative", {
-                                        "cursor-not-allowed opacity-50": (style.id === "hybrid" || style.id === "satellite") && !canChangeStyle
-                                    })}
-                                    onClick={() => setStyleId(style.id)}
-                                    disabled={(style.id === "hybrid" || style.id === "satellite") && !canChangeStyle}
-                                >
+                            {PRIMARY_MAP_STYLES.map((style) => {
+                                const locked = isPlusStyle(style.id) && !canChangeStyle;
 
-                                    <div className="relative mb-2">
+                                return (
+                                    <button
+                                        type="button"
+                                        key={style.id}
+                                        className={cn("flex flex-col justify-center items-center cursor-pointer active:ring-0 focus:outline-none relative", {
+                                            "cursor-not-allowed opacity-50": locked
+                                        })}
+                                        // Re-clicking the active tile must not silently drop the
+                                        // chosen variant — that's what the control below is for.
+                                        onClick={() => {
+                                            if (style.id !== activeFamily) setStyleId(style.id);
+                                        }}
+                                        disabled={locked}
+                                    >
 
-                                        {
-                                            (style.id === "hybrid" || style.id === "satellite") && !canChangeStyle ? (
-                                                <div className="absolute w-full h-full bg-black/50 rounded-lg flex items-center justify-center flex-col">
-                                                    <Tooltip>
-                                                        <TooltipTrigger>
-                                                            <div className="p-2 bg-neutral-500/50 rounded-full">
-                                                                <LockIcon className="text-white size-4" />
-                                                            </div>
-                                                        </TooltipTrigger>
-                                                        <TooltipContent>
-                                                            <p>Plus-Feature</p>
-                                                        </TooltipContent>
-                                                    </Tooltip>
-                                                </div>
-                                            ) : null
-                                        }
-                                        <Image
-                                            src={stylePreviewImages[style.id]}
-                                            alt={style.label}
-                                            className={cn("w-full  rounded-lg border-2 border-transparent transition-colors", {
-                                                "border-blue-500": style.id === styleId
-                                            })}
-                                        />
-                                    </div>
+                                        <div className="relative mb-2">
 
-                                    <p className="text-sm text-muted-foreground">{style.label}</p>
-                                </button>
-                            ))}
+                                            {
+                                                locked ? (
+                                                    <div className="absolute w-full h-full bg-black/50 rounded-lg flex items-center justify-center flex-col">
+                                                        <Tooltip>
+                                                            <TooltipTrigger>
+                                                                <div className="p-2 bg-neutral-500/50 rounded-full">
+                                                                    <LockIcon className="text-white size-4" />
+                                                                </div>
+                                                            </TooltipTrigger>
+                                                            <TooltipContent>
+                                                                <p>Plus-Feature</p>
+                                                            </TooltipContent>
+                                                        </Tooltip>
+                                                    </div>
+                                                ) : null
+                                            }
+                                            <Image
+                                                src={stylePreviewImages[style.id]}
+                                                alt={style.label}
+                                                className={cn("w-full  rounded-lg border-2 border-transparent transition-colors", {
+                                                    "border-blue-500": style.id === activeFamily
+                                                })}
+                                            />
+                                        </div>
+
+                                        <p className="text-sm text-muted-foreground">{style.label}</p>
+                                    </button>
+                                );
+                            })}
                         </div>
+
+                        {/* Looks available within the selected map — only rendered
+                            for families that actually have more than one. */}
+                        {familyVariants.length > 1 && (
+                            <div className="mt-4 flex gap-1 rounded-lg bg-neutral-950/40 p-1">
+                                {familyVariants.map((variant) => (
+                                    <button
+                                        type="button"
+                                        key={variant.id}
+                                        onClick={() => setStyleId(variant.id)}
+                                        aria-pressed={variant.id === styleId}
+                                        className={cn(
+                                            "flex-1 cursor-pointer rounded-md px-2 py-1.5 text-xs transition-colors focus:outline-none",
+                                            variant.id === styleId
+                                                ? "bg-neutral-100/10 text-foreground"
+                                                : "text-muted-foreground hover:text-foreground hover:bg-neutral-100/5",
+                                        )}
+                                    >
+                                        {variant.variantLabel ?? variant.label}
+                                    </button>
+                                ))}
+                            </div>
+                        )}
+
                         <div className="flex items-center mt-4 text-xs text-muted-foreground">
                             <InfoIcon className="inline-block mr-2" /> Bei der Hybrid- und Satellitenansicht werden Daten an Mapbox gesendet.
                         </div>
@@ -225,7 +275,7 @@ export default function MapControls() {
 
             </div>
             <div
-                className={"rounded-xl overflow-hidden flex flex-col divide-y divide-neutral-600/30 text-foreground bg-neutral-950/30 backdrop-blur-xl"}>
+                className={"rounded-xl overflow-hidden flex flex-col divide-y divide-neutral-600/30 text-foreground bg-neutral-950/30 backdrop-blur-xl pointer-events-auto"}>
 
                 <div className={" p-2 hover:bg-neutral-950/60 transition-colors group"}
                     onMouseDown={handleMouseDown}
@@ -254,7 +304,7 @@ export default function MapControls() {
                 </div>
             </div>
 
-            <div className={"rounded-xl overflow-hidden text-neutral-400 bg-neutral-950/30 backdrop-blur-xl px-2 py-1"}>
+            <div className={"rounded-xl overflow-hidden text-neutral-400 bg-neutral-950/30 backdrop-blur-xl px-2 py-1 pointer-events-auto"}>
                 <span>
                     {styleAttributions.map((attribution, index) => (
                         <a
