@@ -2,10 +2,12 @@
 
 import { eq } from "drizzle-orm";
 import db from "@/db/drizzle";
-import { region, regionImage } from "@/db/schema";
+import { bteSyncState, region, regionImage } from "@/db/schema";
 import { requireRegionAccess } from "@/lib/guards";
 import { PERMISSIONS } from "@/lib/permissions";
 import { deleteObject } from "@/lib/s3";
+import { scheduleRegionDeletion } from "@/lib/bte/autoSync";
+import { getSyncState } from "@/lib/bte/sync";
 
 /**
  * Delete a region. Allowed for the region's creator and for users with the
@@ -21,10 +23,17 @@ export async function deleteRegion(regionId: string): Promise<{ success: true }>
         .from(regionImage)
         .where(eq(regionImage.regionId, regionId));
 
+    // Read the mirrored claim id before the state row goes away — it's the
+    // fallback for removing the claim if the externalId lookup ever misses.
+    const claimId = (await getSyncState(regionId))?.claimId ?? null;
+
     await db.transaction(async (tx) => {
         await tx.delete(regionImage).where(eq(regionImage.regionId, regionId));
+        await tx.delete(bteSyncState).where(eq(bteSyncState.regionId, regionId));
         await tx.delete(region).where(eq(region.id, regionId));
     });
+
+    scheduleRegionDeletion(regionId, claimId);
 
     await Promise.allSettled(
         images.map((img) =>

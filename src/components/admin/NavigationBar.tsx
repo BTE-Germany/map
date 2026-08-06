@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { LayoutDashboard, LandPlot, Shield, ListIcon, RefreshCwIcon, ArrowRightLeftIcon, ServerIcon, PlusIcon } from "lucide-react";
+import { LayoutDashboard, LandPlot, Shield, ListIcon, RefreshCwIcon, ArrowRightLeftIcon, ServerIcon, PlusIcon, UploadIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 const NAV_ITEMS = [
@@ -20,6 +20,7 @@ const NAV_ITEMS = [
         ],
     },
     { href: "/admin/servers", label: "Server", icon: ServerIcon },
+    { href: "/admin/sync", label: "BTE-Sync", icon: UploadIcon },
 ];
 
 export default function AdminNavigationBar() {

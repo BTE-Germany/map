@@ -11,6 +11,7 @@ import { geocodeRegionCenter } from "@/lib/regionGeocode";
 import { fetchBuildingCount } from "@/lib/buildings";
 import { fetchLandUseStats } from "@/lib/landuse";
 import { getErrorMessage } from "@/lib/errors";
+import { scheduleRegionSync } from "@/lib/bte/autoSync";
 
 export interface CreateRegionInput {
     /** Polygon vertices in the DB format `[lat, lng][]`. */
@@ -91,12 +92,18 @@ export async function createRegionByAdmin(input: CreateRegionInput): Promise<{ i
 
     // Fire-and-forget; never block the response on Overpass.
     fetchBuildingCount(polygon)
-        .then((buildings) => db.update(region).set({ buildings }).where(eq(region.id, regionId)))
+        .then(async (buildings) => {
+            await db.update(region).set({ buildings }).where(eq(region.id, regionId));
+            // Mirror the building count once it lands; a no-op upstream when unchanged.
+            scheduleRegionSync(regionId);
+        })
         .catch((err) => console.error(`[createRegionByAdmin] building count failed for ${regionId}:`, getErrorMessage(err)));
 
     fetchLandUseStats(polygon)
         .then((landuse) => db.update(region).set({ landuse, landuseUpdatedAt: new Date() }).where(eq(region.id, regionId)))
         .catch((err) => console.error(`[createRegionByAdmin] landuse fetch failed for ${regionId}:`, getErrorMessage(err)));
+
+    scheduleRegionSync(regionId);
 
     return { id: regionId };
 }

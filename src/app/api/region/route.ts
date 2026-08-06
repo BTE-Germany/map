@@ -10,6 +10,7 @@ import { fetchBuildingCount } from "@/lib/buildings";
 import { closePolygon } from "@/lib/geo";
 import { getErrorMessage } from "@/lib/errors";
 import { geocodeRegionCenter } from "@/lib/regionGeocode";
+import { scheduleRegionSync } from "@/lib/bte/autoSync";
 
 export const runtime = "nodejs";
 
@@ -79,12 +80,19 @@ export async function POST(req: NextRequest) {
 
         // Fire-and-forget; never block the plugin's response on Overpass.
         fetchBuildingCount(polygon)
-            .then((buildings) => db.update(region).set({ buildings }).where(eq(region.id, regionId)))
+            .then(async (buildings) => {
+                await db.update(region).set({ buildings }).where(eq(region.id, regionId));
+                // The building count is part of the claim, so mirror it once it
+                // lands — a no-op upstream if the value didn't change.
+                scheduleRegionSync(regionId);
+            })
             .catch((err) => console.error(`[region] building count failed for ${regionId}:`, getErrorMessage(err)));
 
         fetchLandUseStats(polygon)
             .then((landuse) => db.update(region).set({ landuse, landuseUpdatedAt: new Date() }).where(eq(region.id, regionId)))
             .catch((err) => console.error(`[region] landuse fetch failed for ${regionId}:`, getErrorMessage(err)));
+
+        scheduleRegionSync(regionId);
 
         return NextResponse.json({ id: regionId }, { status: 201 });
     } catch (err) {

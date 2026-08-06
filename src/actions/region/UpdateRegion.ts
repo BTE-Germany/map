@@ -5,6 +5,7 @@ import db from "@/db/drizzle";
 import { eq } from "drizzle-orm";
 import { assertUuid, requireRegionAccess } from "@/lib/guards";
 import { PERMISSIONS } from "@/lib/permissions";
+import { scheduleRegionSync } from "@/lib/bte/autoSync";
 
 const MAX_BUILDERS = 50;
 
@@ -33,5 +34,8 @@ export async function updateRegion({
         .update(region)
         .set({ description, finished, builders: normalizedBuilders })
         .where(eq(region.id, regionId));
+
+    scheduleRegionSync(regionId);
+
     return { success: true };
 }

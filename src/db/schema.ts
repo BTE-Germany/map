@@ -103,6 +103,42 @@ export const playerPosition = pgTable("player_positions", {
 	index("player_positions_last_seen_idx").on(table.lastSeenAt),
 ]);
 
+/**
+ * Generic key/value store for runtime-toggleable settings that admins change
+ * from the panel (as opposed to deploy-time env vars). Values are JSON so a
+ * setting can grow from a boolean into an object without a migration.
+ */
+export const appSetting = pgTable("app_settings", {
+	key: varchar("key", { length: 64 }).primaryKey(),
+	value: json("value"),
+	updatedAt: timestamp("updated_at").defaultNow().$onUpdate(() => new Date()).notNull(),
+});
+
+export const bteSyncStatus = pgEnum('bte_sync_status', ['pending', 'synced', 'error']);
+
+/**
+ * Mirror state for the one-way sync of our regions to the main BuildTheEarth
+ * map ("claims"). Our region id is pushed as the claim's `externalId`, so the
+ * remote row can always be addressed without storing its id — `claimId` is
+ * kept purely for display and for adopting pre-existing claims.
+ *
+ * `fingerprint` is a hash of the last payload the BTE API accepted; it lets
+ * both the automatic and the manual sync skip regions that are already
+ * present upstream in exactly the same shape.
+ */
+export const bteSyncState = pgTable("bte_sync_state", {
+	regionId: uuid("region_id").primaryKey(),
+	claimId: uuid("claim_id"),
+	status: bteSyncStatus().default('pending').notNull(),
+	fingerprint: varchar("fingerprint", { length: 64 }),
+	lastError: text("last_error"),
+	lastAttemptAt: timestamp("last_attempt_at"),
+	syncedAt: timestamp("synced_at"),
+	updatedAt: timestamp("updated_at").defaultNow().$onUpdate(() => new Date()).notNull(),
+}, (table) => [
+	index("bte_sync_state_status_idx").on(table.status),
+]);
+
 export const teleportStatus = pgEnum('teleport_status', ['pending', 'delivered', 'failed', 'expired']);
 
 /**

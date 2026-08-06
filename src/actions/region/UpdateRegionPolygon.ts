@@ -8,6 +8,7 @@ import { fetchBuildingCount } from "@/lib/buildings";
 import { closePolygon } from "@/lib/geo";
 import { requireRegionAccess } from "@/lib/guards";
 import { PERMISSIONS } from "@/lib/permissions";
+import { scheduleRegionSync } from "@/lib/bte/autoSync";
 
 const MAX_POLYGON_POINTS = 1000;
 
@@ -64,10 +65,16 @@ export async function updateRegionPolygon(regionId: string, polygon: [number, nu
         );
 
     fetchBuildingCount(closed)
-        .then((buildings) => applyIfUnchanged({ buildings }))
+        .then(async (buildings) => {
+            await applyIfUnchanged({ buildings });
+            // Push the corrected building count once it's in — no-op if unchanged.
+            scheduleRegionSync(regionId);
+        })
         .catch((err) =>
             console.error(`[updateRegionPolygon] building refresh failed for ${regionId}:`, err.message),
         );
+
+    scheduleRegionSync(regionId);
 
     return { success: true };
 }

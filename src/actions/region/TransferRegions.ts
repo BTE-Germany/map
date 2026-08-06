@@ -5,6 +5,7 @@ import db from "@/db/drizzle";
 import { eq } from "drizzle-orm";
 import { assertUuid, requirePermission } from "@/lib/guards";
 import { PERMISSIONS } from "@/lib/permissions";
+import { scheduleRegionsSync } from "@/lib/bte/autoSync";
 
 // Placeholder UUID for plot/event regions that lose their creator attribution
 const SYSTEM_UUID = "00000000-0000-0000-0000-000000000000";
@@ -56,8 +57,9 @@ export async function executeTransfer(sourceUUID: string, targetUUID: string): P
 
     // Run the whole reassignment atomically so a mid-loop failure can't leave
     // attribution half-transferred.
-    return db.transaction(async (tx) => {
+    const result = await db.transaction(async (tx) => {
         const regions = await tx.select().from(regionTable);
+        const touched: string[] = [];
         let transferred = 0;
 
         for (const r of regions) {
@@ -76,6 +78,7 @@ export async function executeTransfer(sourceUUID: string, targetUUID: string): P
                         .where(eq(regionTable.id, r.id));
                 }
                 transferred++;
+                touched.push(r.id);
             } else if ((r.builders ?? []).includes(sourceUUID)) {
                 const newBuilders = r.type === "default"
                     ? [...(r.builders ?? []).filter((u) => u !== sourceUUID && u !== targetUUID), targetUUID]
@@ -84,9 +87,16 @@ export async function executeTransfer(sourceUUID: string, targetUUID: string): P
                     .set({ builders: newBuilders })
                     .where(eq(regionTable.id, r.id));
                 transferred++;
+                touched.push(r.id);
             }
         }
 
-        return { transferred };
+        return { transferred, touched };
     });
+
+    // Attribution changed on every touched region — mirror it upstream once
+    // the transaction has committed.
+    scheduleRegionsSync(result.touched);
+
+    return { transferred: result.transferred };
 }
