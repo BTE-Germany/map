@@ -5,13 +5,14 @@ import { useSession } from "next-auth/react";
 import Link from "next/link";
 import {
     ArrowDownIcon, ArrowUpIcon, Building2, CheckCircle2Icon, ChevronDownIcon,
-    ChevronUpIcon, LandPlot, SearchIcon, Sparkles, Users,
+    ChevronUpIcon, LandPlot, Loader2Icon, SearchIcon, Sparkles, Users,
 } from "lucide-react";
 import { AnimatePresence, motion } from "motion/react";
 import {
     Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from "@/components/ui/table";
-import { useMcUser } from "@/dataHooks/minecraft/useMcUser";
+import { isMcUsername, useMcUser, useMcUserByName } from "@/dataHooks/minecraft/useMcUser";
+import { useDebounced } from "@/hooks/use-debounced";
 import { cn } from "@/lib/utils";
 import type { PlayerScore } from "@/lib/scoring";
 
@@ -90,11 +91,35 @@ export default function ExtendedRankingTable({ players }: { players: PlayerScore
             .map((p, i) => ({ ...p, rank: i + 1 }));
     }, [players, sortKey]);
 
+    // Names live on playerdb, not in the ranking rows, so a name is searched by
+    // resolving it to a UUID and matching that. Debounced: the local UUID filter
+    // stays instant, only the lookup waits for the typing to stop.
+    const query = search.trim();
+    const debouncedQuery = useDebounced(query, 350);
+    const nameLookup = useMcUserByName(debouncedQuery);
+    const isLookingUp = nameLookup.isFetching || (!!query && query !== debouncedQuery && isMcUsername(query));
+    const matchedUuid = nameLookup.data?.raw_id?.toLowerCase() ?? null;
+
     const filtered = useMemo(() => {
-        const q = search.trim().toLowerCase();
+        const q = query.toLowerCase();
         if (!q) return ranked;
-        return ranked.filter((p) => p.uuid.toLowerCase().includes(q));
-    }, [ranked, search]);
+        return ranked.filter((p) => {
+            const uuid = p.uuid.toLowerCase();
+            return uuid === matchedUuid || uuid.includes(q);
+        });
+    }, [ranked, query, matchedUuid]);
+
+    /** Why the table is empty — a missing name reads differently from a typo. */
+    const emptyMessage = (() => {
+        if (isLookingUp) return "Suche Spieler…";
+        if (nameLookup.data) {
+            return `${nameLookup.data.username} hat noch keine Regionen und ist damit nicht in der Wertung.`;
+        }
+        if (isMcUsername(query)) {
+            return `Kein Minecraft-Account „${query}“ gefunden — bitte den vollständigen Namen eingeben.`;
+        }
+        return "Keine Builder gefunden.";
+    })();
 
     const me = currentUserUuid
         ? ranked.find((p) => p.uuid.toLowerCase() === currentUserUuid.toLowerCase())
@@ -134,19 +159,28 @@ export default function ExtendedRankingTable({ players }: { players: PlayerScore
                 <div>
                     <p className="text-sm font-semibold text-white">Gesamtwertung</p>
                     <p className="text-xs text-neutral-500">
-                        {ranked.length.toLocaleString("de-DE")} Builder mit Aktivität
+                        {query
+                            ? `${filtered.length.toLocaleString("de-DE")} von ${ranked.length.toLocaleString("de-DE")} Buildern`
+                            : `${ranked.length.toLocaleString("de-DE")} Builder mit Aktivität`}
                     </p>
                 </div>
 
-                <div className="relative w-full sm:w-64">
-                    <SearchIcon className="absolute left-3 top-1/2 -translate-y-1/2 size-3.5 text-neutral-500 pointer-events-none" />
+                <div className="relative w-full sm:w-72">
+                    {isLookingUp ? (
+                        <Loader2Icon className="absolute left-3 top-1/2 -translate-y-1/2 size-3.5 animate-spin text-neutral-400 pointer-events-none" />
+                    ) : (
+                        <SearchIcon className="absolute left-3 top-1/2 -translate-y-1/2 size-3.5 text-neutral-500 pointer-events-none" />
+                    )}
                     <input
                         value={search}
                         onChange={(e) => {
                             setSearch(e.target.value);
                             resetTableScroll();
                         }}
-                        placeholder="Nach UUID-Anfang filtern…"
+                        placeholder="Minecraft-Name oder UUID…"
+                        aria-label="Builder nach vollständigem Minecraft-Namen oder UUID suchen"
+                        autoComplete="off"
+                        spellCheck={false}
                         className="w-full bg-white/[0.04] border border-white/[0.06] rounded-lg pl-8 pr-3 py-1.5 text-xs text-white placeholder:text-neutral-500 focus:outline-none focus:border-white/20 transition-colors"
                     />
                 </div>
@@ -203,7 +237,7 @@ export default function ExtendedRankingTable({ players }: { players: PlayerScore
                             {filtered.length === 0 ? (
                                 <TableRow>
                                     <TableCell colSpan={2 + COLUMNS.length} className="text-center text-neutral-500 py-10 text-sm">
-                                        Keine Builder gefunden.
+                                        {emptyMessage}
                                     </TableCell>
                                 </TableRow>
                             ) : (

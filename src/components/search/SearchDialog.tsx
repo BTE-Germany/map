@@ -17,6 +17,7 @@ import useSearchStore from "@/stores/SearchStore";
 import useRegionPane from "@/stores/RegionPaneStore";
 import { useRegionsForSearch } from "@/dataHooks/regions/useAllRegions";
 import { usePhotonSearch, formatPhotonLabel, type PhotonFeature } from "@/dataHooks/search/usePhotonSearch";
+import { useDebounced } from "@/hooks/use-debounced";
 import { stateCodeToName } from "@/lib/federalStates";
 
 type Region = {
@@ -28,15 +29,6 @@ type Region = {
     type: string;
     finished: boolean;
 };
-
-function useDebounced<T>(value: T, delay = 250): T {
-    const [debounced, setDebounced] = useState(value);
-    useEffect(() => {
-        const h = setTimeout(() => setDebounced(value), delay);
-        return () => clearTimeout(h);
-    }, [value, delay]);
-    return debounced;
-}
 
 function scoreRegion(region: Region, needle: string): number {
     const q = needle.toLowerCase();
