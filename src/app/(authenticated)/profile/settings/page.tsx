@@ -1,18 +1,33 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { RulerIcon, SettingsIcon, CuboidIcon, LockIcon, ShieldIcon } from "lucide-react";
+import {
+    RulerIcon, SettingsIcon, CuboidIcon, LockIcon, PaletteIcon, RotateCcwIcon, ShieldIcon,
+} from "lucide-react";
 import { usePrivacy } from "@/dataHooks/privacy/usePrivacy";
 import { useSession } from "next-auth/react";
 import { cn } from "@/lib/utils";
-import useUserSettings, { type AreaUnitMode } from "@/stores/UserSettingsStore";
+import useUserSettings, {
+    DEFAULT_REGION_COLORS,
+    isDefaultRegionColors,
+    type AreaUnitMode,
+    type RegionColorKey,
+} from "@/stores/UserSettingsStore";
 import { hasPermission, PERMISSIONS } from "@/lib/permissions";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import { Switch } from "@/components/ui/switch";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 
 /* ─── Section registry ──────────────────────────────────────────── */
 
 const SECTIONS = [
     { id: "einheiten", label: "Einheiten", icon: RulerIcon },
+    { id: "regionenfarben", label: "Regionenfarben", icon: PaletteIcon },
     { id: "3d-ansicht", label: "3D-Ansicht", icon: CuboidIcon },
     { id: "datenschutz", label: "Datenschutz", icon: ShieldIcon },
     // Add more sections here as the settings page grows.
@@ -106,50 +121,47 @@ function SettingsSection({
 
 /* ─── Option card ───────────────────────────────────────────────── */
 
+/**
+ * One choice inside a `<RadioGroup>`. The label covers the whole card so a click
+ * anywhere selects it, while the group keeps real radio semantics: one tab stop
+ * for the group and arrow keys between the options.
+ *
+ * The item is a *sibling* of the label rather than nested inside it: a control
+ * wrapped in its own `<label for>` gets every activation re-dispatched back to
+ * it by the label, so keep the two next to each other.
+ */
 function OptionCard<T extends string>({
     value,
     selected,
-    onSelect,
     title,
     description,
     badge,
 }: {
     value: T;
     selected: boolean;
-    onSelect: (v: T) => void;
     title: string;
     description: string;
     badge?: React.ReactNode;
 }) {
+    const id = `option-${value}`;
+
     return (
-        <button
-            type="button"
-            onClick={() => onSelect(value)}
+        <div
             className={cn(
-                "relative w-full text-left rounded-xl border px-4 py-3.5 transition-all duration-150",
+                "relative rounded-xl border transition-all duration-150",
                 selected
                     ? "border-primary/50 bg-primary/5 ring-1 ring-primary/30"
                     : "border-border bg-card hover:border-border/80 hover:bg-accent/40"
             )}
         >
-            {/* Radio dot */}
-            <span
-                className={cn(
-                    "absolute right-4 top-4 size-4 rounded-full border-2 transition-colors",
-                    selected
-                        ? "border-primary bg-primary"
-                        : "border-muted-foreground/40"
-                )}
-            >
-                {selected && (
-                    <span className="absolute inset-[3px] rounded-full bg-primary-foreground" />
-                )}
-            </span>
+            <RadioGroupItem id={id} value={value} className="absolute right-4 top-4" />
 
-            <p className="font-semibold text-sm pr-7">{title}</p>
-            <p className="text-sm text-muted-foreground mt-0.5 pr-7">{description}</p>
-            {badge && <div className="mt-2.5">{badge}</div>}
-        </button>
+            <Label htmlFor={id} className="block cursor-pointer px-4 py-3.5 font-normal">
+                <p className="pr-7 text-sm font-semibold">{title}</p>
+                <p className="mt-0.5 pr-7 text-sm text-muted-foreground">{description}</p>
+                {badge && <div className="mt-2.5">{badge}</div>}
+            </Label>
+        </div>
     );
 }
 
@@ -206,27 +218,119 @@ function ToggleRow({
                     </TooltipContent>
                 </Tooltip>
             ) : (
-                <button
-                    type="button"
-                    role="switch"
-                    aria-checked={checked}
+                <Switch
+                    checked={checked}
                     disabled={disabled}
-                    onClick={() => !disabled && onChange(!checked)}
-                    className={cn(
-                        "relative inline-flex h-6 w-11 shrink-0 items-center rounded-full transition-colors sm:mt-1",
-                        disabled && "opacity-60 cursor-not-allowed",
-                        checked ? "bg-primary" : "bg-muted-foreground/30"
-                    )}
-                >
-                    <span
-                        className={cn(
-                            "inline-block size-5 rounded-full bg-background shadow transition-transform",
-                            checked ? "translate-x-5" : "translate-x-0.5"
-                        )}
-                    />
-                </button>
+                    onCheckedChange={onChange}
+                    aria-label={label}
+                    className="shrink-0 sm:mt-1"
+                />
             )}
         </div>
+    );
+}
+
+/* ─── Region colours ────────────────────────────────────────────── */
+
+const REGION_COLOR_OPTIONS: {
+    key: RegionColorKey;
+    title: string;
+    description: string;
+}[] = [
+        {
+            key: "finished",
+            title: "Fertiggestellte Regionen",
+            description: "Diese Regionen sind bereits vollständig gebaut.",
+        },
+        {
+            key: "inProgress",
+            title: "In Bearbeitung",
+            description: "In diesen Regionen wird aktuell noch gebaut.",
+        },
+        {
+            key: "plot",
+            title: "Plotregionen",
+            description: "Für Plots vorgesehen und noch nicht vollständig gebaut.",
+        },
+        {
+            key: "event",
+            title: "Eventregionen",
+            description: "In diesen Regionen haben Bauevents stattgefunden.",
+        },
+    ];
+
+/** Preview in the same shape the map draws: 35 % fill inside a solid outline. */
+function RegionSwatch({ color }: { color: string }) {
+    return (
+        <span
+            aria-hidden
+            className="relative block size-10 shrink-0 overflow-hidden rounded-lg border-2"
+            style={{ borderColor: color }}
+        >
+            <span className="absolute inset-0 opacity-35" style={{ backgroundColor: color }} />
+        </span>
+    );
+}
+
+function RegionColorRow({
+    title,
+    description,
+    color,
+    isDefault,
+    onChange,
+    onReset,
+}: {
+    title: string;
+    description: string;
+    color: string;
+    isDefault: boolean;
+    onChange: (color: string) => void;
+    onReset: () => void;
+}) {
+    const inputId = `region-color-${title.replace(/\s+/g, "-").toLowerCase()}`;
+
+    return (
+        <Card className="gap-0 py-0">
+            <CardContent className="flex flex-wrap items-center gap-x-4 gap-y-3 px-4 py-3.5">
+                <RegionSwatch color={color} />
+
+                <div className="min-w-0 flex-1">
+                    <Label htmlFor={inputId} className="cursor-pointer text-sm font-semibold">
+                        {title}
+                    </Label>
+                    <p className="mt-0.5 text-sm text-muted-foreground">{description}</p>
+                </div>
+
+                <div className="ml-auto flex items-center gap-2">
+                    <Badge variant="outline" className="font-mono text-muted-foreground tabular-nums">
+                        {color}
+                    </Badge>
+                    <Input
+                        id={inputId}
+                        type="color"
+                        value={color}
+                        onChange={(e) => onChange(e.target.value)}
+                        className="h-9 w-12 cursor-pointer p-1"
+                    />
+                    <Tooltip>
+                        <TooltipTrigger asChild>
+                            <Button
+                                variant="ghost"
+                                size="icon-sm"
+                                disabled={isDefault}
+                                onClick={onReset}
+                                aria-label={`Farbe für „${title}“ auf den Standard zurücksetzen`}
+                            >
+                                <RotateCcwIcon />
+                            </Button>
+                        </TooltipTrigger>
+                        <TooltipContent>
+                            <p>{isDefault ? "Standardfarbe" : "Auf Standard zurücksetzen"}</p>
+                        </TooltipContent>
+                    </Tooltip>
+                </div>
+            </CardContent>
+        </Card>
     );
 }
 
@@ -250,7 +354,12 @@ function ExamplePills({ examples }: { examples: string[] }) {
 /* ─── Main page ─────────────────────────────────────────────────── */
 
 export default function SettingsPage() {
-    const { areaUnit, setAreaUnit, show3DMap, setShow3DMap } = useUserSettings();
+    const {
+        areaUnit, setAreaUnit,
+        show3DMap, setShow3DMap,
+        regionColors, setRegionColor, resetRegionColors,
+    } = useUserSettings();
+    const colorsAreDefault = isDefaultRegionColors(regionColors);
     const { data: session } = useSession();
     const roles = session?.user.realm_access?.roles ?? [];
     const canUse3D = hasPermission(roles, PERMISSIONS.MAP_3D_VIEW);
@@ -305,18 +414,58 @@ export default function SettingsPage() {
                         description="Lege fest, in welcher Einheit Flächen angezeigt werden."
                         icon={RulerIcon}
                     >
-                        <div className="space-y-2.5">
+                        <RadioGroup
+                            value={areaUnit}
+                            onValueChange={(value) => setAreaUnit(value as AreaUnitMode)}
+                            className="gap-2.5"
+                        >
                             {AREA_UNIT_OPTIONS.map((opt) => (
                                 <OptionCard
                                     key={opt.value}
                                     value={opt.value}
                                     selected={areaUnit === opt.value}
-                                    onSelect={setAreaUnit}
                                     title={opt.title}
                                     description={opt.description}
                                     badge={<ExamplePills examples={opt.examples} />}
                                 />
                             ))}
+                        </RadioGroup>
+                    </SettingsSection>
+
+                    {/* ── Regionenfarben ──────────────────────────── */}
+                    <SettingsSection
+                        id="regionenfarben"
+                        title="Regionenfarben"
+                        description="Lege fest, in welchen Farben die Regionen auf der Karte gezeichnet werden."
+                        icon={PaletteIcon}
+                    >
+                        <div className="space-y-2.5">
+                            {REGION_COLOR_OPTIONS.map((opt) => (
+                                <RegionColorRow
+                                    key={opt.key}
+                                    title={opt.title}
+                                    description={opt.description}
+                                    color={regionColors[opt.key]}
+                                    isDefault={regionColors[opt.key] === DEFAULT_REGION_COLORS[opt.key]}
+                                    onChange={(color) => setRegionColor(opt.key, color)}
+                                    onReset={() => setRegionColor(opt.key, DEFAULT_REGION_COLORS[opt.key])}
+                                />
+                            ))}
+
+                            <div className="flex flex-wrap items-center justify-between gap-3 pt-1">
+                                <p className="text-xs text-muted-foreground">
+                                    Änderungen gelten sofort und nur in diesem Browser.
+                                </p>
+                                <Button
+                                    variant="outline"
+                                    size="sm"
+                                    disabled={colorsAreDefault}
+                                    onClick={resetRegionColors}
+                                >
+                                    <RotateCcwIcon />
+                                    Alle zurücksetzen
+                                </Button>
+                            </div>
                         </div>
                     </SettingsSection>
 

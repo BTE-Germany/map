@@ -14,6 +14,7 @@ import { getPublicRuntimeConfig } from "@/lib/publicRuntimeConfig";
 import maplibregl from "maplibre-gl";
 import useStreetLevelStore from "@/stores/StreetLevelStore";
 import useRegionShapeEdit from "@/stores/RegionShapeEditStore";
+import useUserSettings from "@/stores/UserSettingsStore";
 
 export default function Map() {
 
@@ -41,6 +42,7 @@ export default function Map() {
     // vertex or clicking an edge must not also open the region detail pane
     // (which would close the editor's context and fly the map somewhere else).
     const isEditingShape = useRegionShapeEdit((state) => state.isEditing);
+    const regionColors = useUserSettings((state) => state.regionColors);
 
     useEffect(() => {
         hydrateStyleId();
@@ -125,17 +127,19 @@ export default function Map() {
         };
     }, [isEngineReady, isSelectingStreetLevel, isEditingShape, map, openRegion]);
 
-    // Colors matching the WelcomeScreen legend:
+    // Defaults match the WelcomeScreen legend:
     // red   = event
     // blue  = plot
     // green = finished (default type)
     // orange = in progress (default type)
+    // Each is overridable per user under /profile/settings — `<Layer>` pushes the
+    // new paint property to maplibre, so a change lands without a reload.
     const regionColor = [
         'case',
-        ['==', ['get', 'type'], 'event'],  '#ef4444',
-        ['==', ['get', 'type'], 'plot'],   '#3b82f6',
-        ['==', ['get', 'finished'], true], '#22c55e',
-        '#f97316',
+        ['==', ['get', 'type'], 'event'],  regionColors.event,
+        ['==', ['get', 'type'], 'plot'],   regionColors.plot,
+        ['==', ['get', 'finished'], true], regionColors.finished,
+        regionColors.inProgress,
     ] as any;
 
     const layerStyle = {
