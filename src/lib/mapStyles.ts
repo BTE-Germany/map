@@ -56,17 +56,12 @@ const openMapTilesAttributions: MapAttributionLink[] = [
 ];
 
 /**
- * Fallback attribution for the Google styles. Google's terms ask for the
- * copyright string its viewport endpoint returns for what is actually on
- * screen (it names the imagery providers, e.g. Maxar), so this is what shows
- * until — or if — that lookup answers. See `useGoogleTileCopyright`.
+ * Empty on purpose. Google's map renders its own logo, imagery credits and
+ * terms link inside its container, which is what its terms require — repeating
+ * them in our attribution line would only state them twice, and ours could go
+ * stale as the imagery owners change with the viewport.
  */
-const googleAttributions: MapAttributionLink[] = [
-    {
-        label: "© Google",
-        href: "https://www.google.com/help/terms_maps/"
-    }
-];
+const googleAttributions: MapAttributionLink[] = [];
 
 export const MAP_STYLES: MapStyleDefinition[] = [
     {

@@ -13,6 +13,40 @@ declare namespace google.maps {
         remove(): void;
     }
 
+    type MapTypeId = "roadmap" | "satellite" | "hybrid" | "terrain";
+
+    interface CameraOptions {
+        center: LatLngLiteral;
+        zoom: number;
+        heading?: number;
+        tilt?: number;
+    }
+
+    interface MapOptions {
+        center?: LatLngLiteral;
+        zoom?: number;
+        mapTypeId?: MapTypeId;
+        /** A vector Cloud map ID — what heading and fractional zoom would need. */
+        mapId?: string;
+        disableDefaultUI?: boolean;
+        gestureHandling?: "none" | "greedy" | "cooperative" | "auto";
+        keyboardShortcuts?: boolean;
+        tilt?: number;
+        heading?: number;
+        backgroundColor?: string;
+    }
+
+    class Map {
+        constructor(container: HTMLElement, options?: MapOptions);
+        /** Optional: older releases of the SDK don't have it. */
+        moveCamera?(camera: CameraOptions): void;
+        setCenter(center: LatLngLiteral): void;
+        setZoom(zoom: number): void;
+        setMapTypeId(mapTypeId: MapTypeId): void;
+        getMapTypeId(): MapTypeId | undefined;
+        addListener(eventName: string, handler: () => void): MapsEventListener;
+    }
+
     interface StreetViewLocation {
         latLng?: LatLng | null;
         pano?: string | null;

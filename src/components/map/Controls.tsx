@@ -19,7 +19,6 @@ import {
     PRIMARY_MAP_STYLES,
     type PrimaryMapStyleId,
 } from "@/lib/mapStyles";
-import { useGoogleTileCopyright } from "@/hooks/use-google-tile-copyright";
 import type { StaticImageData } from "next/image";
 import { Tooltip, TooltipContent, TooltipTrigger } from "../ui/tooltip";
 import { useSession } from "next-auth/react";
@@ -42,16 +41,9 @@ export default function MapControls() {
     const hidePlayers = useMapOverlayStore((state) => state.hidePlayers);
     const togglePlayers = useMapOverlayStore((state) => state.togglePlayers);
     const styleAttributions = getMapAttributionsById(styleId);
-    const styleSource = getMapStyleSource(styleId);
-    const googleCopyright = useGoogleTileCopyright(
-        map,
-        styleSource.kind === "google" ? styleSource.mapType : null,
-    );
-    // Google asks for the credit that matches what is on screen; the static
-    // "© Google" entry stands in until that lookup answers.
-    const attributions = googleCopyright
-        ? [{ label: googleCopyright, href: styleAttributions[0].href }]
-        : styleAttributions;
+    // Google draws its own credits inside its map, so these styles bring none —
+    // and then this line has nothing to say and is left out entirely.
+    const isGoogleStyle = getMapStyleSource(styleId).kind === "google";
     // A variant (e.g. monochrome) keeps its parent's tile selected in the grid
     // and is picked from the smaller control underneath it.
     const activeFamily = getMapStyleFamily(styleId);
@@ -89,6 +81,9 @@ export default function MapControls() {
 
     const handleMouseDown = (e: React.MouseEvent) => {
         if (!map) return;
+        // Google's raster imagery has no heading — rotating maplibre alone would
+        // slide the regions off the basemap underneath them.
+        if (isGoogleStyle) return;
 
         setIsDragging(true);
         setDragStartX(e.clientX);
@@ -291,7 +286,8 @@ export default function MapControls() {
 
                 <div className={" p-2 hover:bg-neutral-950/60 transition-colors group"}
                     onMouseDown={handleMouseDown}
-                    style={{ cursor: isDragging ? 'grabbing' : 'grab' }}>
+                    title={isGoogleStyle ? "Drehen ist in der Satelliten- und Hybridansicht nicht möglich" : undefined}
+                    style={{ cursor: isGoogleStyle ? 'default' : isDragging ? 'grabbing' : 'grab' }}>
                     <div
                         className={"group-active:scale-[95%] transition-transform [animation-duration:0.1s] relative flex items-center justify-center size-6 p-1"}>
                         <div className={"w-full h-full border-2 border-foreground rounded-full"}></div>
@@ -316,9 +312,9 @@ export default function MapControls() {
                 </div>
             </div>
 
-            <div className={"rounded-xl overflow-hidden text-neutral-400 bg-neutral-950/30 backdrop-blur-xl px-2 py-1 pointer-events-auto"}>
+            {styleAttributions.length > 0 && <div className={"rounded-xl overflow-hidden text-neutral-400 bg-neutral-950/30 backdrop-blur-xl px-2 py-1 pointer-events-auto"}>
                 <span>
-                    {attributions.map((attribution, index) => (
+                    {styleAttributions.map((attribution, index) => (
                         <a
                             key={attribution.href}
                             href={attribution.href}
@@ -331,7 +327,7 @@ export default function MapControls() {
                         </a>
                     ))}
                 </span>
-            </div>
+            </div>}
         </div>
     )
 }

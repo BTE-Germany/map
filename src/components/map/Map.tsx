@@ -3,19 +3,36 @@
 import { Layer, Map as Maplibre, Source, useMap } from '@vis.gl/react-maplibre';
 import 'maplibre-gl/dist/maplibre-gl.css';
 import { useAllRegionsAsGeoJSON } from "@/dataHooks/regions/useAllRegions";
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { toast } from "sonner";
 import useRegionPane from "@/stores/RegionPaneStore";
 import useMapStyleStore from "@/stores/MapStyleStore";
 import RegionShapeEditor from "./RegionShapeEditor";
 import LivePlayersLayer from "./LivePlayersLayer";
-import { DEFAULT_MAP_STYLE_URL, getMapStyleSource } from "@/lib/mapStyles";
-import { resolveGoogleMapStyle } from "@/lib/googleMapTiles";
+import GoogleBasemap from "./GoogleBasemap";
+import { getMapStyleSource } from "@/lib/mapStyles";
 import { getErrorMessage } from "@/lib/errors";
 import maplibregl, { type StyleSpecification } from "maplibre-gl";
 import useStreetLevelStore from "@/stores/StreetLevelStore";
 import useRegionShapeEdit from "@/stores/RegionShapeEditStore";
 import useUserSettings from "@/stores/UserSettingsStore";
+
+/**
+ * What maplibre renders while Google draws the basemap: nothing of its own, so
+ * the imagery behind it shows through and only the overlays are maplibre's. A
+ * module constant, because a fresh object per render would make `<Maplibre>`
+ * re-run `setStyle` and drop everything added on top of it.
+ */
+const TRANSPARENT_STYLE: StyleSpecification = {
+    version: 8,
+    sources: {},
+    layers: [],
+};
+
+function getRaw(mapRef: unknown): maplibregl.Map {
+    const candidate = mapRef as { getMap?: () => maplibregl.Map };
+    return typeof candidate?.getMap === "function" ? candidate.getMap() : (mapRef as maplibregl.Map);
+}
 
 export default function Map() {
 
@@ -27,10 +44,11 @@ export default function Map() {
     const styleId = useMapStyleStore((state) => state.styleId);
     const setStyleId = useMapStyleStore((state) => state.setStyleId);
     const hydrateStyleId = useMapStyleStore((state) => state.hydrateStyleId);
-    // Held in state, not derived per render: Google's styles are assembled after
-    // a session-token round-trip, and handing `<Maplibre>` a fresh object every
-    // render would re-run `setStyle` and drop everything drawn on top.
-    const [mapStyle, setMapStyle] = useState<string | StyleSpecification>(DEFAULT_MAP_STYLE_URL);
+    const styleSource = getMapStyleSource(styleId);
+    // Google's imagery is drawn by Google's own map underneath; maplibre then
+    // only has to stay out of the way.
+    const googleMapType = styleSource.kind === "google" ? styleSource.mapType : null;
+    const mapStyle = styleSource.kind === "google" ? TRANSPARENT_STYLE : styleSource.url;
     const [viewState, setViewState] = useState({
         longitude: 10.447683,
         latitude: 51.163361,
@@ -49,47 +67,42 @@ export default function Map() {
         hydrateStyleId();
     }, [hydrateStyleId]);
 
-    /* ── Resolve the picked style ──
+    /* ── Google's SDK failing leaves a transparent map over nothing ──
      *
-     * A style.json URL is handed to maplibre as-is. Google's imagery has to be
-     * assembled around a session token first, so the previously rendered style
-     * stays up while that request is in flight — the alternative is a blank map
-     * for a round-trip.
-     *
-     * A failure (no key, Map Tiles API not enabled for it, offline) drops the
-     * selection back to the standard basemap rather than leaving a map that
-     * silently didn't change — and reverting the *selection*, not just the
-     * style, keeps the picker and the attribution line from claiming Google for
-     * tiles that aren't Google's, and stops the next page load from retrying a
-     * style that is known to be unavailable. */
-    useEffect(() => {
-        const source = getMapStyleSource(styleId);
+     * So drop the *selection* back to the standard basemap, not just the style:
+     * the picker and the attribution line then agree with what is on screen, and
+     * the next page load doesn't retry a style that is known to be unavailable. */
+    const handleGoogleError = useCallback((error: unknown) => {
+        console.error("Google-Karte konnte nicht geladen werden:", error);
+        setStyleId("default");
+        toast.error(
+            `Google-Karte nicht verfügbar — es wird die Standardkarte angezeigt. ${getErrorMessage(error)}`,
+        );
+    }, [setStyleId]);
 
-        if (source.kind === "url") {
-            setMapStyle(source.url);
+    /* ── Rotation while Google draws the basemap ──
+     *
+     * Google's raster map types have no heading, so a rotated maplibre would
+     * float its regions over imagery that stayed put. Rotation is therefore
+     * turned off for those styles — pointing them at a vector Cloud map ID
+     * later is what would make it work, and the camera sync already sends the
+     * bearing for that case. */
+    useEffect(() => {
+        if (!map) return;
+        const raw = getRaw(map);
+
+        if (!googleMapType) {
+            raw.dragRotate.enable();
+            raw.touchZoomRotate.enableRotation();
             return;
         }
 
-        let isCurrent = true;
-
-        resolveGoogleMapStyle(source.mapType)
-            .then((style) => {
-                if (isCurrent) setMapStyle(style);
-            })
-            .catch((error) => {
-                console.error("Google-Karte konnte nicht geladen werden:", error);
-                if (!isCurrent) return;
-                setMapStyle(DEFAULT_MAP_STYLE_URL);
-                setStyleId("default");
-                toast.error(
-                    `Google-Karte nicht verfügbar — es wird die Standardkarte angezeigt. ${getErrorMessage(error)}`,
-                );
-            });
-
-        return () => {
-            isCurrent = false;
-        };
-    }, [styleId, setStyleId]);
+        raw.dragRotate.disable();
+        raw.touchZoomRotate.disableRotation();
+        if (raw.getBearing() !== 0 || raw.getPitch() !== 0) {
+            raw.easeTo({ bearing: 0, pitch: 0, duration: 300 });
+        }
+    }, [map, googleMapType]);
 
     useEffect(() => {
         if (!map) return;
@@ -168,6 +181,9 @@ export default function Map() {
 
     return (
         <div className="h-full w-full overflow-hidden relative">
+            {/* Behind maplibre: Google's own map, when a Google style is picked.
+                Mounted inside the same box so it shares the exact viewport. */}
+            {googleMapType && <GoogleBasemap mapType={googleMapType} onError={handleGoogleError} />}
             <Maplibre initialViewState={{
                 longitude: 10.447683,
                 latitude: 51.163361,
@@ -175,7 +191,7 @@ export default function Map() {
             }} id={"mainMap"}
                 mapLib={maplibregl}
                 attributionControl={false}
-                style={{ width: "100%", height: "100%", zIndex: 0 }}
+                style={{ width: "100%", height: "100%", position: "relative", zIndex: 10 }}
                 mapStyle={mapStyle}
                 longitude={viewState.longitude}
                 latitude={viewState.latitude}
