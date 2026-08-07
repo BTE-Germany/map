@@ -3,10 +3,25 @@ export type PrimaryMapStyleId = "default" | "hybrid" | "satellite";
 
 export type MapStyleId = PrimaryMapStyleId | "monochrome";
 
+/** `mapType` + layers of a Google Map Tiles session. */
+export type GoogleMapType = "satellite" | "hybrid";
+
+/**
+ * Where a style's tiles come from.
+ *
+ * `url` styles are a plain style.json maplibre can load on its own. Google's
+ * imagery has no style.json: it needs a session token before the first tile can
+ * be requested, so those styles are assembled at runtime instead (see
+ * `resolveGoogleMapStyle`).
+ */
+export type MapStyleSource =
+    | { kind: "url"; url: string }
+    | { kind: "google"; mapType: GoogleMapType };
+
 export type MapStyleDefinition = {
     id: MapStyleId;
     label: string;
-    style: string;
+    source: MapStyleSource;
     attributions: MapAttributionLink[];
     /**
      * Marks this style as a different look at the same map as `variantOf`
@@ -23,11 +38,9 @@ export type MapAttributionLink = {
     href: string;
 };
 
-const defaultStyle = "https://tiles.dachstein.cloud/styles/btedarklight/style.json";
-const monochromeStyle = "https://tiles.dachstein.cloud/styles/btemonodark/style.json";
-
-const hybridStyle = "mapbox://styles/robinferch-bteg/cmmi8076c000y01s6hscq9xhi";
-const satelliteStyle = "mapbox://styles/robinferch-bteg/cmmi82kwv003v01sb2v4yhree";
+/** The basemap the small non-interactive maps use — they never follow the picker. */
+export const DEFAULT_MAP_STYLE_URL = "https://tiles.dachstein.cloud/styles/btedarklight/style.json";
+const MONOCHROME_STYLE_URL = "https://tiles.dachstein.cloud/styles/btemonodark/style.json";
 
 // Same tiles, same server, same licences — so the monochrome variant carries
 // the default style's attributions verbatim.
@@ -42,12 +55,25 @@ const openMapTilesAttributions: MapAttributionLink[] = [
     }
 ];
 
+/**
+ * Fallback attribution for the Google styles. Google's terms ask for the
+ * copyright string its viewport endpoint returns for what is actually on
+ * screen (it names the imagery providers, e.g. Maxar), so this is what shows
+ * until — or if — that lookup answers. See `useGoogleTileCopyright`.
+ */
+const googleAttributions: MapAttributionLink[] = [
+    {
+        label: "© Google",
+        href: "https://www.google.com/help/terms_maps/"
+    }
+];
+
 export const MAP_STYLES: MapStyleDefinition[] = [
     {
         id: "default",
         label: "Standard",
         variantLabel: "Farbig",
-        style: defaultStyle,
+        source: { kind: "url", url: DEFAULT_MAP_STYLE_URL },
         attributions: openMapTilesAttributions
     },
     {
@@ -55,42 +81,20 @@ export const MAP_STYLES: MapStyleDefinition[] = [
         label: "Monochrom",
         variantLabel: "Monochrom",
         variantOf: "default",
-        style: monochromeStyle,
+        source: { kind: "url", url: MONOCHROME_STYLE_URL },
         attributions: openMapTilesAttributions
     },
     {
         id: "hybrid",
         label: "Hybrid",
-        style: hybridStyle,
-        attributions: [
-            {
-                label: "© Mapbox",
-                href: "https://www.mapbox.com/about/maps"
-            },
-            {
-                label: "© OpenStreetMap contributors",
-                href: "https://www.openstreetmap.org/copyright"
-            },
-            {
-                label: "© Maxar",
-                href: "https://www.maxar.com/copyright"
-            }
-        ]
+        source: { kind: "google", mapType: "hybrid" },
+        attributions: googleAttributions
     },
     {
         id: "satellite",
         label: "Satellit",
-        style: satelliteStyle,
-        attributions: [
-            {
-                label: "© Mapbox",
-                href: "https://www.mapbox.com/about/maps"
-            },
-            {
-                label: "© Maxar",
-                href: "https://www.maxar.com/copyright"
-            }
-        ]
+        source: { kind: "google", mapType: "satellite" },
+        attributions: googleAttributions
     }
 ];
 
@@ -103,8 +107,8 @@ export function isMapStyleId(value: unknown): value is MapStyleId {
     return MAP_STYLES.some((style) => style.id === value);
 }
 
-export function getMapStyleById(styleId: MapStyleId): string {
-    return MAP_STYLES.find((style) => style.id === styleId)?.style ?? MAP_STYLES[0].style;
+export function getMapStyleSource(styleId: MapStyleId): MapStyleSource {
+    return MAP_STYLES.find((style) => style.id === styleId)?.source ?? MAP_STYLES[0].source;
 }
 
 export function getMapAttributionsById(styleId: MapStyleId): MapAttributionLink[] {

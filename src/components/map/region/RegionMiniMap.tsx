@@ -3,9 +3,9 @@
 import { Layer, Map as MaplibreMap, Source } from "@vis.gl/react-maplibre";
 import "maplibre-gl/dist/maplibre-gl.css";
 import maplibregl from "maplibre-gl";
-import { getMapStyleById } from "@/lib/mapStyles";
+import { DEFAULT_MAP_STYLE_URL } from "@/lib/mapStyles";
 
-const MAP_STYLE = getMapStyleById("default");
+const MAP_STYLE = DEFAULT_MAP_STYLE_URL;
 
 interface Props {
     /** Polygon stored as [lat, lon][] */

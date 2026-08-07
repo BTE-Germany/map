@@ -15,9 +15,9 @@ import { Button } from "@/components/ui/button";
 import PlayerSearch from "@/components/admin/PlayerSearch";
 import { createRegionByAdmin } from "@/actions/region/CreateRegion";
 import { type Player } from "@/actions/minecraft/user";
-import { getMapStyleById } from "@/lib/mapStyles";
+import { DEFAULT_MAP_STYLE_URL } from "@/lib/mapStyles";
 
-const MAP_STYLE = getMapStyleById("default");
+const MAP_STYLE = DEFAULT_MAP_STYLE_URL;
 const VERTEX_HIT_RADIUS_PX = 10;
 
 const TYPE_OPTIONS = [

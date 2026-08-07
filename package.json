@@ -46,7 +46,6 @@
     "drizzle-orm": "^0.44.4",
     "isomorphic-dompurify": "^3.18.0",
     "lucide-react": "^0.541.0",
-    "mapbox-gl": "^3.19.1",
     "maplibre-gl": "^5.6.1",
     "maplibre-google-maps": "^1.1.0",
     "motion": "^12.23.12",

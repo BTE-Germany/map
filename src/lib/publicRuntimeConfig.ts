@@ -1,5 +1,9 @@
 export interface PublicRuntimeConfig {
-    mapboxAccessToken: string;
+    /**
+     * Browser key for the Google Maps JS SDK (Street View, 3D) *and* the Map
+     * Tiles API the satellite/hybrid styles request their tiles from. Restrict
+     * it by HTTP referrer — it is visible in every tile URL.
+     */
     googleMapsApiKey: string;
 }
 

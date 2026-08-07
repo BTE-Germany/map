@@ -5,10 +5,10 @@ import "maplibre-gl/dist/maplibre-gl.css";
 import maplibregl from "maplibre-gl";
 import { useMemo } from "react";
 import type { FeatureCollection, Polygon } from "geojson";
-import { getMapStyleById } from "@/lib/mapStyles";
+import { DEFAULT_MAP_STYLE_URL } from "@/lib/mapStyles";
 import { regionGeoJSONToPoints } from "@/lib/regionGeo";
 
-const MAP_STYLE = getMapStyleById("default");
+const MAP_STYLE = DEFAULT_MAP_STYLE_URL;
 
 export type UserRegionsGeoJSON = FeatureCollection<Polygon, { id: string; finished: boolean }>;
 

@@ -2,16 +2,17 @@
 
 import { Layer, Map as Maplibre, Source, useMap } from '@vis.gl/react-maplibre';
 import 'maplibre-gl/dist/maplibre-gl.css';
-import 'mapbox-gl/dist/mapbox-gl.css';
 import { useAllRegionsAsGeoJSON } from "@/dataHooks/regions/useAllRegions";
 import { useEffect, useState } from "react";
+import { toast } from "sonner";
 import useRegionPane from "@/stores/RegionPaneStore";
 import useMapStyleStore from "@/stores/MapStyleStore";
 import RegionShapeEditor from "./RegionShapeEditor";
 import LivePlayersLayer from "./LivePlayersLayer";
-import { getMapStyleById } from "@/lib/mapStyles";
-import { getPublicRuntimeConfig } from "@/lib/publicRuntimeConfig";
-import maplibregl from "maplibre-gl";
+import { DEFAULT_MAP_STYLE_URL, getMapStyleSource } from "@/lib/mapStyles";
+import { resolveGoogleMapStyle } from "@/lib/googleMapTiles";
+import { getErrorMessage } from "@/lib/errors";
+import maplibregl, { type StyleSpecification } from "maplibre-gl";
 import useStreetLevelStore from "@/stores/StreetLevelStore";
 import useRegionShapeEdit from "@/stores/RegionShapeEditStore";
 import useUserSettings from "@/stores/UserSettingsStore";
@@ -24,12 +25,12 @@ export default function Map() {
     // the click handler doesn't re-bind — whenever unrelated store fields change.
     const openRegion = useRegionPane((s) => s.openRegion);
     const styleId = useMapStyleStore((state) => state.styleId);
+    const setStyleId = useMapStyleStore((state) => state.setStyleId);
     const hydrateStyleId = useMapStyleStore((state) => state.hydrateStyleId);
-    const mapStyle = getMapStyleById(styleId);
-    const isMapboxStyle = typeof mapStyle === "string" && mapStyle.startsWith("mapbox://");
-    const [mapLib, setMapLib] = useState<any>(maplibregl);
-    const [activeEngine, setActiveEngine] = useState<"maplibre" | "mapbox">("maplibre");
-    const [mapboxAccessToken, setMapboxAccessToken] = useState("");
+    // Held in state, not derived per render: Google's styles are assembled after
+    // a session-token round-trip, and handing `<Maplibre>` a fresh object every
+    // render would re-run `setStyle` and drop everything drawn on top.
+    const [mapStyle, setMapStyle] = useState<string | StyleSpecification>(DEFAULT_MAP_STYLE_URL);
     const [viewState, setViewState] = useState({
         longitude: 10.447683,
         latitude: 51.163361,
@@ -48,45 +49,50 @@ export default function Map() {
         hydrateStyleId();
     }, [hydrateStyleId]);
 
+    /* ── Resolve the picked style ──
+     *
+     * A style.json URL is handed to maplibre as-is. Google's imagery has to be
+     * assembled around a session token first, so the previously rendered style
+     * stays up while that request is in flight — the alternative is a blank map
+     * for a round-trip.
+     *
+     * A failure (no key, Map Tiles API not enabled for it, offline) drops the
+     * selection back to the standard basemap rather than leaving a map that
+     * silently didn't change — and reverting the *selection*, not just the
+     * style, keeps the picker and the attribution line from claiming Google for
+     * tiles that aren't Google's, and stops the next page load from retrying a
+     * style that is known to be unavailable. */
     useEffect(() => {
-        let isMounted = true;
+        const source = getMapStyleSource(styleId);
 
-        const resolveMapLib = async () => {
-            if (!isMapboxStyle) {
-                setMapLib(maplibregl);
-                setActiveEngine("maplibre");
-                return;
-            }
+        if (source.kind === "url") {
+            setMapStyle(source.url);
+            return;
+        }
 
-            const [mapboxModule, runtimeConfig] = await Promise.all([
-                import("mapbox-gl"),
-                getPublicRuntimeConfig(),
-            ]);
-            if (!isMounted) return;
+        let isCurrent = true;
 
-            const mapboxgl = mapboxModule.default;
-            if (runtimeConfig.mapboxAccessToken) {
-                mapboxgl.accessToken = runtimeConfig.mapboxAccessToken;
-            }
-
-            setMapboxAccessToken(runtimeConfig.mapboxAccessToken);
-            setMapLib(mapboxgl);
-            setActiveEngine("mapbox");
-        };
-
-        resolveMapLib().catch((error) => {
-            console.error("Mapbox konnte nicht initialisiert werden:", error);
-        });
+        resolveGoogleMapStyle(source.mapType)
+            .then((style) => {
+                if (isCurrent) setMapStyle(style);
+            })
+            .catch((error) => {
+                console.error("Google-Karte konnte nicht geladen werden:", error);
+                if (!isCurrent) return;
+                setMapStyle(DEFAULT_MAP_STYLE_URL);
+                setStyleId("default");
+                toast.error(
+                    `Google-Karte nicht verfügbar — es wird die Standardkarte angezeigt. ${getErrorMessage(error)}`,
+                );
+            });
 
         return () => {
-            isMounted = false;
+            isCurrent = false;
         };
-    }, [isMapboxStyle]);
-
-    const isEngineReady = isMapboxStyle ? activeEngine === "mapbox" : activeEngine === "maplibre";
+    }, [styleId, setStyleId]);
 
     useEffect(() => {
-        if (!isEngineReady || !map) return;
+        if (!map) return;
 
         const handleMapClick = (e: any) => {
             if (isSelectingStreetLevel || isEditingShape) {
@@ -125,7 +131,7 @@ export default function Map() {
             map.off('mouseenter', 'region-layer', handleMouseEnter);
             map.off('mouseleave', 'region-layer', handleMouseLeave);
         };
-    }, [isEngineReady, isSelectingStreetLevel, isEditingShape, map, openRegion]);
+    }, [isSelectingStreetLevel, isEditingShape, map, openRegion]);
 
     // Defaults match the WelcomeScreen legend:
     // red   = event
@@ -162,13 +168,12 @@ export default function Map() {
 
     return (
         <div className="h-full w-full overflow-hidden relative">
-            {isEngineReady ? <Maplibre initialViewState={{
+            <Maplibre initialViewState={{
                 longitude: 10.447683,
                 latitude: 51.163361,
                 zoom: 6
             }} id={"mainMap"}
-                key={activeEngine}
-                mapLib={mapLib}
+                mapLib={maplibregl}
                 attributionControl={false}
                 style={{ width: "100%", height: "100%", zIndex: 0 }}
                 mapStyle={mapStyle}
@@ -186,7 +191,6 @@ export default function Map() {
                         pitch: evt.viewState.pitch
                     });
                 }}
-                {...(isMapboxStyle && mapboxAccessToken ? { mapboxAccessToken } : {})}
             >
                 {
                     // Deliberately not gated on a style-loaded flag. <Source>
@@ -207,7 +211,6 @@ export default function Map() {
                 {/* Markers are DOM overlays and survive a style swap untouched. */}
                 <LivePlayersLayer />
             </Maplibre>
-                : <div id="mainMap" style={{ width: "100%", height: "100%", zIndex: 0 }} />}
             <RegionShapeEditor />
         </div>
     )

@@ -14,10 +14,12 @@ import useMapOverlayStore from "@/stores/MapOverlayStore";
 import {
     getMapAttributionsById,
     getMapStyleFamily,
+    getMapStyleSource,
     getMapStyleVariants,
     PRIMARY_MAP_STYLES,
     type PrimaryMapStyleId,
 } from "@/lib/mapStyles";
+import { useGoogleTileCopyright } from "@/hooks/use-google-tile-copyright";
 import type { StaticImageData } from "next/image";
 import { Tooltip, TooltipContent, TooltipTrigger } from "../ui/tooltip";
 import { useSession } from "next-auth/react";
@@ -30,7 +32,7 @@ const stylePreviewImages: Record<PrimaryMapStyleId, StaticImageData> = {
     satellite: satelliteImage
 };
 
-/** Mapbox-backed styles send request data to a third party and need Plus. */
+/** Google-backed styles send request data to a third party and need Plus. */
 const isPlusStyle = (styleId: PrimaryMapStyleId) => styleId === "hybrid" || styleId === "satellite";
 
 export default function MapControls() {
@@ -40,6 +42,16 @@ export default function MapControls() {
     const hidePlayers = useMapOverlayStore((state) => state.hidePlayers);
     const togglePlayers = useMapOverlayStore((state) => state.togglePlayers);
     const styleAttributions = getMapAttributionsById(styleId);
+    const styleSource = getMapStyleSource(styleId);
+    const googleCopyright = useGoogleTileCopyright(
+        map,
+        styleSource.kind === "google" ? styleSource.mapType : null,
+    );
+    // Google asks for the credit that matches what is on screen; the static
+    // "© Google" entry stands in until that lookup answers.
+    const attributions = googleCopyright
+        ? [{ label: googleCopyright, href: styleAttributions[0].href }]
+        : styleAttributions;
     // A variant (e.g. monochrome) keeps its parent's tile selected in the grid
     // and is picked from the smaller control underneath it.
     const activeFamily = getMapStyleFamily(styleId);
@@ -216,7 +228,7 @@ export default function MapControls() {
                         )}
 
                         <div className="flex items-center mt-4 text-xs text-muted-foreground">
-                            <InfoIcon className="inline-block mr-2" /> Bei der Hybrid- und Satellitenansicht werden Daten an Mapbox gesendet.
+                            <InfoIcon className="inline-block mr-2" /> Bei der Hybrid- und Satellitenansicht werden Daten an Google gesendet.
                         </div>
                     </PopoverContent>
                 </Popover>
@@ -306,7 +318,7 @@ export default function MapControls() {
 
             <div className={"rounded-xl overflow-hidden text-neutral-400 bg-neutral-950/30 backdrop-blur-xl px-2 py-1 pointer-events-auto"}>
                 <span>
-                    {styleAttributions.map((attribution, index) => (
+                    {attributions.map((attribution, index) => (
                         <a
                             key={attribution.href}
                             href={attribution.href}
