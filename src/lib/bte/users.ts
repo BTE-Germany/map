@@ -43,11 +43,13 @@ export async function resolveClaimUsers(
         if (name) resolved.owner = { name };
     }
 
-    const builders = (builderUUIDs ?? []).filter(isAttributableUuid);
-    if (builders.length > 0) {
-        const names = await Promise.all(builders.map(resolveName));
-        const refs = names.filter((n): n is string => !!n).map((name) => ({ name }));
-        if (refs.length > 0) resolved.builders = refs;
+    if (includeOwner) {
+        const builders = (builderUUIDs ?? []).filter(isAttributableUuid);
+        if (builders.length > 0) {
+            const names = await Promise.all(builders.map(resolveName));
+            const refs = names.filter((n): n is string => !!n).map((name) => ({ name }));
+            if (refs.length > 0) resolved.builders = refs;
+        }
     }
 
     return resolved;

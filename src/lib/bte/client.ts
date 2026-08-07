@@ -143,7 +143,7 @@ export async function listClaims(): Promise<BteClaim[]> {
 }
 
 export async function createClaim(payload: BteClaimPayload): Promise<BteClaim> {
-    return bteFetch<BteClaim>(claimsPath(), {
+    return bteFetch<BteClaim>(`${claimsPath()}?skipOSM=true`, {
         method: "POST",
         query: { coordType: "stringarray" },
         body: JSON.stringify(payload),
