@@ -3,8 +3,17 @@ export type PrimaryMapStyleId = "default" | "hybrid" | "satellite";
 
 export type MapStyleId = PrimaryMapStyleId | "monochrome";
 
-/** `mapType` + layers of a Google Map Tiles session. */
 export type GoogleMapType = "satellite" | "hybrid";
+
+/**
+ * How Google should render a style.
+ *
+ * `vector` needs a Cloud map ID (`googleMapsVectorMapId`) and is what makes
+ * heading and fractional zoom work, so the basemap can follow maplibre's camera
+ * exactly. `raster` needs no configuration but snaps to whole zoom levels and
+ * cannot rotate. Without the map ID a `vector` style falls back to `raster`.
+ */
+export type GoogleRendering = "raster" | "vector";
 
 /**
  * Where a style's tiles come from.
@@ -16,7 +25,7 @@ export type GoogleMapType = "satellite" | "hybrid";
  */
 export type MapStyleSource =
     | { kind: "url"; url: string }
-    | { kind: "google"; mapType: GoogleMapType };
+    | { kind: "google"; mapType: GoogleMapType; rendering: GoogleRendering };
 
 export type MapStyleDefinition = {
     id: MapStyleId;
@@ -82,13 +91,13 @@ export const MAP_STYLES: MapStyleDefinition[] = [
     {
         id: "hybrid",
         label: "Hybrid",
-        source: { kind: "google", mapType: "hybrid" },
+        source: { kind: "google", mapType: "hybrid", rendering: "vector" },
         attributions: googleAttributions
     },
     {
         id: "satellite",
         label: "Satellit",
-        source: { kind: "google", mapType: "satellite" },
+        source: { kind: "google", mapType: "satellite", rendering: "raster" },
         attributions: googleAttributions
     }
 ];
@@ -100,6 +109,20 @@ export const PRIMARY_MAP_STYLES = MAP_STYLES.filter(
 
 export function isMapStyleId(value: unknown): value is MapStyleId {
     return MAP_STYLES.some((style) => style.id === value);
+}
+
+/**
+ * What Google will actually render, as opposed to what the style asked for: a
+ * `vector` style without a Cloud map ID falls back to raster, which cannot
+ * rotate. Returns null for styles Google doesn't draw.
+ */
+export function effectiveGoogleRendering(
+    source: MapStyleSource,
+    vectorMapId: string | null | undefined,
+): GoogleRendering | null {
+    if (source.kind !== "google") return null;
+    if (source.rendering === "raster") return "raster";
+    return vectorMapId?.trim() ? "vector" : "raster";
 }
 
 export function getMapStyleSource(styleId: MapStyleId): MapStyleSource {

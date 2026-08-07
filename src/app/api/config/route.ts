@@ -13,6 +13,10 @@ export async function GET() {
                 readRuntimeEnv("GOOGLE_MAPS_BROWSER_API_KEY") ??
                 readRuntimeEnv("NEXT_PUBLIC_GOOGLE_MAPS_API_KEY") ??
                 "",
+            googleMapsVectorMapId:
+                readRuntimeEnv("GOOGLE_MAPS_VECTOR_MAP_ID") ??
+                readRuntimeEnv("NEXT_PUBLIC_GOOGLE_MAPS_VECTOR_MAP_ID") ??
+                "",
         },
         {
             headers: {

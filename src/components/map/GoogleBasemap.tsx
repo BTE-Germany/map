@@ -3,7 +3,8 @@
 import { useCallback, useEffect, useRef } from "react";
 import { useMap } from "@vis.gl/react-maplibre";
 import { loadGoogleMaps } from "@/lib/googleMapsBrowser";
-import type { GoogleMapType } from "@/lib/mapStyles";
+import { getPublicRuntimeConfig } from "@/lib/publicRuntimeConfig";
+import type { GoogleMapType, GoogleRendering } from "@/lib/mapStyles";
 
 /**
  * Google's satellite/hybrid imagery as the basemap underneath maplibre.
@@ -18,6 +19,10 @@ import type { GoogleMapType } from "@/lib/mapStyles";
  * follows maplibre's camera, so the two must agree on what a zoom level means:
  * maplibre counts a 512 px world tile, Google a 256 px one, which is the whole
  * story behind the offset below.
+ *
+ * A `vector` style is rendered from a Cloud map ID, which is what lets Google
+ * accept a fractional zoom and a heading — without it the basemap snaps to whole
+ * zoom levels and cannot rotate.
  */
 const GOOGLE_ZOOM_OFFSET = 1;
 
@@ -28,9 +33,11 @@ function getRaw(mapRef: unknown): maplibregl.Map {
 
 export default function GoogleBasemap({
     mapType,
+    rendering,
     onError,
 }: {
     mapType: GoogleMapType;
+    rendering: GoogleRendering;
     onError: (error: unknown) => void;
 }) {
     const { mainMap: map } = useMap();
@@ -39,7 +46,11 @@ export default function GoogleBasemap({
 
     const handleError = useCallback(onError, [onError]);
 
-    /* ── Create the Google map once and keep its camera on maplibre's ── */
+    /* ── Create the Google map and keep its camera on maplibre's ──
+     *
+     * Re-runs when the rendering mode changes: `mapId` is fixed at construction,
+     * so switching between a vector and a raster style means a new map. Changing
+     * only the map *type* does not — that is the effect below. */
     useEffect(() => {
         const container = containerRef.current;
         if (!map || !container) return;
@@ -55,8 +66,7 @@ export default function GoogleBasemap({
             const camera = {
                 center: { lat: center.lat, lng: center.lng },
                 zoom: raw.getZoom() + GOOGLE_ZOOM_OFFSET,
-                // Ignored by raster map types; correct already if the project
-                // later points these styles at a vector Cloud map ID.
+                // Raster map types ignore both; a vector map ID follows them.
                 heading: raw.getBearing(),
                 tilt: raw.getPitch(),
             };
@@ -69,15 +79,24 @@ export default function GoogleBasemap({
             googleMap.setZoom(camera.zoom);
         };
 
-        loadGoogleMaps()
-            .then((maps) => {
+        Promise.all([loadGoogleMaps(), getPublicRuntimeConfig()])
+            .then(([maps, { googleMapsVectorMapId }]) => {
                 if (cancelled) return;
+
+                const vectorMapId = rendering === "vector" ? googleMapsVectorMapId.trim() : "";
+                if (rendering === "vector" && !vectorMapId) {
+                    console.warn(
+                        "[google-basemap] GOOGLE_MAPS_VECTOR_MAP_ID ist nicht gesetzt — " +
+                        `"${mapType}" wird als Raster gezeichnet (kein Drehen, ganzzahlige Zoomstufen).`,
+                    );
+                }
 
                 const center = raw.getCenter();
                 googleMapRef.current = new maps.Map(container, {
                     center: { lat: center.lat, lng: center.lng },
                     zoom: raw.getZoom() + GOOGLE_ZOOM_OFFSET,
                     mapTypeId: mapType,
+                    ...(vectorMapId ? { mapId: vectorMapId } : {}),
                     // Drops the controls but keeps the Google logo and the terms
                     // link, which have to stay visible.
                     disableDefaultUI: true,
@@ -102,9 +121,9 @@ export default function GoogleBasemap({
             // Google's Map has no teardown; dropping its DOM is the way out.
             container.replaceChildren();
         };
-    }, [map, handleError]); // eslint-disable-line react-hooks/exhaustive-deps
+    }, [map, rendering, handleError]); // eslint-disable-line react-hooks/exhaustive-deps
 
-    /* ── Switching satellite ⇄ hybrid keeps the same map instance ── */
+    /* ── A map type change within the same rendering mode reuses the map ── */
     useEffect(() => {
         googleMapRef.current?.setMapTypeId(mapType);
     }, [mapType]);

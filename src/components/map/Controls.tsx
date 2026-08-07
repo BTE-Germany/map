@@ -14,11 +14,11 @@ import useMapOverlayStore from "@/stores/MapOverlayStore";
 import {
     getMapAttributionsById,
     getMapStyleFamily,
-    getMapStyleSource,
     getMapStyleVariants,
     PRIMARY_MAP_STYLES,
     type PrimaryMapStyleId,
 } from "@/lib/mapStyles";
+import { useEffectiveGoogleRendering } from "@/hooks/use-google-basemap-rendering";
 import type { StaticImageData } from "next/image";
 import { Tooltip, TooltipContent, TooltipTrigger } from "../ui/tooltip";
 import { useSession } from "next-auth/react";
@@ -41,9 +41,10 @@ export default function MapControls() {
     const hidePlayers = useMapOverlayStore((state) => state.hidePlayers);
     const togglePlayers = useMapOverlayStore((state) => state.togglePlayers);
     const styleAttributions = getMapAttributionsById(styleId);
-    // Google draws its own credits inside its map, so these styles bring none —
-    // and then this line has nothing to say and is left out entirely.
-    const isGoogleStyle = getMapStyleSource(styleId).kind === "google";
+    // Only a *raster* Google basemap can't rotate; a vector one follows the
+    // bearing. (Google draws its own credits either way, which is why those
+    // styles carry no attributions and the line below hides itself.)
+    const rotationBlocked = useEffectiveGoogleRendering(styleId) === "raster";
     // A variant (e.g. monochrome) keeps its parent's tile selected in the grid
     // and is picked from the smaller control underneath it.
     const activeFamily = getMapStyleFamily(styleId);
@@ -83,7 +84,7 @@ export default function MapControls() {
         if (!map) return;
         // Google's raster imagery has no heading — rotating maplibre alone would
         // slide the regions off the basemap underneath them.
-        if (isGoogleStyle) return;
+        if (rotationBlocked) return;
 
         setIsDragging(true);
         setDragStartX(e.clientX);
@@ -286,8 +287,8 @@ export default function MapControls() {
 
                 <div className={" p-2 hover:bg-neutral-950/60 transition-colors group"}
                     onMouseDown={handleMouseDown}
-                    title={isGoogleStyle ? "Drehen ist in der Satelliten- und Hybridansicht nicht möglich" : undefined}
-                    style={{ cursor: isGoogleStyle ? 'default' : isDragging ? 'grabbing' : 'grab' }}>
+                    title={rotationBlocked ? "Drehen ist in dieser Ansicht nicht möglich" : undefined}
+                    style={{ cursor: rotationBlocked ? 'default' : isDragging ? 'grabbing' : 'grab' }}>
                     <div
                         className={"group-active:scale-[95%] transition-transform [animation-duration:0.1s] relative flex items-center justify-center size-6 p-1"}>
                         <div className={"w-full h-full border-2 border-foreground rounded-full"}></div>

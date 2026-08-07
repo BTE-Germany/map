@@ -1,10 +1,18 @@
 export interface PublicRuntimeConfig {
     /**
-     * Browser key for the Google Maps JS SDK (Street View, 3D) *and* the Map
-     * Tiles API the satellite/hybrid styles request their tiles from. Restrict
-     * it by HTTP referrer — it is visible in every tile URL.
+     * Browser key for the Google Maps JS SDK — Street View, the 3D view and the
+     * satellite/hybrid basemaps. Restrict it by HTTP referrer.
      */
     googleMapsApiKey: string;
+    /**
+     * Cloud map ID with rendering type "vector", used by the styles that ask for
+     * vector rendering (see `MAP_STYLES`). Vector is what makes heading and
+     * fractional zoom work, so the map follows maplibre exactly instead of
+     * snapping to whole zoom levels.
+     *
+     * Empty is fine: those styles then fall back to Google's raster rendering.
+     */
+    googleMapsVectorMapId: string;
 }
 
 let configPromise: Promise<PublicRuntimeConfig> | null = null;

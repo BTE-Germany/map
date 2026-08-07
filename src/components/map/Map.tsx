@@ -11,6 +11,7 @@ import RegionShapeEditor from "./RegionShapeEditor";
 import LivePlayersLayer from "./LivePlayersLayer";
 import GoogleBasemap from "./GoogleBasemap";
 import { getMapStyleSource } from "@/lib/mapStyles";
+import { useEffectiveGoogleRendering } from "@/hooks/use-google-basemap-rendering";
 import { getErrorMessage } from "@/lib/errors";
 import maplibregl, { type StyleSpecification } from "maplibre-gl";
 import useStreetLevelStore from "@/stores/StreetLevelStore";
@@ -47,8 +48,10 @@ export default function Map() {
     const styleSource = getMapStyleSource(styleId);
     // Google's imagery is drawn by Google's own map underneath; maplibre then
     // only has to stay out of the way.
-    const googleMapType = styleSource.kind === "google" ? styleSource.mapType : null;
+    const googleSource = styleSource.kind === "google" ? styleSource : null;
     const mapStyle = styleSource.kind === "google" ? TRANSPARENT_STYLE : styleSource.url;
+    // What Google will really do, which is not always what the style asked for.
+    const googleRendering = useEffectiveGoogleRendering(styleId);
     const [viewState, setViewState] = useState({
         longitude: 10.447683,
         latitude: 51.163361,
@@ -82,16 +85,15 @@ export default function Map() {
 
     /* ── Rotation while Google draws the basemap ──
      *
-     * Google's raster map types have no heading, so a rotated maplibre would
-     * float its regions over imagery that stayed put. Rotation is therefore
-     * turned off for those styles — pointing them at a vector Cloud map ID
-     * later is what would make it work, and the camera sync already sends the
-     * bearing for that case. */
+     * Google's *raster* map types have no heading, so a rotated maplibre would
+     * float its regions over imagery that stayed put — rotation is turned off
+     * for those. A vector basemap follows the bearing the camera sync sends it,
+     * so there rotation stays available. */
     useEffect(() => {
         if (!map) return;
         const raw = getRaw(map);
 
-        if (!googleMapType) {
+        if (googleRendering !== "raster") {
             raw.dragRotate.enable();
             raw.touchZoomRotate.enableRotation();
             return;
@@ -102,7 +104,7 @@ export default function Map() {
         if (raw.getBearing() !== 0 || raw.getPitch() !== 0) {
             raw.easeTo({ bearing: 0, pitch: 0, duration: 300 });
         }
-    }, [map, googleMapType]);
+    }, [map, googleRendering]);
 
     useEffect(() => {
         if (!map) return;
@@ -183,7 +185,13 @@ export default function Map() {
         <div className="h-full w-full overflow-hidden relative">
             {/* Behind maplibre: Google's own map, when a Google style is picked.
                 Mounted inside the same box so it shares the exact viewport. */}
-            {googleMapType && <GoogleBasemap mapType={googleMapType} onError={handleGoogleError} />}
+            {googleSource && (
+                <GoogleBasemap
+                    mapType={googleSource.mapType}
+                    rendering={googleSource.rendering}
+                    onError={handleGoogleError}
+                />
+            )}
             <Maplibre initialViewState={{
                 longitude: 10.447683,
                 latitude: 51.163361,
