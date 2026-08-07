@@ -31,10 +31,14 @@ export interface ResolvedClaimUsers {
 export async function resolveClaimUsers(
     creatorUUID: string,
     builderUUIDs: string[] | null,
+    options: { includeOwner?: boolean } = {},
 ): Promise<ResolvedClaimUsers> {
     const resolved: ResolvedClaimUsers = {};
+    // Owner sync off: skip the lookup entirely rather than resolving a name and
+    // dropping it afterwards.
+    const includeOwner = options.includeOwner ?? true;
 
-    if (isAttributableUuid(creatorUUID)) {
+    if (includeOwner && isAttributableUuid(creatorUUID)) {
         const name = await resolveName(creatorUUID);
         if (name) resolved.owner = { name };
     }

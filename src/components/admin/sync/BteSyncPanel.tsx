@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useRef, useState, useTransition } from "react";
+import { useCallback, useRef, useState, useTransition, type ReactNode } from "react";
 import {
     AlertCircle,
     CheckCircle2,
@@ -17,6 +17,7 @@ import {
     getBteSyncOverview,
     retryRegionSync,
     setBteAutoSync,
+    setBteOwnerSync,
     type BteSyncOverview,
 } from "@/actions/sync/BteSync";
 
@@ -73,6 +74,68 @@ function ActionBadge({ action }: { action: LogAction }) {
     );
 }
 
+function Switch({
+    checked,
+    onChange,
+    disabled,
+    label,
+}: {
+    checked: boolean;
+    onChange: (next: boolean) => void;
+    disabled?: boolean;
+    label: string;
+}) {
+    return (
+        <button
+            type="button"
+            role="switch"
+            aria-checked={checked}
+            aria-label={label}
+            disabled={disabled}
+            onClick={() => onChange(!checked)}
+            className={`relative shrink-0 h-6 w-11 rounded-full border transition-colors disabled:opacity-50 disabled:cursor-not-allowed ${
+                checked ? "bg-primary border-primary" : "bg-muted border-border"
+            }`}
+        >
+            <span
+                className={`absolute top-0.5 size-4.5 rounded-full bg-background transition-transform ${
+                    checked ? "translate-x-5.5" : "translate-x-0.5"
+                }`}
+            />
+        </button>
+    );
+}
+
+/** A settings card: heading, explanation, switch, and a status line below. */
+function ToggleCard({
+    title,
+    description,
+    checked,
+    disabled,
+    onChange,
+    children,
+}: {
+    title: string;
+    description: ReactNode;
+    checked: boolean;
+    disabled?: boolean;
+    onChange: (next: boolean) => void;
+    children?: ReactNode;
+}) {
+    return (
+        <div className="rounded-xl border border-border bg-card p-5">
+            <div className="flex items-start justify-between gap-4">
+                <div>
+                    <h2 className="font-semibold">{title}</h2>
+                    <p className="text-sm text-muted-foreground mt-1">{description}</p>
+                </div>
+                <Switch checked={checked} onChange={onChange} disabled={disabled} label={`${title} umschalten`} />
+            </div>
+            {children && <p className="text-xs text-muted-foreground mt-3">{children}</p>}
+        </div>
+    );
+}
+
 function Stat({ label, value, hint }: { label: string; value: number | string; hint?: string }) {
     return (
         <div className="rounded-xl border border-border bg-card p-4">
@@ -114,6 +177,17 @@ export default function BteSyncPanel({ initialOverview }: { initialOverview: Bte
             try {
                 await setBteAutoSync(next);
                 setOverview((prev) => ({ ...prev, autoSyncEnabled: next }));
+            } catch (err) {
+                setFatal(err instanceof Error ? err.message : String(err));
+            }
+        });
+    }
+
+    function toggleOwnerSync(next: boolean) {
+        startToggle(async () => {
+            try {
+                await setBteOwnerSync(next);
+                setOverview((prev) => ({ ...prev, ownerSyncEnabled: next }));
             } catch (err) {
                 setFatal(err instanceof Error ? err.message : String(err));
             }
@@ -291,45 +365,40 @@ export default function BteSyncPanel({ initialOverview }: { initialOverview: Bte
             </div>
 
             {/* Auto sync toggle */}
-            <div className="rounded-xl border border-border bg-card p-5">
-                <div className="flex items-start justify-between gap-4">
-                    <div>
-                        <h2 className="font-semibold">Automatischer Sync</h2>
-                        <p className="text-sm text-muted-foreground mt-1">
-                            Neue Regionen sowie Änderungen an Polygon, Beschreibung, Status, Ersteller und Buildern
-                            werden sofort an die BTE-Karte übertragen. Gelöschte Regionen werden dort entfernt.
-                        </p>
-                    </div>
-                    <button
-                        type="button"
-                        role="switch"
-                        aria-checked={overview.autoSyncEnabled}
-                        aria-label="Automatischen Sync umschalten"
-                        disabled={!configured || togglePending}
-                        onClick={() => toggleAutoSync(!overview.autoSyncEnabled)}
-                        className={`relative shrink-0 h-6 w-11 rounded-full border transition-colors disabled:opacity-50 disabled:cursor-not-allowed ${
-                            overview.autoSyncEnabled
-                                ? "bg-primary border-primary"
-                                : "bg-muted border-border"
-                        }`}
-                    >
-                        <span
-                            className={`absolute top-0.5 size-4.5 rounded-full bg-background transition-transform ${
-                                overview.autoSyncEnabled ? "translate-x-5.5" : "translate-x-0.5"
-                            }`}
-                        />
-                    </button>
-                </div>
-                <p className="text-xs text-muted-foreground mt-3">
-                    Status:{" "}
-                    <span className={overview.autoSyncEnabled ? "text-emerald-400" : "text-muted-foreground"}>
-                        {overview.autoSyncEnabled ? "aktiv" : "deaktiviert"}
-                    </span>
-                    {overview.lastSyncedAt && (
-                        <> · Zuletzt übertragen: {new Date(overview.lastSyncedAt).toLocaleString("de-DE")}</>
-                    )}
-                </p>
-            </div>
+            <ToggleCard
+                title="Automatischer Sync"
+                description="Neue Regionen sowie Änderungen an Polygon, Beschreibung, Status, Ersteller und Buildern
+                    werden sofort an die BTE-Karte übertragen. Gelöschte Regionen werden dort entfernt."
+                checked={overview.autoSyncEnabled}
+                disabled={!configured || togglePending}
+                onChange={toggleAutoSync}
+            >
+                Status:{" "}
+                <span className={overview.autoSyncEnabled ? "text-emerald-400" : "text-muted-foreground"}>
+                    {overview.autoSyncEnabled ? "aktiv" : "deaktiviert"}
+                </span>
+                {overview.lastSyncedAt && (
+                    <> · Zuletzt übertragen: {new Date(overview.lastSyncedAt).toLocaleString("de-DE")}</>
+                )}
+            </ToggleCard>
+
+            {/* Owner attribution toggle */}
+            <ToggleCard
+                title="Ersteller übertragen"
+                description="Übermittelt den Minecraft-Namen des Erstellers als Besitzer des Claims. Ist dies
+                    deaktiviert, gehen Claims ohne Besitzer-Angabe raus — Builder sind davon nicht betroffen."
+                checked={overview.ownerSyncEnabled}
+                disabled={!configured || togglePending}
+                onChange={toggleOwnerSync}
+            >
+                Status:{" "}
+                <span className={overview.ownerSyncEnabled ? "text-emerald-400" : "text-amber-400"}>
+                    {overview.ownerSyncEnabled ? "wird übertragen" : "wird nicht übertragen"}
+                </span>{" "}
+                · Nach dem Umschalten gelten alle Regionen als geändert und werden beim nächsten Abgleich neu
+                übertragen. Ob ein bereits gesetzter Besitzer auf der BTE-Karte dabei entfernt wird, entscheidet
+                die BTE-API — wir senden das Feld dann nur nicht mehr mit.
+            </ToggleCard>
 
             {/* Manual sync */}
             <div className="rounded-xl border border-border bg-card p-5 space-y-4">

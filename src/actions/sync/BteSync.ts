@@ -15,6 +15,8 @@ import { getSetting, invalidateSetting, setSetting, SETTINGS } from "@/lib/setti
 export interface BteSyncOverview {
     config: BteConfigStatus;
     autoSyncEnabled: boolean;
+    /** Whether pushed claims carry the region's owner (creator). */
+    ownerSyncEnabled: boolean;
     regionCount: number;
     syncedCount: number;
     errorCount: number;
@@ -37,7 +39,14 @@ const MAX_FAILURES = 25;
 export async function getBteSyncOverview(): Promise<BteSyncOverview> {
     await requirePermission(PERMISSIONS.SYNC_MANAGE);
 
-    const [regionCountRow, stateCounts, lastSynced, failureRows, autoSyncEnabled] = await Promise.all([
+    const [
+        regionCountRow,
+        stateCounts,
+        lastSynced,
+        failureRows,
+        autoSyncEnabled,
+        ownerSyncEnabled,
+    ] = await Promise.all([
         db.select({ count: sql<number>`count(*)::int` }).from(regionTable).then((r) => r[0]?.count ?? 0),
         db
             .select({ status: bteSyncState.status, count: sql<number>`count(*)::int` })
@@ -63,6 +72,7 @@ export async function getBteSyncOverview(): Promise<BteSyncOverview> {
             .orderBy(desc(bteSyncState.lastAttemptAt))
             .limit(MAX_FAILURES),
         getSetting<boolean>(SETTINGS.BTE_AUTO_SYNC, false),
+        getSetting<boolean>(SETTINGS.BTE_SYNC_OWNER, true),
     ]);
 
     const byStatus = new Map(stateCounts.map((row) => [row.status, row.count]));
@@ -74,6 +84,7 @@ export async function getBteSyncOverview(): Promise<BteSyncOverview> {
     return {
         config: getBteConfigStatus(),
         autoSyncEnabled,
+        ownerSyncEnabled,
         regionCount: regionCountRow,
         syncedCount,
         errorCount,
@@ -94,6 +105,22 @@ export async function setBteAutoSync(enabled: boolean): Promise<{ enabled: boole
 
     await setSetting(SETTINGS.BTE_AUTO_SYNC, enabled);
     invalidateSetting(SETTINGS.BTE_AUTO_SYNC);
+
+    return { enabled };
+}
+
+/**
+ * Toggles whether pushed claims carry the region's owner.
+ *
+ * Every stored fingerprint hashes the creator, so flipping this invalidates
+ * them all: the next manual sync lists every synced region as changed and
+ * re-pushes it with (or without) the owner reference.
+ */
+export async function setBteOwnerSync(enabled: boolean): Promise<{ enabled: boolean }> {
+    await requirePermission(PERMISSIONS.SYNC_MANAGE);
+
+    await setSetting(SETTINGS.BTE_SYNC_OWNER, enabled);
+    invalidateSetting(SETTINGS.BTE_SYNC_OWNER);
 
     return { enabled };
 }

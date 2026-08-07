@@ -193,13 +193,19 @@ async function send(payload: BteClaimPayload, target: PushTarget): Promise<BteCl
  * Sends one payload, attaching owner/builder references. If the API rejects
  * those references (a builder that has no BTE account, say), the claim is
  * retried without attribution rather than being dropped from the map.
+ *
+ * `syncOwner` is the admin toggle: with it off the claim goes up without an
+ * owner reference, builders are unaffected.
  */
 async function sendWithAttribution(
     regionRow: SyncRegion,
     payload: BteClaimPayload,
     target: PushTarget,
+    syncOwner: boolean,
 ): Promise<BteClaim> {
-    const users = await resolveClaimUsers(regionRow.creatorUUID, regionRow.builders);
+    const users = await resolveClaimUsers(regionRow.creatorUUID, regionRow.builders, {
+        includeOwner: syncOwner,
+    });
     const enriched: BteClaimPayload = { ...payload, ...users };
     const hasAttribution = !!users.owner || !!users.builders?.length;
 
@@ -215,6 +221,15 @@ async function sendWithAttribution(
         }
         throw err;
     }
+}
+
+/**
+ * Whether pushed claims carry the region's owner. Read per push rather than
+ * once per process — `getSetting` caches for a few seconds, so a long-running
+ * full sync picks the current value up without hitting the DB per region.
+ */
+export async function isOwnerSyncEnabled(): Promise<boolean> {
+    return getSetting<boolean>(SETTINGS.BTE_SYNC_OWNER, true);
 }
 
 export type PushOutcome = "created" | "updated" | "adopted" | "unchanged";
@@ -235,8 +250,9 @@ export async function pushRegion(
     regionRow: SyncRegion,
     options: { force?: boolean; target?: PushTarget } = {},
 ): Promise<PushResult> {
+    const syncOwner = await isOwnerSyncEnabled();
     const payload = buildClaimPayload(regionRow);
-    const fingerprint = fingerprintRegion(payload, regionRow);
+    const fingerprint = fingerprintRegion(payload, regionRow, { syncOwner });
     const state = await getSyncState(regionRow.id);
 
     if (
@@ -254,14 +270,14 @@ export async function pushRegion(
     try {
         let claim: BteClaim;
         try {
-            claim = await sendWithAttribution(regionRow, payload, target);
+            claim = await sendWithAttribution(regionRow, payload, target, syncOwner);
         } catch (err) {
             // The two ways our assumption about the remote side can be wrong:
             // we thought the claim existed and it doesn't, or vice versa.
             if (target.kind === "update" && isMissingClaimError(err)) {
-                claim = await sendWithAttribution(regionRow, payload, { kind: "create" });
+                claim = await sendWithAttribution(regionRow, payload, { kind: "create" }, syncOwner);
             } else if (target.kind === "create" && isDuplicateClaimError(err)) {
-                claim = await sendWithAttribution(regionRow, payload, { kind: "update" });
+                claim = await sendWithAttribution(regionRow, payload, { kind: "update" }, syncOwner);
             } else {
                 throw err;
             }
@@ -343,7 +359,11 @@ export interface SyncPlan {
  * adopted rather than duplicated.
  */
 export async function planFullSync(): Promise<SyncPlan> {
-    const [regions, claims] = await Promise.all([loadSyncRegions(), listClaims()]);
+    const [regions, claims, syncOwner] = await Promise.all([
+        loadSyncRegions(),
+        listClaims(),
+        isOwnerSyncEnabled(),
+    ]);
     const states = await getSyncStates();
 
     const byExternalId = new Map<string, BteClaim>();
@@ -388,7 +408,7 @@ export async function planFullSync(): Promise<SyncPlan> {
         localIds.add(regionRow.id);
 
         const payload = buildClaimPayload(regionRow);
-        const fingerprint = fingerprintRegion(payload, regionRow);
+        const fingerprint = fingerprintRegion(payload, regionRow, { syncOwner });
         const state = states.get(regionRow.id);
         const label = claimName(regionRow);
 
@@ -479,11 +499,14 @@ export async function planFullSync(): Promise<SyncPlan> {
 export async function applyPlanEntry(entry: PlanEntry): Promise<PushOutcome> {
     if (entry.action === "unchanged") {
         // Nothing to send, but remember the verified state so the next run can
-        // skip the region without asking the API again.
+        // skip the region without asking the API again. Same owner-sync flag as
+        // the plan used, or the stored hash would immediately look stale again.
         await recordSuccess(
             entry.regionId,
             entry.claimId,
-            fingerprintRegion(entry.payload, entry.regionRow),
+            fingerprintRegion(entry.payload, entry.regionRow, {
+                syncOwner: await isOwnerSyncEnabled(),
+            }),
         );
         return "unchanged";
     }

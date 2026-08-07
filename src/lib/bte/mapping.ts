@@ -136,8 +136,18 @@ export function isAttributableUuid(uuid: string | null | undefined): boolean {
  *
  * Comparing the stored hash against a freshly built payload answers "has this
  * region changed since the last successful push" offline.
+ *
+ * `syncOwner === false` hashes the creator as absent rather than adding a flag
+ * of its own: switching owner sync off therefore invalidates every stored
+ * fingerprint (the next sync re-pushes without the owner), while leaving it on
+ * keeps producing exactly the hashes already in `bte_sync_state`.
  */
-export function fingerprintRegion(payload: BteClaimPayload, region: SyncRegion): string {
+export function fingerprintRegion(
+    payload: BteClaimPayload,
+    region: SyncRegion,
+    options: { syncOwner?: boolean } = {},
+): string {
+    const syncOwner = options.syncOwner ?? true;
     const canonical = JSON.stringify([
         payload.externalId,
         payload.name,
@@ -147,7 +157,7 @@ export function fingerprintRegion(payload: BteClaimPayload, region: SyncRegion):
         payload.active,
         payload.finished,
         payload.area,
-        region.creatorUUID,
+        syncOwner ? region.creatorUUID : null,
         [...(region.builders ?? [])].sort(),
     ]);
     return createHash("sha256").update(canonical).digest("hex");

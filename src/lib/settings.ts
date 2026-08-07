@@ -62,4 +62,6 @@ export function invalidateSetting(key?: string): void {
 export const SETTINGS = {
     /** Whether region writes are pushed to the main BTE map automatically. */
     BTE_AUTO_SYNC: "bte_sync.auto_enabled",
+    /** Whether pushed claims carry the region's owner (creator) reference. */
+    BTE_SYNC_OWNER: "bte_sync.owner_enabled",
 } as const;
