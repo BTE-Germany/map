@@ -97,7 +97,7 @@ export const MAP_STYLES: MapStyleDefinition[] = [
     {
         id: "satellite",
         label: "Satellit",
-        source: { kind: "google", mapType: "satellite", rendering: "raster" },
+        source: { kind: "google", mapType: "satellite", rendering: "vector" },
         attributions: googleAttributions
     }
 ];
