@@ -6,7 +6,7 @@ import type maplibregl from "maplibre-gl";
 import type { FeatureCollection, MultiPolygon, Point, Polygon } from "geojson";
 import { useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
-import { LoaderIcon, CheckIcon, XIcon, MousePointerIcon, MagnetIcon } from "lucide-react";
+import { LoaderIcon, CheckIcon, XIcon, MousePointerIcon, MagnetIcon, Trash2Icon } from "lucide-react";
 import { cn } from "@/lib/utils";
 import useRegionShapeEdit from "@/stores/RegionShapeEditStore";
 import { updateRegionPolygon } from "@/actions/region/UpdateRegionPolygon";
@@ -15,7 +15,15 @@ import { useAllRegionsAsGeoJSON } from "@/dataHooks/regions/useAllRegions";
 type Vertex = [number, number]; // [lng, lat]
 type RegionFeatureCollection = FeatureCollection<Polygon | MultiPolygon, { id?: string }>;
 
+interface VertexMenuState {
+    idx: number;
+    screenX: number;
+    screenY: number;
+}
+
 const SNAP_DISTANCE_PX = 14;
+const VERTEX_LAYER = "shape-verts-layer";
+const MIN_VERTICES = 3;
 const EMPTY_SNAP_POINTS: FeatureCollection<Point> = {
     type: "FeatureCollection",
     features: [],
@@ -122,6 +130,28 @@ function activeSnapGeoJSON(vertex: Vertex | null): FeatureCollection<Point> {
 // (addSource / addLayer / getSource etc.) we need the raw instance.
 function getRaw(mapRef: any): maplibregl.Map {
     return typeof mapRef.getMap === "function" ? mapRef.getMap() : mapRef;
+}
+
+// The style spec is parsed — sources and layers can be added. Deliberately
+// independent of whether the tiles behind them have arrived.
+function isStyleReady(raw: maplibregl.Map): boolean {
+    try {
+        return !!raw.getStyle()?.layers;
+    } catch {
+        return false;
+    }
+}
+
+/* ── Shared hit test ──────────────────────────────────────────── */
+
+// Right-clicking a vertex opens the editor's own menu, so the generic map
+// context menu has to stand down. Same query maplibre uses for its
+// layer-scoped events, so both agree on what counts as a hit.
+export function hasShapeVertexAt(mapRef: any, point: { x: number; y: number }): boolean {
+    if (!mapRef) return false;
+    const raw = getRaw(mapRef);
+    if (!raw.getLayer?.(VERTEX_LAYER)) return false;
+    return raw.queryRenderedFeatures([point.x, point.y], { layers: [VERTEX_LAYER] }).length > 0;
 }
 
 /* ── Layer / source helpers ───────────────────────────────────── */
@@ -260,6 +290,7 @@ export default function RegionShapeEditor() {
     const queryClient = useQueryClient();
     const [isSaving, setIsSaving] = useState(false);
     const [snapEnabled, setSnapEnabled] = useState(true);
+    const [vertexMenu, setVertexMenu] = useState<VertexMenuState | null>(null);
 
     const snapPoints = useMemo(
         () => isEditing
@@ -274,6 +305,7 @@ export default function RegionShapeEditor() {
     // Refs for use inside event handlers (avoid stale closures)
     const vertsRef = useRef<Vertex[]>(vertices);
     const draggingIdxRef = useRef<number | null>(null);
+    const vertexMenuRef = useRef<HTMLDivElement>(null);
     const snapEnabledRef = useRef(snapEnabled);
     const snapPointsRef = useRef(snapPoints);
 
@@ -290,36 +322,92 @@ export default function RegionShapeEditor() {
         function setup() {
             addLayersToMap(raw, vertsRef.current, snapPointsRef.current, snapEnabledRef.current);
 
-            /* Vertex drag */
-            const onVertexDown = (e: any) => {
-                e.preventDefault();
-                const idx = e.features?.[0]?.properties?.idx;
-                if (idx == null) return;
-                draggingIdxRef.current = Number(idx);
-                raw.dragPan.disable();
-                raw.getCanvas().style.cursor = "grabbing";
+            const canvas = raw.getCanvas();
+
+            /* Vertex drag
+             *
+             * The move/up half of the drag lives on `window`, not on the map.
+             * Map mouse events only fire for the canvas container, so releasing
+             * the button over the toolbar, over the region pane or outside the
+             * window never ended the drag — dragPan stayed disabled and the map
+             * could not be panned for the rest of the editing session. */
+            const pointFromEvent = (event: MouseEvent) => {
+                const rect = canvas.getBoundingClientRect();
+                return { x: event.clientX - rect.left, y: event.clientY - rect.top };
             };
 
-            const onMouseMove = (e: any) => {
-                if (draggingIdxRef.current === null) return;
-                const newVerts = [...vertsRef.current] as Vertex[];
+            function moveDraggedVertex(event: MouseEvent) {
+                const idx = draggingIdxRef.current;
+                if (idx === null) return;
+                const point = pointFromEvent(event);
                 const snapTarget = snapEnabledRef.current
-                    ? findNearestSnapVertex(raw, e.point)
+                    ? findNearestSnapVertex(raw, point)
                     : null;
-                newVerts[draggingIdxRef.current] = snapTarget ?? [e.lngLat.lng, e.lngLat.lat];
+                const lngLat = raw.unproject([point.x, point.y]);
+                const newVerts = [...vertsRef.current] as Vertex[];
+                newVerts[idx] = snapTarget ?? [lngLat.lng, lngLat.lat];
                 vertsRef.current = newVerts;
                 updateSources(raw, newVerts);
                 updateSnapTarget(raw, snapTarget);
-            };
+            }
 
-            const onMouseUp = () => {
+            function endDrag() {
                 if (draggingIdxRef.current === null) return;
-                setVertices([...vertsRef.current]);
                 draggingIdxRef.current = null;
+                detachDragListeners();
+                setVertices([...vertsRef.current]);
                 updateSnapTarget(raw, null);
                 raw.dragPan.enable();
-                raw.getCanvas().style.cursor = "";
+                canvas.style.cursor = "";
+            }
+
+            function onWindowMouseMove(event: MouseEvent) {
+                if (draggingIdxRef.current === null) return;
+                // A button released outside the window fires no mouseup at all,
+                // so a move with no button held is the end of the drag.
+                if (event.buttons === 0) {
+                    endDrag();
+                    return;
+                }
+                moveDraggedVertex(event);
+            }
+
+            function onWindowMouseUp(event: MouseEvent) {
+                if (draggingIdxRef.current === null) return;
+                moveDraggedVertex(event);
+                endDrag();
+            }
+
+            function detachDragListeners() {
+                window.removeEventListener("mousemove", onWindowMouseMove);
+                window.removeEventListener("mouseup", onWindowMouseUp);
+                window.removeEventListener("blur", endDrag);
+            }
+
+            const onVertexDown = (e: any) => {
+                // Right/middle button: no drag, the context menu handles it.
+                if (e.originalEvent?.button !== 0) return;
+                e.preventDefault();
+                const idx = e.features?.[0]?.properties?.idx;
+                if (idx == null) return;
+                setVertexMenu(null);
+                draggingIdxRef.current = Number(idx);
+                raw.dragPan.disable();
+                canvas.style.cursor = "grabbing";
+                window.addEventListener("mousemove", onWindowMouseMove);
+                window.addEventListener("mouseup", onWindowMouseUp);
+                window.addEventListener("blur", endDrag);
             };
+
+            /* Vertex right-click → context menu (delete) */
+            const onVertexContextMenu = (e: any) => {
+                e.preventDefault();
+                const idx = e.features?.[0]?.properties?.idx;
+                if (idx == null) return;
+                setVertexMenu({ idx: Number(idx), screenX: e.point.x, screenY: e.point.y });
+            };
+
+            const closeVertexMenu = () => setVertexMenu(null);
 
             /* Midpoint click → insert vertex */
             const onMidClick = (e: any) => {
@@ -336,14 +424,9 @@ export default function RegionShapeEditor() {
                 setVertices(newVerts);
             };
 
-            /* Vertex double-click → delete */
+            /* Vertex double-click → swallow, so it doesn't zoom the map */
             const onVertexDblClick = (e: any) => {
-                if (vertsRef.current.length <= 3) return;
-                const idx = e.features?.[0]?.properties?.idx;
-                if (idx == null) return;
-                const newVerts = vertsRef.current.filter((_, i) => i !== Number(idx));
-                vertsRef.current = newVerts;
-                setVertices(newVerts);
+                e.preventDefault();
             };
 
             /* Cursors */
@@ -351,45 +434,59 @@ export default function RegionShapeEditor() {
             const crossCursor = () => { if (draggingIdxRef.current === null) raw.getCanvas().style.cursor = "copy"; };
             const resetCursor = () => { if (draggingIdxRef.current === null) raw.getCanvas().style.cursor = ""; };
 
-            raw.on("mousedown", "shape-verts-layer", onVertexDown);
-            raw.on("mousemove", onMouseMove);
-            raw.on("mouseup", onMouseUp);
+            raw.on("mousedown", VERTEX_LAYER, onVertexDown);
+            raw.on("contextmenu", VERTEX_LAYER, onVertexContextMenu);
             raw.on("click", "shape-mids-layer", onMidClick);
-            raw.on("dblclick", "shape-verts-layer", onVertexDblClick);
-            raw.on("mouseenter", "shape-verts-layer", grabCursor);
-            raw.on("mouseleave", "shape-verts-layer", resetCursor);
+            raw.on("dblclick", VERTEX_LAYER, onVertexDblClick);
+            raw.on("mouseenter", VERTEX_LAYER, grabCursor);
+            raw.on("mouseleave", VERTEX_LAYER, resetCursor);
             raw.on("mouseenter", "shape-mids-layer", crossCursor);
             raw.on("mouseleave", "shape-mids-layer", resetCursor);
+            raw.on("movestart", closeVertexMenu);
+            raw.on("zoomstart", closeVertexMenu);
 
             return () => {
-                raw.off("mousedown", "shape-verts-layer", onVertexDown);
-                raw.off("mousemove", onMouseMove);
-                raw.off("mouseup", onMouseUp);
+                raw.off("mousedown", VERTEX_LAYER, onVertexDown);
+                raw.off("contextmenu", VERTEX_LAYER, onVertexContextMenu);
                 raw.off("click", "shape-mids-layer", onMidClick);
-                raw.off("dblclick", "shape-verts-layer", onVertexDblClick);
-                raw.off("mouseenter", "shape-verts-layer", grabCursor);
-                raw.off("mouseleave", "shape-verts-layer", resetCursor);
+                raw.off("dblclick", VERTEX_LAYER, onVertexDblClick);
+                raw.off("mouseenter", VERTEX_LAYER, grabCursor);
+                raw.off("mouseleave", VERTEX_LAYER, resetCursor);
                 raw.off("mouseenter", "shape-mids-layer", crossCursor);
                 raw.off("mouseleave", "shape-mids-layer", resetCursor);
+                raw.off("movestart", closeVertexMenu);
+                raw.off("zoomstart", closeVertexMenu);
+                draggingIdxRef.current = null;
+                detachDragListeners();
                 removeLayersFromMap(raw);
-                raw.getCanvas().style.cursor = "";
+                canvas.style.cursor = "";
                 raw.dragPan.enable();
             };
         }
 
-        // Wait for style to be ready before adding sources/layers
-        if (raw.isStyleLoaded()) {
-            const cleanup = setup();
-            return cleanup;
-        } else {
-            let cleanup: (() => void) | undefined;
-            const onStyleLoad = () => { cleanup = setup(); };
-            raw.once("style.load", onStyleLoad);
-            return () => {
-                raw.off("style.load", onStyleLoad);
-                cleanup?.();
-            };
-        }
+        // Wait for the style spec before adding sources/layers.
+        //
+        // Not `isStyleLoaded()`: that also waits for every source cache, so it
+        // is false whenever tiles are in flight — which is exactly the case
+        // right after the region pane has flown the map to the region. The
+        // `style.load` fallback then never fires again (it only fires per
+        // style) and the editor silently added no layers at all. `styledata`
+        // repeats, so retrying on it always converges.
+        let cleanup: (() => void) | undefined;
+
+        const trySetup = () => {
+            if (cleanup || !isStyleReady(raw)) return;
+            cleanup = setup();
+            raw.off("styledata", trySetup);
+        };
+
+        trySetup();
+        if (!cleanup) raw.on("styledata", trySetup);
+
+        return () => {
+            raw.off("styledata", trySetup);
+            cleanup?.();
+        };
     }, [map, isEditing]); // eslint-disable-line react-hooks/exhaustive-deps
 
     /* ── Keep sources in sync after React state updates ── */
@@ -415,6 +512,38 @@ export default function RegionShapeEditor() {
         }
         if (!snapEnabled) updateSnapTarget(raw, null);
     }, [isEditing, map, snapEnabled]);
+
+    /* ── Vertex menu dismissal ── */
+    useEffect(() => {
+        if (!isEditing) setVertexMenu(null);
+    }, [isEditing]);
+
+    useEffect(() => {
+        if (!vertexMenu) return;
+
+        const handlePointerDown = (event: MouseEvent) => {
+            if (vertexMenuRef.current?.contains(event.target as Node)) return;
+            setVertexMenu(null);
+        };
+        const handleKey = (event: KeyboardEvent) => {
+            if (event.key === "Escape") setVertexMenu(null);
+        };
+
+        document.addEventListener("mousedown", handlePointerDown);
+        document.addEventListener("keydown", handleKey);
+        return () => {
+            document.removeEventListener("mousedown", handlePointerDown);
+            document.removeEventListener("keydown", handleKey);
+        };
+    }, [vertexMenu]);
+
+    function handleDeleteVertex(idx: number) {
+        if (vertices.length <= MIN_VERTICES) return;
+        const newVerts = vertices.filter((_, i) => i !== idx);
+        vertsRef.current = newVerts;
+        setVertices(newVerts);
+        setVertexMenu(null);
+    }
 
     function handleCancel() {
         stopEditing();
@@ -450,8 +579,11 @@ export default function RegionShapeEditor() {
 
     if (!isEditing) return null;
 
+    const canDeleteVertex = vertices.length > MIN_VERTICES;
+
     return (
-        /* Floating toolbar — centered at the top of the map */
+        <>
+        {/* Floating toolbar — centered at the top of the map */}
         <div className="absolute top-4 left-1/2 -translate-x-1/2 z-50 pointer-events-none">
             <div className="pointer-events-auto flex flex-col items-center gap-2">
                 {/* Main toolbar */}
@@ -517,7 +649,7 @@ export default function RegionShapeEditor() {
                         {" · "}
                         <span className="text-neutral-400">Klick auf Kante</span> zum Hinzufügen
                         {" · "}
-                        <span className="text-neutral-400">Doppelklick</span> zum Entfernen
+                        <span className="text-neutral-400">Rechtsklick</span> zum Entfernen
                         {snapEnabled && (
                             <>
                                 {" · "}
@@ -529,5 +661,30 @@ export default function RegionShapeEditor() {
 
             </div>
         </div>
+
+        {/* Vertex context menu — right-click on a point */}
+        {vertexMenu && (
+            <div
+                ref={vertexMenuRef}
+                onContextMenu={(e) => e.preventDefault()}
+                className="absolute z-50 min-w-[200px] rounded-xl bg-neutral-950/90 backdrop-blur-xl border border-white/[0.07] shadow-2xl overflow-hidden text-sm"
+                style={{ left: vertexMenu.screenX, top: vertexMenu.screenY }}
+            >
+                <div className="px-3 py-2.5 border-b border-white/[0.06] flex items-center gap-2 text-neutral-400">
+                    <MousePointerIcon size={13} className="text-violet-400" />
+                    <span className="text-[11px]">Punkt {vertexMenu.idx + 1}</span>
+                </div>
+                <button
+                    onClick={() => handleDeleteVertex(vertexMenu.idx)}
+                    disabled={!canDeleteVertex}
+                    title={canDeleteVertex ? undefined : `Mindestens ${MIN_VERTICES} Punkte erforderlich`}
+                    className="w-full flex items-center gap-2.5 px-3 py-2.5 hover:bg-red-500/10 transition-colors text-left disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-transparent"
+                >
+                    <Trash2Icon size={14} className="text-red-400" />
+                    <span className="text-neutral-200">Punkt löschen</span>
+                </button>
+            </div>
+        )}
+        </>
     );
 }

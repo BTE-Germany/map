@@ -8,6 +8,7 @@ import { Copy, ExternalLink, Loader2, LockIcon, MapPin, NavigationIcon, PersonSt
 import { teleportToCoordinates } from "@/actions/teleport/Teleport";
 import useStreetLevelStore from "@/stores/StreetLevelStore";
 import { hasPermission, PERMISSIONS } from "@/lib/permissions";
+import { hasShapeVertexAt } from "./RegionShapeEditor";
 
 interface MenuState {
     lng: number;
@@ -37,6 +38,9 @@ export default function MapContextMenu() {
 
         const open = (e: any) => {
             e.preventDefault?.();
+            // A right-click on a shape-editor vertex belongs to the editor's own
+            // menu ("Punkt löschen"), so don't stack this one on top of it.
+            if (hasShapeVertexAt(map, e.point)) return;
             const { x: screenX, y: screenY } = e.point;
             setMenu({
                 lng: e.lngLat.lng,

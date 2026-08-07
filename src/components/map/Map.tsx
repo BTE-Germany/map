@@ -13,6 +13,7 @@ import { getMapStyleById } from "@/lib/mapStyles";
 import { getPublicRuntimeConfig } from "@/lib/publicRuntimeConfig";
 import maplibregl from "maplibre-gl";
 import useStreetLevelStore from "@/stores/StreetLevelStore";
+import useRegionShapeEdit from "@/stores/RegionShapeEditStore";
 
 export default function Map() {
 
@@ -36,6 +37,10 @@ export default function Map() {
         pitch: 0
     });
     const isSelectingStreetLevel = useStreetLevelStore((state) => state.isSelecting);
+    // While the shape editor is active the map clicks belong to it: dragging a
+    // vertex or clicking an edge must not also open the region detail pane
+    // (which would close the editor's context and fly the map somewhere else).
+    const isEditingShape = useRegionShapeEdit((state) => state.isEditing);
 
     useEffect(() => {
         hydrateStyleId();
@@ -82,7 +87,7 @@ export default function Map() {
         if (!isEngineReady || !map) return;
 
         const handleMapClick = (e: any) => {
-            if (isSelectingStreetLevel) {
+            if (isSelectingStreetLevel || isEditingShape) {
                 return;
             }
 
@@ -99,13 +104,16 @@ export default function Map() {
         map.on('click', handleMapClick);
 
         // Change the cursor to a pointer when the mouse is over the states layer.
+        // Not while editing — there the editor owns the cursor.
         const handleMouseEnter = () => {
+            if (isEditingShape) return;
             map.getCanvas().style.cursor = 'pointer';
         };
         map.on('mouseenter', 'region-layer', handleMouseEnter);
 
         // Change it back to a pointer when it leaves.
         const handleMouseLeave = () => {
+            if (isEditingShape) return;
             map.getCanvas().style.cursor = '';
         };
         map.on('mouseleave', 'region-layer', handleMouseLeave);
@@ -115,7 +123,7 @@ export default function Map() {
             map.off('mouseenter', 'region-layer', handleMouseEnter);
             map.off('mouseleave', 'region-layer', handleMouseLeave);
         };
-    }, [isEngineReady, isSelectingStreetLevel, map, openRegion]);
+    }, [isEngineReady, isSelectingStreetLevel, isEditingShape, map, openRegion]);
 
     // Colors matching the WelcomeScreen legend:
     // red   = event
