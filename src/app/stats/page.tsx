@@ -2,12 +2,12 @@ import { getGlobalStats } from "@/actions/stats/GetGlobalStats";
 import {
     BuildingTimelineChart,
     LanduseStackedBar,
-    StateBarChart,
     TimelineChart,
     TypeDonutChart,
 } from "@/components/stats/StatsCharts";
 import RankingSection from "@/components/stats/RankingSection";
 import ExtendedRankingTable from "@/components/stats/ExtendedRankingTable";
+import GermanyHeatmap from "@/components/stats/GermanyHeatmap";
 import { stateCodeToName } from "@/lib/federalStates";
 import {
     BASE_POINTS_PER_1000_SQM,
@@ -306,29 +306,14 @@ export default async function StatsPage() {
 
             <GermanyProgress finishedArea={stats.totals.finishedArea} />
 
+            {/* Heatmap der Bundesländer inkl. Detailansicht je Land */}
+            <GermanyHeatmap states={stats.states} />
+
             {/* Hero: Ranglisten (Punkte / Fläche / Gebäude) */}
             <RankingSection players={stats.ranking} />
 
             {/* Vollständige sortierbare Tabelle mit eigener Position */}
             <ExtendedRankingTable players={stats.ranking} />
-
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-                <SectionCard
-                    icon={<LandPlot className="size-4" />}
-                    title="Fläche pro Bundesland"
-                    subtitle="Top 10"
-                    className="lg:col-span-2"
-                >
-                    <StateBarChart data={stats.byState} />
-                </SectionCard>
-
-                <SectionCard
-                    icon={<Layers className="size-4" />}
-                    title="Region-Typen"
-                >
-                    <TypeDonutChart data={stats.byType} />
-                </SectionCard>
-            </div>
 
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
                 <SectionCard
@@ -347,26 +332,36 @@ export default async function StatsPage() {
                 </SectionCard>
 
                 <SectionCard
+                    icon={<Layers className="size-4" />}
+                    title="Region-Typen"
+                >
+                    <TypeDonutChart data={stats.byType} />
+                </SectionCard>
+            </div>
+
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+                <SectionCard
+                    icon={<Building2 className="size-4" />}
+                    title="Gebäude über die Zeit"
+                    subtitle="nach Erstellmonat der Region"
+                    className="lg:col-span-2"
+                >
+                    {stats.timeline.some((entry) => entry.buildings > 0) ? (
+                        <BuildingTimelineChart data={stats.timeline} />
+                    ) : (
+                        <p className="text-sm text-neutral-500 text-center py-10">
+                            Noch keine Gebäude-Zeitreihendaten verfügbar.
+                        </p>
+                    )}
+                </SectionCard>
+
+                <SectionCard
                     icon={<Sparkles className="size-4" />}
                     title="Flächennutzung"
                 >
                     <LanduseStackedBar landuse={stats.landuse} />
                 </SectionCard>
             </div>
-
-            <SectionCard
-                icon={<Building2 className="size-4" />}
-                title="Gebäude über die Zeit"
-                subtitle="nach Erstellmonat der Region"
-            >
-                {stats.timeline.some((entry) => entry.buildings > 0) ? (
-                    <BuildingTimelineChart data={stats.timeline} />
-                ) : (
-                    <p className="text-sm text-neutral-500 text-center py-10">
-                        Noch keine Gebäude-Zeitreihendaten verfügbar.
-                    </p>
-                )}
-            </SectionCard>
 
             <SectionCard
                 icon={<CheckCircle2 className="size-4" />}

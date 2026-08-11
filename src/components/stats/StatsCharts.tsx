@@ -1,8 +1,6 @@
 "use client";
 
 import {
-    Bar,
-    BarChart,
     CartesianGrid,
     Cell,
     Line,
@@ -15,7 +13,6 @@ import {
     YAxis,
 } from "recharts";
 import type { LandUseStats } from "@/db/schema";
-import { stateCodeToName } from "@/lib/federalStates";
 
 const TYPE_COLORS: Record<string, string> = {
     default: "#22c55e",
@@ -82,49 +79,6 @@ function CustomTooltip({ active, payload, label, formatter }: any) {
                 </div>
             ))}
         </div>
-    );
-}
-
-export function StateBarChart({
-    data,
-}: {
-    data: Array<{ state: string; count: number; totalArea: number }>;
-}) {
-    const chartData = data.slice(0, 10).map((d) => ({
-        state: d.state,
-        label: stateCodeToName(d.state),
-        count: d.count,
-        area: d.totalArea / 1_000_000,
-    }));
-
-    return (
-        <ResponsiveContainer width="100%" height={260}>
-            <BarChart data={chartData} margin={{ top: 8, right: 12, left: 0, bottom: 20 }}>
-                <CartesianGrid stroke="rgba(255,255,255,0.04)" vertical={false} />
-                <XAxis
-                    dataKey="state"
-                    tick={{ fill: "#737373", fontSize: 11 }}
-                    axisLine={false}
-                    tickLine={false}
-                />
-                <YAxis
-                    tick={{ fill: "#737373", fontSize: 11 }}
-                    axisLine={false}
-                    tickLine={false}
-                    width={36}
-                />
-                <Tooltip
-                    cursor={{ fill: "rgba(255,255,255,0.03)" }}
-                    content={
-                        <CustomTooltip
-                            formatter={(v: number) => `${v.toFixed(2)} km²`}
-                        />
-                    }
-                    labelFormatter={(l: string) => stateCodeToName(l)}
-                />
-                <Bar dataKey="area" name="Fläche" radius={[6, 6, 0, 0]} fill="#6366f1" />
-            </BarChart>
-        </ResponsiveContainer>
     );
 }
 

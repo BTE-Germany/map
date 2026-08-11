@@ -3,6 +3,7 @@
 import db from "@/db/drizzle";
 import { region, type LandUseStats } from "@/db/schema";
 import { aggregatePlayerScores, type PlayerScore, type ScoringRegion } from "@/lib/scoring";
+import { aggregateStateStats, type StateStats } from "@/lib/stateStats";
 
 export interface GlobalStats {
     totals: {
@@ -15,7 +16,8 @@ export interface GlobalStats {
         finishedBuildings: number;
         uniqueBuilders: number;
     };
-    byState: Array<{ state: string; count: number; totalArea: number }>;
+    /** Auswertung je Bundesland — speist die Heatmap-Karte. */
+    states: StateStats[];
     byType: Array<{
         type: string;
         count: number;
@@ -78,7 +80,6 @@ export async function getGlobalStats(): Promise<GlobalStats> {
 
     const builderSet = new Set<string>();
 
-    const stateMap = new Map<string, { count: number; totalArea: number }>();
     const typeMap = new Map<
         string,
         { count: number; totalArea: number; buildings: number }
@@ -112,12 +113,6 @@ export async function getGlobalStats(): Promise<GlobalStats> {
         for (const uuid of r.builders ?? []) {
             if (uuid) builderSet.add(uuid);
         }
-
-        const stateKey = r.state || "—";
-        if (!stateMap.has(stateKey)) stateMap.set(stateKey, { count: 0, totalArea: 0 });
-        const s = stateMap.get(stateKey)!;
-        s.count += 1;
-        s.totalArea += area;
 
         if (!typeMap.has(r.type)) {
             typeMap.set(r.type, { count: 0, totalArea: 0, buildings: 0 });
@@ -157,10 +152,6 @@ export async function getGlobalStats(): Promise<GlobalStats> {
 
     totals.uniqueBuilders = builderSet.size;
 
-    const byState = Array.from(stateMap.entries())
-        .map(([state, v]) => ({ state, ...v }))
-        .sort((a, b) => b.totalArea - a.totalArea);
-
     const byType = Array.from(typeMap.entries())
         .map(([type, values]) => ({ type, ...values }))
         .sort((a, b) => b.count - a.count);
@@ -194,6 +185,10 @@ export async function getGlobalStats(): Promise<GlobalStats> {
         builders: r.builders ?? [],
     }));
 
+    const states = aggregateStateStats(
+        all.map((r, i) => ({ ...scoringRegions[i], state: r.state, city: r.city })),
+    );
+
     // Alle Spieler mit Punkten > 0 zurückgeben — der Client sortiert / limitiert
     // dann je nach Ranking-Metrik (Punkte / Fläche / Gebäude).
     const ranking = aggregatePlayerScores(scoringRegions);
@@ -202,7 +197,7 @@ export async function getGlobalStats(): Promise<GlobalStats> {
 
     return {
         totals,
-        byState,
+        states,
         byType,
         timeline,
         landuse: landuseTotals,

@@ -8,6 +8,7 @@
     "build": "next build",
     "start": "next start",
     "db:migrate": "node scripts/migrate.mjs",
+    "generate:state-paths": "node scripts/generate-state-paths.mjs",
     "migrate:v2": "node scripts/migrate-v2.mjs all",
     "migrate:v2:dry-run": "node scripts/migrate-v2.mjs all --dry-run",
     "migrate:v2:test": "node --test scripts/migrate-v2.test.mjs",
