@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
 import { AnimatePresence, motion } from "motion/react";
 
 interface BuilderProfile {
@@ -24,21 +25,27 @@ export default function BuilderAvatarStack({ owner, builders }: Props) {
             onMouseEnter={() => setHovered(true)}
             onMouseLeave={() => setHovered(false)}
         >
-            {/* Overlapping avatars */}
+            {/* Overlapping avatars — jeder führt aufs Builderprofil. Am Zeigegerät
+                sind sie der einzige stabile Klickpunkt: die Namensliste darunter
+                erscheint erst beim Hovern und existiert auf Touch gar nicht. */}
             <div className="flex items-center">
                 {all.map((p, i) => (
-                    <div
+                    <Link
                         key={p.raw_id}
-                        className="relative"
+                        href={`/builder/${p.raw_id}`}
+                        prefetch={false}
+                        title={`Statistiken von ${p.username}`}
+                        aria-label={`Builderprofil von ${p.username} öffnen`}
+                        className="relative rounded-full ring-2 ring-transparent transition-[ring-color,transform] hover:z-10 hover:ring-sky-400/70 focus-visible:outline-none focus-visible:ring-sky-400"
                         style={{ marginLeft: i === 0 ? 0 : -10, zIndex: all.length - i }}
                     >
                         {/* eslint-disable-next-line @next/next/no-img-element */}
                         <img
                             src={p.avatar}
-                            alt={p.username}
+                            alt=""
                             className="size-9 rounded-full"
                         />
-                    </div>
+                    </Link>
                 ))}
             </div>
 
@@ -58,12 +65,15 @@ export default function BuilderAvatarStack({ owner, builders }: Props) {
                             className="flex flex-wrap gap-x-1.5 gap-y-0.5"
                         >
                             {all.map((p, i) => (
-                                <span
+                                <Link
                                     key={p.raw_id}
-                                    className={`text-sm font-semibold ${i === 0 ? "text-foreground" : "text-muted-foreground"}`}
+                                    href={`/builder/${p.raw_id}`}
+                                    prefetch={false}
+                                    className={`text-sm font-semibold underline-offset-4 transition-colors hover:text-sky-300 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-400/50 ${i === 0 ? "text-foreground" : "text-muted-foreground"
+                                        }`}
                                 >
                                     {p.username}
-                                </span>
+                                </Link>
                             ))}
                         </motion.div>
                     ) : (

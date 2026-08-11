@@ -131,6 +131,39 @@ function LandUseSection({ landuse, totalArea, areaMode }: { landuse: LandUseStat
     );
 }
 
+/**
+ * Verlinkt einen Builder auf sein Profil. `prefetch` bleibt aus: die
+ * Profilseite aggregiert alle Regionen, das lohnt sich nicht auf Verdacht für
+ * jedes Teammitglied einer angeklickten Region.
+ */
+function BuilderProfileLink({
+    uuid,
+    className,
+    style,
+    children,
+}: {
+    uuid: string;
+    className?: string;
+    style?: React.CSSProperties;
+    children: React.ReactNode;
+}) {
+    const { data } = useMcUser(uuid);
+    const label = data?.username ?? uuid.slice(0, 8);
+
+    return (
+        <Link
+            href={`/builder/${uuid}`}
+            prefetch={false}
+            title={`Statistiken von ${label}`}
+            aria-label={`Builderprofil von ${label} öffnen`}
+            className={className}
+            style={style}
+        >
+            {children}
+        </Link>
+    );
+}
+
 function BuilderAvatar({ uuid, size = 9 }: { uuid: string; size?: number }) {
     const { data } = useMcUser(uuid);
     if (!data) return <div className={`size-${size} rounded-full bg-neutral-800 animate-pulse shrink-0`} />;
@@ -174,16 +207,19 @@ function BuilderAvatarStack({
             onMouseEnter={() => setHovered(true)}
             onMouseLeave={() => setHovered(false)}
         >
-            {/* Overlapping avatar stack */}
+            {/* Overlapping avatar stack — jeder Avatar führt aufs Builderprofil.
+                Am Zeigegerät sind sie der einzige stabile Klickpunkt: die
+                Namensliste erscheint erst beim Hovern und fehlt auf Touch. */}
             <div className="flex items-center">
                 {allUUIDs.map((uuid, i) => (
-                    <div
+                    <BuilderProfileLink
                         key={uuid}
-                        className="relative"
+                        uuid={uuid}
+                        className="relative rounded-full ring-2 ring-transparent transition-[box-shadow] hover:z-10 hover:ring-sky-400/70 focus-visible:outline-none focus-visible:ring-sky-400"
                         style={{ marginLeft: i === 0 ? 0 : -10, zIndex: allUUIDs.length - i }}
                     >
                         <BuilderAvatar uuid={uuid} size={9} />
-                    </div>
+                    </BuilderProfileLink>
                 ))}
             </div>
 
@@ -233,9 +269,14 @@ function BuilderName({ uuid, isCreator }: { uuid: string; isCreator: boolean }) 
     const { data } = useMcUser(uuid);
     if (!data) return null;
     return (
-        <span className={`text-sm font-semibold ${isCreator ? "text-neutral-200" : "text-neutral-400"}`}>
+        <Link
+            href={`/builder/${uuid}`}
+            prefetch={false}
+            className={`text-sm font-semibold underline-offset-4 transition-colors hover:text-sky-300 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-400/50 ${isCreator ? "text-neutral-200" : "text-neutral-400"
+                }`}
+        >
             {data.username}
-        </span>
+        </Link>
     );
 }
 
