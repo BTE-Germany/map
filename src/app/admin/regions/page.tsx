@@ -1,8 +1,8 @@
 import Link from "next/link";
 import { LandPlot, PlusIcon } from "lucide-react";
-import { getAllRegions } from "@/actions/region/GetRegions";
+import { getRegionsForAdminList } from "@/actions/region/GetRegions";
 import getUser from "@/actions/minecraft/user";
-import RegionsTable, { type CreatorProfile } from "@/components/admin/regions/RegionsTable";
+import RegionsTable, { type CreatorProfileMap } from "@/components/admin/regions/RegionsTable";
 import { getSession } from "@/lib/auth";
 import { hasPermission, PERMISSIONS } from "@/lib/permissions";
 
@@ -14,9 +14,9 @@ const CREATOR_RESOLVE_CONCURRENCY = 8;
  * hundreds of simultaneous upstream requests; `getUser` caches each profile for
  * 24h, so warm loads resolve instantly.
  */
-async function resolveCreatorProfiles(uuids: string[]): Promise<Record<string, CreatorProfile | null>> {
+async function resolveCreatorProfiles(uuids: string[]): Promise<CreatorProfileMap> {
     const unique = [...new Set(uuids.filter(Boolean))];
-    const result: Record<string, CreatorProfile | null> = {};
+    const result: CreatorProfileMap = {};
 
     for (let i = 0; i < unique.length; i += CREATOR_RESOLVE_CONCURRENCY) {
         const batch = unique.slice(i, i + CREATOR_RESOLVE_CONCURRENCY);
@@ -31,10 +31,18 @@ async function resolveCreatorProfiles(uuids: string[]): Promise<Record<string, C
 }
 
 export default async function AdminRegionsListPage() {
-    const [regions, session] = await Promise.all([getAllRegions(), getSession()]);
+    const [regions, session] = await Promise.all([getRegionsForAdminList(), getSession()]);
     const rows = regions ?? [];
     const canEdit = hasPermission(session?.user.realm_access?.roles ?? [], PERMISSIONS.REGIONS_EDIT);
-    const creatorProfiles = await resolveCreatorProfiles(rows.map((r) => r.creatorUUID));
+
+    // Bewusst nicht awaited: das Promise geht so, wie es ist, an die Tabelle und
+    // wird nachgeliefert, sobald es aufgelöst ist. Die Liste selbst steht damit
+    // sofort, statt auf die Profil-Lookups aller Ersteller zu warten. Das
+    // `catch` gehört hierher und nicht erst in den Client — ein nicht awaitetes
+    // Promise, das ablehnt, wäre auf dem Server eine unhandled rejection.
+    const creatorProfilesPromise = resolveCreatorProfiles(rows.map((r) => r.creatorUUID)).catch(
+        () => ({}) as CreatorProfileMap,
+    );
 
     return (
         <div className="space-y-6">
@@ -59,7 +67,7 @@ export default async function AdminRegionsListPage() {
                 )}
             </div>
 
-            <RegionsTable regions={rows} creatorProfiles={creatorProfiles} canEdit={canEdit} />
+            <RegionsTable regions={rows} creatorProfilesPromise={creatorProfilesPromise} canEdit={canEdit} />
         </div>
     );
 }

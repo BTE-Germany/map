@@ -5,8 +5,45 @@ import db from "@/db/drizzle";
 import { and, count, desc, eq, isNotNull, isNull, sql, sum } from "drizzle-orm";
 import { regionsToCreatorGeoJSON, type RegionGeoJSON } from "@/lib/regionGeo";
 
-export async function getAllRegions() {
-    return db?.select().from(region);
+export interface AdminRegionListItem {
+    id: string;
+    address: string;
+    city: string;
+    state: string;
+    type: "default" | "plot" | "event";
+    description: string | null;
+    finished: boolean;
+    buildings: number;
+    area: string;
+    creatorUUID: string;
+    builders: string[] | null;
+    createdAt: Date | null;
+}
+
+/**
+ * Spalten, die die Admin-Regionsliste tatsächlich anzeigt oder in den
+ * Bearbeiten-Dialog reicht. Bewusst ohne `polygon` und `landuse`: beides ist
+ * JSON in Größenordnungen, die bei mehreren tausend Regionen die Antwort
+ * dominieren — und beides wandert, weil die Tabelle eine Client-Komponente ist,
+ * sonst komplett mit in den RSC-Payload des Browsers, ohne je gelesen zu werden.
+ */
+export async function getRegionsForAdminList(): Promise<AdminRegionListItem[]> {
+    return db
+        ?.select({
+            id: region.id,
+            address: region.address,
+            city: region.city,
+            state: region.state,
+            type: region.type,
+            description: region.description,
+            finished: region.finished,
+            buildings: region.buildings,
+            area: region.area,
+            creatorUUID: region.creatorUUID,
+            builders: region.builders,
+            createdAt: region.createdAt,
+        })
+        .from(region) ?? [];
 }
 
 export interface RegionSearchItem {

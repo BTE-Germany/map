@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo, useTransition } from "react";
+import { useState, useMemo, useTransition, useEffect } from "react";
 import {
     SearchIcon, PencilIcon, ChevronUpIcon, ChevronDownIcon,
     ChevronsUpDownIcon, ChevronLeftIcon, ChevronRightIcon,
@@ -23,6 +23,32 @@ export type CreatorProfile = {
     username: string;
     avatar: string;
 };
+
+export type CreatorProfileMap = Record<string, CreatorProfile | null>;
+
+/**
+ * Die Ersteller-Profile kommen als noch offenes Promise aus der
+ * Server-Komponente. Die Tabelle wartet nicht darauf: sie rendert sofort mit
+ * dem UUID-Kürzel und dem Minotar-Avatar (der allein aus der UUID entsteht) und
+ * tauscht die Namen ein, sobald playerdb geantwortet hat.
+ *
+ * Vorher hing der erste Paint der ganzen Seite an bis zu mehreren hundert
+ * Profil-Lookups — bei kaltem Cache Sekunden, in denen nichts zu sehen war.
+ */
+function useCreatorProfiles(promise: Promise<CreatorProfileMap>): CreatorProfileMap {
+    const [profiles, setProfiles] = useState<CreatorProfileMap>({});
+
+    useEffect(() => {
+        let active = true;
+        promise.then(
+            (resolved) => { if (active) setProfiles(resolved); },
+            () => { /* Ohne Profile bleibt die Tabelle bei UUID + Minotar-Avatar. */ },
+        );
+        return () => { active = false; };
+    }, [promise]);
+
+    return profiles;
+}
 
 type RegionRow = {
     id: string;
@@ -58,13 +84,14 @@ const PAGE_SIZE = 50;
 
 export default function RegionsTable({
     regions,
-    creatorProfiles = {},
+    creatorProfilesPromise,
     canEdit = false,
 }: {
     regions: RegionRow[];
-    creatorProfiles?: Record<string, CreatorProfile | null>;
+    creatorProfilesPromise: Promise<CreatorProfileMap>;
     canEdit?: boolean;
 }) {
+    const creatorProfiles = useCreatorProfiles(creatorProfilesPromise);
     const router = useRouter();
     const [search, setSearch] = useState("");
     const [typeFilter, setTypeFilter] = useState<"all" | "default" | "plot" | "event">("all");

@@ -31,7 +31,12 @@ export default function AdminNavigationBar() {
     }
 
     return (
-        <aside className="w-56 shrink-0 border-r border-border bg-card flex flex-col">
+        // `self-start` + feste Höhe statt der Standard-Streckung des Flex-Containers:
+        // sonst wächst die Leiste mit dem Inhalt (die Regionstabelle ist lang), der
+        // "Zurück zur Karte"-Link rutscht ans Seitenende und ist erst nach dem
+        // Scrollen zu sehen. So bleibt die Leiste genau ein Viewport hoch und
+        // stehen, während der Inhalt daneben scrollt.
+        <aside className="sticky top-0 self-start h-screen w-56 shrink-0 border-r border-border bg-card flex flex-col">
             <div className="px-5 py-5 border-b border-border flex items-center gap-2.5">
                 <div className="size-7 rounded-lg bg-primary/10 border border-primary/20 flex items-center justify-center">
                     <Shield className="size-4 text-primary" />
@@ -39,7 +44,7 @@ export default function AdminNavigationBar() {
                 <span className="font-semibold text-sm">Admin</span>
             </div>
 
-            <nav className="flex-1 p-3 space-y-0.5">
+            <nav className="flex-1 min-h-0 overflow-y-auto p-3 space-y-0.5">
                 {NAV_ITEMS.map(({ href, label, icon: Icon, children }) => {
                     const sectionActive = pathname.startsWith(href);
                     return (
