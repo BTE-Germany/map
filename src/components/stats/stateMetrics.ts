@@ -1,18 +1,21 @@
 import type { StateStats } from "@/lib/stateStats";
 
 /**
- * Sequenzielle Blau-Rampe für die Heatmap: dunkel = wenig (verschwindet fast im
- * dunklen Hintergrund), hell = viel. Ein Farbton, monoton heller werdend — kein
- * Regenbogen, damit die Stufen als Größenordnung lesbar bleiben.
+ * Sequenzielle Blau-Rampe für die Heatmap: hell = wenig, dunkel = viel. Ein
+ * Farbton, monoton dunkler werdend — kein Regenbogen, damit die Stufen als
+ * Größenordnung lesbar bleiben. Die dunkelste Stufe bleibt deutlich über dem
+ * Kartenhintergrund, sonst fiele der Spitzenreiter aus der Karte heraus.
  */
-export const HEAT_STEPS = ["#0d366b", "#184f95", "#256abf", "#3987e5", "#6da7ec", "#9ec5f4"];
+export const HEAT_STEPS = ["#9ec5f4", "#6da7ec", "#3987e5", "#256abf", "#184f95", "#0d366b"];
 
 /**
- * Füllung für Bundesländer ganz ohne Regionen — neutrales Grau statt der
- * untersten Blaustufe, aber kräftig genug, dass das Land noch als Fläche und
- * nicht als Loch in der Karte gelesen wird.
+ * Füllung für Bundesländer ganz ohne Regionen — ein neutrales Hellgrau ohne
+ * Blaustich, jenseits des hellen Endes der Rampe: null Regionen ist weniger als
+ * die unterste Stufe, und die fehlende Sättigung hält es sichtbar außerhalb der
+ * Skala. Ein dunkler Ton wäre hier nicht möglich, der läge auf der Rampe beim
+ * Maximum.
  */
-export const HEAT_EMPTY = "rgba(255,255,255,0.08)";
+export const HEAT_EMPTY = "#c9cbcd";
 
 /**
  * Stufe für einen Wert. Die Wurzel staucht den Abstand zum Spitzenreiter —
