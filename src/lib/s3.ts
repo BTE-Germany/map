@@ -27,6 +27,18 @@ export const s3 = new S3Client({
         accessKeyId: process.env.S3_ACCESS_KEY_ID ?? "",
         secretAccessKey: process.env.S3_SECRET_ACCESS_KEY ?? "",
     },
+    /**
+     * Seit AWS SDK v3.729 rechnet der Client für PutObject standardmäßig eine
+     * CRC32-Prüfsumme aus und hängt sie an die Anfrage. Beim Presigning gibt es
+     * aber noch keinen Body: signiert wird die Prüfsumme des leeren Payloads
+     * ("AAAAAA=="), die S3 dann gegen die echten Bytes des Browser-Uploads
+     * prüft — und mit 400 (XAmzContentChecksumMismatch) ablehnt.
+     *
+     * "WHEN_REQUIRED" lässt die Prüfsumme weg, wo sie nicht vorgeschrieben ist,
+     * und macht die presigned URLs damit überhaupt erst benutzbar. Die
+     * Integrität der Übertragung deckt weiterhin TLS und die SigV4-Signatur ab.
+     */
+    requestChecksumCalculation: "WHEN_REQUIRED",
 });
 
 export const ALLOWED_IMAGE_MIME_TYPES = [

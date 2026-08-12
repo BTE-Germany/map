@@ -180,6 +180,29 @@ Restrict the Google browser key to the application's HTTP referrers and the Maps
 
 The gallery accepts JPEG, PNG, WebP, and GIF images up to 10 MiB, with at most 20 images per region.
 
+The browser uploads straight to the bucket with a presigned `PUT`, so the bucket
+needs a CORS rule for every origin that serves the app — without one the upload
+fails on the preflight before a single byte is sent:
+
+```json
+{
+  "CORSRules": [
+    {
+      "AllowedOrigins": ["https://map.bteger.dev"],
+      "AllowedMethods": ["PUT"],
+      "AllowedHeaders": ["*"],
+      "ExposeHeaders": ["ETag"],
+      "MaxAgeSeconds": 3000
+    }
+  ]
+}
+```
+
+```bash
+aws s3api put-bucket-cors --bucket "$S3_BUCKET" --cors-configuration file://cors.json
+aws s3api get-bucket-cors --bucket "$S3_BUCKET"   # verify
+```
+
 ### Minecraft bridge
 
 | Variable | Purpose |
