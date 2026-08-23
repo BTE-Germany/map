@@ -1,13 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { eq } from "drizzle-orm";
-import * as turf from "@turf/turf";
 import db from "@/db/drizzle";
 import { region } from "@/db/schema";
 import { requireMcAuth, type McAuthContext } from "@/lib/mcAuth";
 import { fetchLandUseStats } from "@/lib/landuse";
 import { fetchBuildingCount } from "@/lib/buildings";
-import { closePolygon } from "@/lib/geo";
+import { closePolygon, polygonAreaSqm } from "@/lib/geo";
 import { getErrorMessage } from "@/lib/errors";
 import { geocodeRegionCenter } from "@/lib/regionGeocode";
 import { scheduleRegionSync } from "@/lib/bte/autoSync";
@@ -53,8 +52,7 @@ export async function POST(req: NextRequest) {
     }
 
     const polygon = closePolygon(parsed.polygon as [number, number][]);
-    const turfPolygon = turf.polygon([polygon.map(([lat, lng]) => [lng, lat])]);
-    const area = turf.area(turfPolygon);
+    const area = polygonAreaSqm(polygon);
 
     // Only the geocode (fast, ~100-300ms) blocks the plugin's response. Building
     // count and landuse are slow Overpass calls, so they run fire-and-forget and

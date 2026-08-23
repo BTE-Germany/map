@@ -5,7 +5,7 @@ import db from "@/db/drizzle";
 import { eq } from "drizzle-orm";
 import { fetchLandUseStats } from "@/lib/landuse";
 import { fetchBuildingCount } from "@/lib/buildings";
-import { closePolygon } from "@/lib/geo";
+import { closePolygon, polygonAreaSqm } from "@/lib/geo";
 import { requireRegionAccess } from "@/lib/guards";
 import { PERMISSIONS } from "@/lib/permissions";
 import { scheduleRegionSync } from "@/lib/bte/autoSync";
@@ -35,11 +35,16 @@ export async function updateRegionPolygon(regionId: string, polygon: [number, nu
 
     const closed = closePolygon(polygon);
 
-    // Save polygon immediately, clear stale landuse + buildings so the UI shows
-    // "wird neu berechnet" while the background jobs run.
+    // The area follows straight from the geometry, so it is recomputed here
+    // rather than left to a background job — otherwise a resized region keeps
+    // reporting the size of its previous shape.
+    const area = polygonAreaSqm(closed);
+
+    // Save polygon + area immediately, clear stale landuse + buildings so the UI
+    // shows "wird neu berechnet" while the background jobs run.
     await db
         .update(region)
-        .set({ polygon: closed, landuse: null, landuseUpdatedAt: null, buildings: 0 })
+        .set({ polygon: closed, area: area.toFixed(2), landuse: null, landuseUpdatedAt: null, buildings: 0 })
         .where(eq(region.id, regionId));
 
     // Only apply a background recalculation if the polygon still matches the

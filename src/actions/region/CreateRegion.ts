@@ -1,12 +1,11 @@
 "use server";
 
-import * as turf from "@turf/turf";
 import { eq } from "drizzle-orm";
 import db from "@/db/drizzle";
 import { region } from "@/db/schema";
 import { assertUuid, requirePermission } from "@/lib/guards";
 import { PERMISSIONS } from "@/lib/permissions";
-import { closePolygon } from "@/lib/geo";
+import { closePolygon, polygonAreaSqm } from "@/lib/geo";
 import { geocodeRegionCenter } from "@/lib/regionGeocode";
 import { fetchBuildingCount } from "@/lib/buildings";
 import { fetchLandUseStats } from "@/lib/landuse";
@@ -67,8 +66,7 @@ export async function createRegionByAdmin(input: CreateRegionInput): Promise<{ i
     }
 
     const polygon = closePolygon(input.polygon);
-    const turfPolygon = turf.polygon([polygon.map(([lat, lng]) => [lng, lat])]);
-    const area = turf.area(turfPolygon);
+    const area = polygonAreaSqm(polygon);
 
     // Only the geocode (fast) blocks the response. Building count and landuse
     // are slow Overpass calls, so they backfill the row afterwards.
