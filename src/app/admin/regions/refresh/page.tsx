@@ -1,10 +1,11 @@
 "use client";
 
 import { useState, useRef } from "react";
-import { RefreshCw, AlertCircle, CheckCircle2, Loader2, LandPlot, MapIcon } from "lucide-react";
+import { RefreshCw, AlertCircle, CheckCircle2, Loader2, LandPlot, MapIcon, RulerIcon } from "lucide-react";
 
 const METADATA_ENDPOINT = "/api/admin/regions/refresh-metadata";
 const STATES_ENDPOINT = "/api/admin/regions/refresh-states";
+const AREAS_ENDPOINT = "/api/admin/regions/recalculate-areas";
 
 type LogEntry = { city: string; success: boolean; error?: string };
 type Phase = "idle" | "running" | "done";
@@ -14,6 +15,8 @@ export default function AdminRegionsPage() {
     const [total, setTotal] = useState(0);
     const [done, setDone] = useState(0);
     const [errors, setErrors] = useState(0);
+    // Only the area recalculation reports this — it skips rows that already match.
+    const [changed, setChanged] = useState<number | null>(null);
     const [log, setLog] = useState<LogEntry[]>([]);
     const abortRef = useRef<AbortController | null>(null);
     const logEndRef = useRef<HTMLDivElement>(null);
@@ -25,6 +28,7 @@ export default function AdminRegionsPage() {
         setTotal(0);
         setDone(0);
         setErrors(0);
+        setChanged(null);
         setLog([]);
 
         abortRef.current = new AbortController();
@@ -73,6 +77,7 @@ export default function AdminRegionsPage() {
                         } else if (event.type === "done") {
                             setDone(event.done);
                             setErrors(event.errors);
+                            setChanged(typeof event.changed === "number" ? event.changed : null);
                             setPhase("done");
                         }
                     } catch {}
@@ -102,7 +107,7 @@ export default function AdminRegionsPage() {
                     <h1 className="text-2xl font-bold">Regionen</h1>
                 </div>
                 <p className="text-muted-foreground text-sm">
-                    Flächennutzungs-Metadaten über die Overpass API laden und in der Datenbank speichern.
+                    Abgeleitete Regionsdaten — Flächennutzung, Bundesland und Fläche — neu berechnen und in der Datenbank speichern.
                 </p>
             </div>
 
@@ -177,6 +182,29 @@ export default function AdminRegionsPage() {
                 </div>
             </div>
 
+            {/* Flächen */}
+            <div className="rounded-xl border border-border bg-card p-5 space-y-4">
+                <div className="flex items-center gap-2">
+                    <RulerIcon className="size-4 text-primary" />
+                    <h2 className="font-semibold">Flächen neu berechnen</h2>
+                </div>
+                <p className="text-sm text-muted-foreground">
+                    Berechnet die Fläche jeder Region neu aus ihrem gespeicherten Polygon — lokal und ohne externe API.
+                    Repariert Regionen, deren Fläche noch von einer früheren Form stammt. Unveränderte Regionen werden
+                    übersprungen, „Geändert am“ bleibt erhalten.
+                </p>
+                <div className="flex flex-wrap gap-3">
+                    <button
+                        onClick={() => startRefresh("all", AREAS_ENDPOINT)}
+                        disabled={phase === "running"}
+                        className="inline-flex items-center gap-2 rounded-lg bg-primary text-primary-foreground hover:bg-primary/90 disabled:opacity-50 disabled:cursor-not-allowed px-4 py-2 text-sm font-medium transition-colors"
+                    >
+                        <RefreshCw className={`size-4 ${phase === "running" ? "animate-spin" : ""}`} />
+                        Alle neu berechnen
+                    </button>
+                </div>
+            </div>
+
             {/* Progress */}
             {phase !== "idle" && (
                 <div className="rounded-xl border border-border bg-card p-5 space-y-4">
@@ -197,7 +225,10 @@ export default function AdminRegionsPage() {
                     {phase === "done" && (
                         <div className="flex items-center gap-2 text-sm">
                             <CheckCircle2 className="size-4 text-emerald-400" />
-                            <span>Fertig — {done - errors} erfolgreich, {errors} Fehler</span>
+                            <span>
+                                Fertig — {done - errors} erfolgreich, {errors} Fehler
+                                {changed !== null && ` (${changed} aktualisiert)`}
+                            </span>
                         </div>
                     )}
                     {phase === "running" && (
